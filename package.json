@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@pm/webSimpleOutcome",
+  "name": "@cc/webSimpleOutcome",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
