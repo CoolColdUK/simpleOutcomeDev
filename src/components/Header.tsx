@@ -1,5 +1,3 @@
-'use client';
-
 import {AppBar, Toolbar, Typography} from '@mui/material';
 import {useTheme} from '@mui/material/styles';
 
