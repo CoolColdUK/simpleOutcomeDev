@@ -35,6 +35,7 @@
   "devDependencies": {
     "@coolcolduk/eslint-config-react": "^3.0.0",
     "@coolcolduk/jest-config": "^3.0.0",
+    "@coolcolduk/prettier-config": "^3.0.0",
     "@coolcolduk/ts-config": "^3.0.0",
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
@@ -51,6 +52,13 @@
       "project": "**/tsconfig.json"
     }
   },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write --ignore-unknown"
+    ],
+    "package.json": "prettier-package-json --write"
+  },
+  "prettier": "@coolcolduk/prettier-config",
   "jest": {
     "preset": "@coolcolduk/jest-config",
     "setupFiles": [
