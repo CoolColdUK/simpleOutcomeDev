@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://simpleoutcome.com'),
+  metadataBase: new URL('https://simpleoutcome.dev'),
   alternates: {
     canonical: '/',
   },
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     title: 'SimpleOutcome - Innovative Digital Solutions & Portfolio',
     description:
       'Professional portfolio showcasing innovative digital solutions including CraftySmile and GoalJar. Expert web development and product design services.',
-    url: 'https://simpleoutcome.com',
+    url: 'https://simpleoutcome.dev',
     siteName: 'SimpleOutcome',
     images: [
       {
@@ -116,14 +116,14 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               name: 'SimpleOutcome',
-              url: 'https://simpleoutcome.com',
-              logo: 'https://simpleoutcome.com/logo.png',
+              url: 'https://simpleoutcome.dev',
+              logo: 'https://simpleoutcome.dev/logo.png',
               description: 'Innovative digital solutions and web development services',
               sameAs: ['https://twitter.com/simpleoutcome', 'https://linkedin.com/company/simpleoutcome'],
               contactPoint: {
                 '@type': 'ContactPoint',
                 contactType: 'customer service',
-                email: 'contact@simpleoutcome.com',
+                email: 'contact@simpleoutcome.dev',
               },
             }),
           }}
