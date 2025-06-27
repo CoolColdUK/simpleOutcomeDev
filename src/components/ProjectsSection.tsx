@@ -1,56 +1,42 @@
-import LaunchIcon from "@mui/icons-material/Launch";
-import {
-  Box,
-  Button,
-  Card,
-  CardActions,
-  CardContent,
-  Container,
-  Grid,
-  Typography,
-} from "@mui/material";
-import { useTheme } from "@mui/material/styles";
-import Link from "next/link";
+import LaunchIcon from '@mui/icons-material/Launch';
+import {Box, Button, Card, CardActions, CardContent, Container, Grid, Typography} from '@mui/material';
+import {useTheme} from '@mui/material/styles';
+import Link from 'next/link';
 
 export function ProjectsSection() {
   const theme = useTheme();
 
   const projects = [
     {
-      title: "CraftySmile",
+      title: 'CraftySmile',
       description:
-        "A comprehensive e-commerce management platform for Etsy sellers, featuring bulk listing creation, SEO optimization, and automated workflows.",
-      features: ["Bulk Operations", "SEO Tools", "Analytics", "Automation"],
-      link: "https://craftysmile.com",
-      status: "Live",
+        'A comprehensive e-commerce management platform for Etsy sellers, featuring bulk listing creation, SEO optimization, and automated workflows.',
+      features: ['Bulk Operations', 'SEO Tools', 'Analytics', 'Automation'],
+      link: 'https://craftysmile.com',
+      status: 'Live',
     },
     {
-      title: "GoalJar",
+      title: 'GoalJar',
       description:
-        "A personal finance tracking application that helps users manage their savings goals and financial transactions with intuitive categorization.",
-      features: [
-        "Goal Tracking",
-        "Transaction Management",
-        "Analytics",
-        "Budget Planning",
-      ],
-      link: "#",
-      status: "Coming Soon",
+        'A personal finance tracking application that helps users manage their savings goals and financial transactions with intuitive categorization.',
+      features: ['Goal Tracking', 'Transaction Management', 'Analytics', 'Budget Planning'],
+      link: '#',
+      status: 'Coming Soon',
     },
   ];
 
   return (
-    <Box sx={{ py: 8, backgroundColor: theme.palette.background.paper }}>
+    <Box sx={{py: 8, backgroundColor: theme.palette.background.paper}}>
       <Container maxWidth="md">
         <Typography
           variant="h2"
           id="projects-heading"
           sx={{
-            textAlign: "center",
+            textAlign: 'center',
             mb: 2,
             fontWeight: 800,
             color: theme.palette.secondary.main,
-            letterSpacing: "-0.02em",
+            letterSpacing: '-0.02em',
           }}
         >
           Our Products
@@ -58,7 +44,7 @@ export function ProjectsSection() {
         <Typography
           variant="h5"
           sx={{
-            textAlign: "center",
+            textAlign: 'center',
             mb: 6,
             color: theme.palette.text.secondary,
             fontWeight: 400,
@@ -72,22 +58,22 @@ export function ProjectsSection() {
             <Grid item xs={12} md={6} key={index}>
               <Card
                 sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  transition: "transform 0.2s, box-shadow 0.2s",
-                  "&:hover": {
-                    transform: "translateY(-2px) scale(1.01)",
-                    boxShadow: "0 4px 16px rgba(107,79,58,0.08)",
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px) scale(1.01)',
+                    boxShadow: '0 4px 16px rgba(107,79,58,0.08)',
                   },
                 }}
               >
-                <CardContent sx={{ flexGrow: 1 }}>
+                <CardContent sx={{flexGrow: 1}}>
                   <Box
                     sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
                       mb: 2,
                     }}
                   >
@@ -107,14 +93,12 @@ export function ProjectsSection() {
                         py: 0.5,
                         borderRadius: 2,
                         backgroundColor:
-                          project.status === "Live"
-                            ? theme.palette.success.light
-                            : theme.palette.warning.main,
+                          project.status === 'Live' ? theme.palette.success.light : theme.palette.warning.main,
                         color:
-                          project.status === "Live"
+                          project.status === 'Live'
                             ? theme.palette.success.contrastText
                             : theme.palette.warning.contrastText,
-                        fontSize: "0.875rem",
+                        fontSize: '0.875rem',
                         fontWeight: 600,
                       }}
                     >
@@ -133,11 +117,11 @@ export function ProjectsSection() {
                     {project.description}
                   </Typography>
 
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                  <Box sx={{mb: 3}}>
+                    <Typography variant="h6" sx={{mb: 1, fontWeight: 600}}>
                       Key Features:
                     </Typography>
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                    <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1}}>
                       {project.features.map((feature, featureIndex) => (
                         <Box
                           key={featureIndex}
@@ -147,7 +131,7 @@ export function ProjectsSection() {
                             borderRadius: 1,
                             backgroundColor: theme.palette.primary.light,
                             color: theme.palette.primary.contrastText,
-                            fontSize: "0.875rem",
+                            fontSize: '0.875rem',
                             fontWeight: 500,
                           }}
                         >
@@ -158,22 +142,17 @@ export function ProjectsSection() {
                   </Box>
                 </CardContent>
 
-                <CardActions sx={{ p: 2, pt: 0 }}>
-                  {project.status === "Live" ? (
-                    <Link
-                      href={project.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ width: "100%" }}
-                    >
+                <CardActions sx={{p: 2, pt: 0}}>
+                  {project.status === 'Live' ? (
+                    <Link href={project.link} target="_blank" rel="noopener noreferrer" style={{width: '100%'}}>
                       <Button
                         variant="contained"
                         endIcon={<LaunchIcon />}
                         sx={{
-                          width: "100%",
+                          width: '100%',
                           py: 1.2,
                           fontWeight: 600,
-                          fontSize: "1.05rem",
+                          fontSize: '1.05rem',
                           borderRadius: 20,
                         }}
                       >
@@ -185,10 +164,10 @@ export function ProjectsSection() {
                       variant="contained"
                       disabled
                       sx={{
-                        width: "100%",
+                        width: '100%',
                         py: 1.2,
                         fontWeight: 600,
-                        fontSize: "1.05rem",
+                        fontSize: '1.05rem',
                         borderRadius: 20,
                       }}
                     >
