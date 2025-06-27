@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/private/', '/admin/'],
     },
-    sitemap: 'https://simpleoutcome.com/sitemap.xml',
+    sitemap: 'https://simpleoutcome.dev/sitemap.xml',
   };
 }
