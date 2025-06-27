@@ -1,3 +1,5 @@
+'use client';
+
 import {Box, Container} from '@mui/material';
 import {HeroSection} from '@/components/HeroSection';
 import {ProjectsSection} from '@/components/ProjectsSection';

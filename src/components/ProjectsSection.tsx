@@ -1,3 +1,5 @@
+'use client';
+
 import LaunchIcon from '@mui/icons-material/Launch';
 import {Box, Button, Card, CardActions, CardContent, Container, Grid, Typography} from '@mui/material';
 import {useTheme} from '@mui/material/styles';

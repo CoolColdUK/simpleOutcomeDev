@@ -1,5 +1,5 @@
 import {ThemeProvider} from '@/components/ThemeProvider';
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import {Roboto} from 'next/font/google';
 import './globals.css';
 
@@ -8,6 +8,15 @@ const roboto = Roboto({
   subsets: ['latin'],
   variable: '--font-roboto',
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    {media: '(prefers-color-scheme: light)', color: '#6B4F3A'},
+    {media: '(prefers-color-scheme: dark)', color: '#6B4F3A'},
+  ],
+};
 
 export const metadata: Metadata = {
   title: 'SimpleOutcome - Innovative Digital Solutions & Portfolio',
@@ -83,11 +92,6 @@ export const metadata: Metadata = {
   category: 'technology',
   classification: 'Portfolio Website',
   referrer: 'origin-when-cross-origin',
-  viewport: 'width=device-width, initial-scale=1',
-  themeColor: [
-    {media: '(prefers-color-scheme: light)', color: '#6B4F3A'},
-    {media: '(prefers-color-scheme: dark)', color: '#6B4F3A'},
-  ],
   manifest: '/manifest.json',
   icons: {
     icon: [
