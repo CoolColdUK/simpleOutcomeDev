@@ -25,6 +25,14 @@ export function ProjectsSection() {
       link: '#',
       status: 'Coming Soon',
     },
+    {
+      title: 'CoachPebble',
+      description:
+        "Most learning apps let you practice what you already know—CoachPebble shows you what you need to learn next. We're a learning companion that helps students find their weak spots, then drills them with the right questions until they master the topic. Starting with adaptive quizzes and performance insights, we're building towards a platform that serves families, schools, and tutors with tools like custom flashcards, teacher-led mini-tests, and detailed student reports. It's personalised, fun, and designed to make every practice session count.",
+      features: ['Adaptive Learning', 'Performance Analytics', 'Custom Flashcards', 'Teacher Tools', 'Student Reports'],
+      link: '#',
+      status: 'Coming Soon',
+    },
   ];
 
   return (
