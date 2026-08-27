@@ -21,7 +21,7 @@
   ],
   "devDependencies": {
     "@coolcolduk/prettier-config": "6.0.0",
-    "lerna": "10.0.0",
+    "lerna": "^10.0.1",
     "prettier": "3.9.6",
     "typescript": "^6"
   },
