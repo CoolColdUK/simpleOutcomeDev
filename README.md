@@ -11,4 +11,8 @@ Marketing site and personal app shell. Monorepo: `packages/web` (Next.js) and `p
 
 ## Deploy
 
-Production is GitHub Actions → Vercel (workflow **Production**). See `AGENTS.md`.
+1. GitHub secret `VERCEL_TOKEN` (https://vercel.com/account/tokens).
+2. **Actions → Create Vercel project** (once; no Git import).
+3. **Actions → Production** to build and deploy.
+
+See `AGENTS.md`.

@@ -31,4 +31,6 @@ Required: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Optional:
 
 ## 5. Deploy
 
-Production only: GitHub Actions workflow **Production** (prebuilt Vercel deploy). Vercel project root directory must be `packages/web` with “Include files outside root” enabled.
+Production only: GitHub Actions **Production** (prebuilt Vercel deploy). Do not import the GitHub repo into Vercel.
+
+**First-time Vercel project:** add secret `VERCEL_TOKEN`, then run **Actions → Create Vercel project**. That workflow creates the project (root `packages/web`, files outside root on, no Git) and writes `VERCEL_ORG_ID` + `VERCEL_PROJECT_ID_PRODUCTION`. Optional GitHub secrets `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_WEB_URL` are copied onto the Vercel project when **sync_env** is on.

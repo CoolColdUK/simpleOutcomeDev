@@ -1,0 +1,208 @@
+# One-shot: create (or update) a Vercel project without connecting GitHub.
+# Does not deploy. After this succeeds, run the Production workflow.
+name: Create Vercel project
+run-name: 'Create Vercel project: ${{ inputs.project_name }}'
+'on':
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Vercel project name (lowercase, hyphens)'
+        required: true
+        type: string
+        default: 'simple-outcome'
+      upsert_github_vars:
+        description: 'Write VERCEL_ORG_ID and VERCEL_PROJECT_ID_PRODUCTION as GitHub Actions variables'
+        required: false
+        type: boolean
+        default: true
+      sync_env:
+        description: 'Copy NEXT_PUBLIC_* GitHub secrets onto the Vercel project (if those secrets exist)'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_PAT }}
+      PROJECT_NAME: ${{ inputs.project_name }}
+      EXISTING_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+    steps:
+      - name: Require VERCEL_TOKEN
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo '::error::Add repository secret VERCEL_TOKEN (https://vercel.com/account/tokens).'
+            exit 1
+          fi
+
+      - name: Create or update Vercel project
+        id: vercel
+        env:
+          SYNC_ENV: ${{ inputs.sync_env }}
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          WEB_URL: ${{ secrets.NEXT_PUBLIC_WEB_URL }}
+        run: |
+          set -euo pipefail
+          API='https://api.vercel.com'
+
+          vercel_get() {
+            curl -sS -H "Authorization: Bearer ${VERCEL_TOKEN}" "$@"
+          }
+
+          vercel_json() {
+            curl -sS -H "Authorization: Bearer ${VERCEL_TOKEN}" -H 'Content-Type: application/json' "$@"
+          }
+
+          TEAM="${EXISTING_ORG_ID:-}"
+          if [ -z "$TEAM" ]; then
+            USER_JSON="$(vercel_get "${API}/v2/user")"
+            TEAM="$(printf '%s' "$USER_JSON" | jq -r '.user.defaultTeamId // empty')"
+          fi
+          if [ -z "$TEAM" ]; then
+            TEAMS_JSON="$(vercel_get "${API}/v2/teams")"
+            COUNT="$(printf '%s' "$TEAMS_JSON" | jq '.teams | length')"
+            if [ "$COUNT" = '1' ]; then
+              TEAM="$(printf '%s' "$TEAMS_JSON" | jq -r '.teams[0].id')"
+            else
+              echo '::error::Could not resolve Vercel team id. Set GitHub variable VERCEL_ORG_ID (team_…) and re-run.'
+              printf '%s\n' "$TEAMS_JSON" | jq '{teams: [.teams[] | {id, slug, name}]}'
+              exit 1
+            fi
+          fi
+
+          echo "Using Vercel team/org id: ${TEAM}"
+          echo "org_id=${TEAM}" >> "$GITHUB_OUTPUT"
+
+          LIST_CODE="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            "${API}/v9/projects/${PROJECT_NAME}?teamId=${TEAM}")"
+
+          PAYLOAD="$(jq -n \
+            --arg name "$PROJECT_NAME" \
+            '{
+              name: $name,
+              framework: "nextjs",
+              rootDirectory: "packages/web",
+              sourceFilesOutsideRootDirectory: true,
+              skipGitConnectDuringLink: true
+            }')"
+
+          if [ "$LIST_CODE" = '200' ]; then
+            echo 'Project already exists; updating root directory settings.'
+            PATCH_CODE="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' \
+              -X PATCH \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              -d "$PAYLOAD" \
+              "${API}/v9/projects/${PROJECT_NAME}?teamId=${TEAM}")"
+            if [ "$PATCH_CODE" != '200' ]; then
+              echo "::error::Failed to update Vercel project (HTTP ${PATCH_CODE})"
+              cat /tmp/vercel-project.json
+              exit 1
+            fi
+          else
+            echo 'Creating Vercel project (no Git connection).'
+            CREATE_CODE="$(curl -sS -o /tmp/vercel-project.json -w '%{http_code}' \
+              -X POST \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              -d "$PAYLOAD" \
+              "${API}/v11/projects?teamId=${TEAM}")"
+            if [ "$CREATE_CODE" != '200' ] && [ "$CREATE_CODE" != '201' ]; then
+              echo "::error::Failed to create Vercel project (HTTP ${CREATE_CODE})"
+              cat /tmp/vercel-project.json
+              exit 1
+            fi
+          fi
+
+          PROJECT_ID="$(jq -r '.id' /tmp/vercel-project.json)"
+          if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = 'null' ]; then
+            echo '::error::Vercel response had no project id.'
+            cat /tmp/vercel-project.json
+            exit 1
+          fi
+          echo "project_id=${PROJECT_ID}" >> "$GITHUB_OUTPUT"
+          echo "Created/updated project ${PROJECT_NAME} (${PROJECT_ID})"
+
+          upsert_env() {
+            KEY="$1"
+            VALUE="$2"
+            if [ -z "$VALUE" ]; then
+              echo "Skipping ${KEY} (secret not set on GitHub)."
+              return 0
+            fi
+            BODY="$(jq -n --arg key "$KEY" --arg value "$VALUE" '{
+              key: $key,
+              value: $value,
+              type: "plain",
+              target: ["production", "preview", "development"]
+            }')"
+            CODE="$(curl -sS -o /tmp/vercel-env.json -w '%{http_code}' \
+              -X POST \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              -d "$BODY" \
+              "${API}/v10/projects/${PROJECT_ID}/env?teamId=${TEAM}&upsert=true")"
+            if [ "$CODE" != '200' ] && [ "$CODE" != '201' ]; then
+              echo "::warning::Could not set ${KEY} on Vercel (HTTP ${CODE})"
+              cat /tmp/vercel-env.json
+              return 0
+            fi
+            echo "Set ${KEY} on Vercel."
+          }
+
+          if [ "$SYNC_ENV" = 'true' ]; then
+            WEB_URL_VALUE="${WEB_URL:-https://simpleoutcome.dev}"
+            upsert_env NEXT_PUBLIC_WEB_URL "$WEB_URL_VALUE"
+            upsert_env NEXT_PUBLIC_SUPABASE_URL "$SUPABASE_URL"
+            upsert_env NEXT_PUBLIC_SUPABASE_ANON_KEY "$SUPABASE_ANON_KEY"
+          fi
+
+      - name: Write GitHub Actions variables
+        if: ${{ inputs.upsert_github_vars }}
+        env:
+          ORG_ID: ${{ steps.vercel.outputs.org_id }}
+          PROJECT_ID: ${{ steps.vercel.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo '::warning::GH_PAT is not set; add GitHub variables by hand:'
+            echo "VERCEL_ORG_ID=${ORG_ID}"
+            echo "VERCEL_PROJECT_ID_PRODUCTION=${PROJECT_ID}"
+            exit 0
+          fi
+          gh variable set VERCEL_ORG_ID --body "$ORG_ID" --repo "$GITHUB_REPOSITORY"
+          gh variable set VERCEL_PROJECT_ID_PRODUCTION --body "$PROJECT_ID" --repo "$GITHUB_REPOSITORY"
+          echo 'Wrote VERCEL_ORG_ID and VERCEL_PROJECT_ID_PRODUCTION.'
+
+      - name: Summary
+        env:
+          ORG_ID: ${{ steps.vercel.outputs.org_id }}
+          PROJECT_ID: ${{ steps.vercel.outputs.project_id }}
+        run: |
+          {
+            echo '## Vercel project'
+            echo
+            echo "| Item | Value |"
+            echo "| --- | --- |"
+            echo "| Name | \`${PROJECT_NAME}\` |"
+            echo "| Org / team id | \`${ORG_ID}\` |"
+            echo "| Project id | \`${PROJECT_ID}\` |"
+            echo "| Root directory | \`packages/web\` |"
+            echo "| Git | not connected |"
+            echo
+            echo 'GitHub variables expected by Production:'
+            echo
+            echo '- `VERCEL_ORG_ID`'
+            echo '- `VERCEL_PROJECT_ID_PRODUCTION`'
+            echo
+            echo 'GitHub secret still required: `VERCEL_TOKEN`.'
+            echo
+            echo 'If contact/auth should work on Vercel, set project env (or GitHub secrets used by this workflow): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_WEB_URL`.'
+          } >> "$GITHUB_STEP_SUMMARY"
