@@ -1,69 +1,32 @@
 {
   "private": true,
-  "name": "@cc/webSimpleOutcome",
-  "version": "0.0.0",
-  "type": "module",
+  "name": "simple-outcome",
+  "version": "0.1.0",
   "scripts": {
-    "build": "next build",
-    "build:staging": "next build",
-    "check": "tsc --noEmit",
-    "clean:dist": "rm -rf .next && rm -rf tsconfig.tsbuildinfo",
-    "clean:node": "rm -rf node_modules",
-    "deploy": "firebase deploy --only hosting",
-    "dev": "next dev --turbopack",
-    "format": "prettier --write src/**",
-    "lint": "eslint --fix \"src/**/*.{ts,tsx}\"",
-    "preview": "next start",
-    "start": "next start",
-    "test": "jest",
-    "test:int": "jest --testMatch **/*.spec.ts",
-    "test:unit": "jest --testMatch **/*.test.ts"
+    "build": "npm run build:model && npm run build:web",
+    "build:model": "lerna exec --scope=@so/model -- npm run build:prod",
+    "build:web": "lerna exec --scope=@so/web -- npm run build:prod",
+    "check": "npm run lint && npm run build",
+    "clean": "npm run clean:dist && npm run clean:node",
+    "clean:dist": "lerna run clean:dist",
+    "clean:node": "lerna run clean:node && rm -rf node_modules",
+    "dev:web": "lerna exec --scope=@so/web -- npm run dev",
+    "format": "prettier --ignore-unknown --write ./packages/**/*.{ts,tsx}",
+    "lint": "lerna exec --concurrency 1 -- npm run lint",
+    "test": "lerna run test",
+    "test:unit": "lerna run test:unit"
   },
-  "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^6.4.12",
-    "@mui/material": "^6.4.12",
-    "dayjs": "^1.11.13",
-    "framer-motion": "^12.19.1",
-    "next": "15.3.4",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "uuid": "^11.1.0",
-    "zod": "^3.25.67"
-  },
+  "workspaces": [
+    "packages/*"
+  ],
   "devDependencies": {
-    "@coolcolduk/eslint-config-react": "^3.0.0",
-    "@coolcolduk/jest-config": "^3.0.0",
-    "@coolcolduk/prettier-config": "^3.0.0",
-    "@coolcolduk/ts-config": "^3.0.0",
-    "@eslint/eslintrc": "^3",
-    "@types/node": "^20",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "eslint-config-next": "15.3.4",
-    "typescript": "^5"
-  },
-  "eslintConfig": {
-    "extends": [
-      "@coolcolduk/eslint-config-react"
-    ],
-    "parserOptions": {
-      "project": "**/tsconfig.json"
-    }
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "prettier --write --ignore-unknown"
-    ],
-    "package.json": "prettier-package-json --write"
+    "@coolcolduk/prettier-config": "6.0.0",
+    "lerna": "10.0.0",
+    "prettier": "3.9.6",
+    "typescript": "^6"
   },
   "prettier": "@coolcolduk/prettier-config",
-  "jest": {
-    "preset": "@coolcolduk/jest-config",
-    "setupFiles": [
-      "./setupTests.ts"
-    ],
-    "rootDir": "./src"
+  "engines": {
+    "node": ">=24"
   }
 }

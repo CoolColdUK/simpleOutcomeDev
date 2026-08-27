@@ -1,0 +1,134 @@
+# Production: Vercel (packages/web). No staging.
+name: Production
+run-name: 'Prod: ${{ inputs.description }}'
+'on':
+  workflow_dispatch:
+    inputs:
+      description:
+        description: 'Brief description'
+        required: true
+        type: string
+      release_type:
+        description: 'Release type (major or minor)'
+        required: false
+        type: choice
+        default: 'minor'
+        options:
+          - minor
+          - major
+      deploy_vercel:
+        description: 'Deploy web to Vercel (production)'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      HUSKY: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://npm.pkg.github.com'
+
+      - name: Git identity
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/$GITHUB_REPOSITORY
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: npm-release-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Configure npm for private packages
+        run: |
+          echo "@coolcolduk:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify TypeScript major version
+        run: |
+          TS_VERSION=$(node -p "require('typescript/package.json').version")
+          echo "TypeScript version: $TS_VERSION"
+          case "$TS_VERSION" in
+            6.*) ;;
+            *)
+              echo "Expected TypeScript 6.x in CI but found $TS_VERSION"
+              exit 1
+              ;;
+          esac
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Bump version with Lerna
+        run: |
+          RELEASE_TYPE="${{ inputs.release_type || 'minor' }}"
+          npx lerna version $RELEASE_TYPE --no-git-tag-version --yes --no-push
+          NEW_VERSION=$(node -p "require('./lerna.json').version")
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          git add lerna.json package-lock.json
+          find . -name "package.json" -not -path "*/node_modules/*" | xargs git add
+          git commit -m "chore: bump version to $NEW_VERSION ($RELEASE_TYPE)"
+
+      - name: Create tag (local only)
+        run: |
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "CURRENT_BRANCH=$CURRENT_BRANCH" >> $GITHUB_ENV
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+          echo "NEXT_PUBLIC_GIT_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: Build model (production)
+        if: ${{ inputs.deploy_vercel }}
+        run: npm run build:model
+
+      # Dashboard: Framework Preset = Next.js, Root Directory = packages/web, “Include files outside root” on.
+      # Disable Git→Vercel auto-deploy if you only want GHA deploys.
+      - name: Deploy web to Vercel (production, prebuilt)
+        if: ${{ inputs.deploy_vercel }}
+        env:
+          NEXT_PUBLIC_APP_VERSION: ${{ env.NEW_VERSION }}
+          NEXT_PUBLIC_GIT_COMMIT: ${{ env.NEXT_PUBLIC_GIT_COMMIT }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_PRODUCTION }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          set -euo pipefail
+          npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx vercel build --prod --yes --token="$VERCEL_TOKEN"
+          npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"
+
+      - name: Push tag and commit
+        run: |
+          git push origin "v$NEW_VERSION"
+          git push origin $CURRENT_BRANCH
+
+      - name: Create GitHub Release
+        env:
+          RELEASE_DESCRIPTION: ${{ inputs.description }}
+          RELEASE_TYPE: ${{ inputs.release_type || 'minor' }}
+        run: |
+          printf '%s\n\nRelease type: %s (production)\n' "$RELEASE_DESCRIPTION" "$RELEASE_TYPE" > /tmp/release-notes-head.md
+          gh release create "v$NEW_VERSION" \
+            --title "v$NEW_VERSION" \
+            --generate-notes \
+            --notes-file /tmp/release-notes-head.md \
+            --target ${{ env.CURRENT_BRANCH }}

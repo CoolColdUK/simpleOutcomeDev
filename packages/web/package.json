@@ -1,0 +1,37 @@
+{
+  "private": true,
+  "name": "@so/web",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build:prod": "next build --webpack",
+    "clean:dist": "rm -rf .next && rm -rf tsconfig.tsbuildinfo",
+    "clean:node": "rm -rf node_modules",
+    "dev": "next dev -p 3000 --webpack",
+    "lint": "eslint --fix \"app/**/*.{ts,tsx}\" \"components/**/*.{ts,tsx}\" \"lib/**/*.{ts,tsx}\" \"styles/**/*.ts\"",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^3.36.1",
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@so/model": "^0.1.0",
+    "@supabase/supabase-js": "^2.112.3",
+    "dayjs": "^1.11.22",
+    "framer-motion": "^13.1.0",
+    "next": "^16.3.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "eslint": "^9",
+    "eslint-config-next": "^16.3.1",
+    "typescript": "^6"
+  },
+  "engines": {
+    "node": "24"
+  }
+}
