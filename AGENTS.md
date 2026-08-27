@@ -33,4 +33,4 @@ Required: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Optional:
 
 Production only: GitHub Actions **Production** (prebuilt Vercel deploy). Do not import the GitHub repo into Vercel.
 
-**First-time Vercel project:** add secret `VERCEL_TOKEN`, then run **Actions → Create Vercel project**. That workflow creates the project (root `packages/web`, files outside root on, no Git) and writes `VERCEL_ORG_ID` + `VERCEL_PROJECT_ID_PRODUCTION`. Optional GitHub secrets `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_WEB_URL` are copied onto the Vercel project when **sync_env** is on.
+**First-time Vercel project:** add secret `VERCEL_TOKEN`, then run **Actions → Create Vercel project**. That creates the Vercel project (root `packages/web`, no Git). Copy `VERCEL_ORG_ID` (Vercel team id, `team_…`) and `VERCEL_PROJECT_ID_PRODUCTION` from the job summary into GitHub **Settings → Secrets and variables → Actions → Variables**. Auto-writing those variables needs a GitHub PAT with **Variables: write** (classic `repo` scope); a packages-only `GH_PAT` will get HTTP 401 and can be ignored.

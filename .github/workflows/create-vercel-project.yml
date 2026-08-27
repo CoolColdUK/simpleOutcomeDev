@@ -185,15 +185,19 @@ jobs:
           PROJECT_ID: ${{ steps.vercel.outputs.project_id }}
         run: |
           set -euo pipefail
+          echo "VERCEL_ORG_ID=${ORG_ID}"
+          echo "VERCEL_PROJECT_ID_PRODUCTION=${PROJECT_ID}"
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo '::warning::GH_PAT is not set; add GitHub variables by hand:'
-            echo "VERCEL_ORG_ID=${ORG_ID}"
-            echo "VERCEL_PROJECT_ID_PRODUCTION=${PROJECT_ID}"
+            echo '::warning::GH_PAT is not set. Add the two variables above in GitHub → Settings → Secrets and variables → Actions → Variables.'
             exit 0
           fi
-          gh variable set VERCEL_ORG_ID --body "$ORG_ID" --repo "$GITHUB_REPOSITORY"
-          gh variable set VERCEL_PROJECT_ID_PRODUCTION --body "$PROJECT_ID" --repo "$GITHUB_REPOSITORY"
-          echo 'Wrote VERCEL_ORG_ID and VERCEL_PROJECT_ID_PRODUCTION.'
+          if gh variable set VERCEL_ORG_ID --body "$ORG_ID" --repo "$GITHUB_REPOSITORY" \
+            && gh variable set VERCEL_PROJECT_ID_PRODUCTION --body "$PROJECT_ID" --repo "$GITHUB_REPOSITORY"; then
+            echo 'Wrote VERCEL_ORG_ID and VERCEL_PROJECT_ID_PRODUCTION.'
+            exit 0
+          fi
+          echo '::warning::Could not write GitHub variables (GH_PAT needs Variables write on this repo, or use a classic PAT with repo scope). Add them by hand — this does not affect the Vercel project.'
+
 
       - name: Summary
         env:
