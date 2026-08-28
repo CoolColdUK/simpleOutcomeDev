@@ -57,10 +57,12 @@ export default function SpaceWorkspace() {
   }, [spaceId, user]);
 
   useEffect(() => {
-    void load().catch((e: unknown) => {
-      setError(e instanceof Error ? e.message : String(e));
-      setReady(true);
-    });
+    void Promise.resolve()
+      .then(() => load())
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : String(e));
+        setReady(true);
+      });
   }, [load]);
 
   if (!ready) {

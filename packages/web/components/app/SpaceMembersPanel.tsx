@@ -19,7 +19,9 @@ export default function SpaceMembersPanel({spaceId}: SpaceMembersPanelProps) {
   }, [spaceId]);
 
   useEffect(() => {
-    void load().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+    void Promise.resolve()
+      .then(() => load())
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }, [load]);
 
   const setRole = async (userId: string, role: Exclude<SpaceRole, 'space_owner'>): Promise<void> => {

@@ -10,11 +10,11 @@ export default function JoinSpacePage() {
   const params = useParams<{token: string}>();
   const router = useRouter();
   const [error, setError] = useState('');
+  const token = params.token;
+  const missingToken = token === undefined || token === '';
 
   useEffect(() => {
-    const token = params.token;
-    if (token === undefined || token === '') {
-      setError('Missing invite token');
+    if (missingToken) {
       return;
     }
     void joinDbSpaceByInviteToken(token)
@@ -24,16 +24,18 @@ export default function JoinSpacePage() {
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : String(e));
       });
-  }, [params.token, router]);
+  }, [missingToken, token, router]);
 
-  if (error !== '') {
+  const shownError = missingToken ? 'Missing invite token' : error;
+
+  if (shownError !== '') {
     return (
       <Stack gap={4}>
         <Heading as="h1" size="lg">
           Invite
         </Heading>
         <Alert.Root status="error">
-          <Alert.Description>{error}</Alert.Description>
+          <Alert.Description>{shownError}</Alert.Description>
         </Alert.Root>
       </Stack>
     );

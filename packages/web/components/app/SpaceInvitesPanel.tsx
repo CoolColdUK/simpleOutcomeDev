@@ -25,7 +25,9 @@ export default function SpaceInvitesPanel({spaceId}: SpaceInvitesPanelProps) {
   }, [spaceId]);
 
   useEffect(() => {
-    void load().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+    void Promise.resolve()
+      .then(() => load())
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }, [load]);
 
   const create = async (): Promise<void> => {

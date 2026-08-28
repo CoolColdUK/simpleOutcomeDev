@@ -51,10 +51,12 @@ export default function PodWorkspace() {
   }, [params.podId, params.spaceId, user]);
 
   useEffect(() => {
-    void load().catch((e: unknown) => {
-      setError(e instanceof Error ? e.message : String(e));
-      setReady(true);
-    });
+    void Promise.resolve()
+      .then(() => load())
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : String(e));
+        setReady(true);
+      });
   }, [load]);
 
   if (!ready || pod === undefined) {
