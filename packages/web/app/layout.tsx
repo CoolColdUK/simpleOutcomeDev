@@ -12,12 +12,22 @@ const roboto = Roboto({
   variable: '--font-roboto',
 });
 
-export const metadata: Metadata = buildDefaultMetadata();
-
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: '#6B4F3A',
+};
+
+export const metadata: Metadata = {
+  ...buildDefaultMetadata(),
+  appleWebApp: {
+    capable: true,
+    title: 'SimpleOutcome',
+    statusBarStyle: 'default',
+  },
+  icons: {
+    apple: '/icons/icon-192.png',
+  },
 };
 
 export default function RootLayout({children}: {children: ReactNode}) {

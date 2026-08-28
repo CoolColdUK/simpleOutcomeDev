@@ -1,8 +1,83 @@
-import {createSystem, defaultConfig, defineConfig} from '@chakra-ui/react';
+import {createSystem, defaultConfig, defineConfig, defineSlotRecipe} from '@chakra-ui/react';
 
-/**
- * Latte / brown brand tokens (migrated from the previous MUI theme).
- */
+const appHeaderRecipe = defineSlotRecipe({
+  className: 'so-app-header',
+  slots: ['root', 'brand'],
+  base: {
+    root: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      px: {base: 4, md: 8},
+      py: 4,
+      borderBottomWidth: '1px',
+      borderColor: 'border.subtle',
+      bg: 'bg.header',
+    },
+    brand: {
+      fontWeight: '800',
+    },
+  },
+});
+
+const appShellRecipe = defineSlotRecipe({
+  className: 'so-app-shell',
+  slots: ['root', 'main'],
+  base: {
+    root: {
+      bg: 'bg.canvas',
+      minH: '100vh',
+    },
+    main: {
+      px: {base: 4, md: 8},
+      py: 10,
+      maxW: 'sizes.page',
+      mx: 'auto',
+      w: 'full',
+    },
+  },
+});
+
+const authCardRecipe = defineSlotRecipe({
+  className: 'so-auth-card',
+  slots: ['root', 'inner'],
+  base: {
+    root: {
+      minH: '100vh',
+      bg: 'bg.canvas',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      p: {base: 4, md: 8},
+    },
+    inner: {
+      w: 'full',
+      maxW: 'md',
+      bg: 'bg.paper',
+      p: {base: 6, md: 8},
+      borderRadius: 'lg',
+      borderWidth: '1px',
+      borderColor: 'border.subtle',
+      boxShadow: 'card',
+    },
+  },
+});
+
+const spaceCardRecipe = defineSlotRecipe({
+  className: 'so-space-card',
+  slots: ['root'],
+  base: {
+    root: {
+      bg: 'bg.paper',
+      p: 4,
+      borderRadius: 'md',
+      borderWidth: '1px',
+      borderColor: 'border.subtle',
+      boxShadow: 'card',
+    },
+  },
+});
+
 const soExtension = defineConfig({
   theme: {
     tokens: {
@@ -31,6 +106,9 @@ const soExtension = defineConfig({
       sizes: {
         page: {value: '48rem'},
       },
+      shadows: {
+        card: {value: '0 1px 3px rgba(75, 54, 33, 0.12)'},
+      },
     },
     semanticTokens: {
       colors: {
@@ -40,13 +118,25 @@ const soExtension = defineConfig({
         'bg.paper': {
           value: {base: '{colors.brand.50}', _dark: '{colors.brand.900}'},
         },
+        'bg.header': {
+          value: {base: '{colors.brand.50}', _dark: '{colors.brand.900}'},
+        },
         'fg.default': {
           value: {base: '{colors.brand.700}', _dark: '{colors.brand.50}'},
         },
         'fg.muted': {
           value: {base: '{colors.gray.600}', _dark: '{colors.gray.400}'},
         },
+        'border.subtle': {
+          value: {base: '{colors.brand.200}', _dark: '{colors.brand.700}'},
+        },
       },
+    },
+    slotRecipes: {
+      appHeader: appHeaderRecipe,
+      appShell: appShellRecipe,
+      authCard: authCardRecipe,
+      spaceCard: spaceCardRecipe,
     },
   },
   globalCss: {

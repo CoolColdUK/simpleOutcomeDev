@@ -9,7 +9,7 @@ export default function Footer() {
   const [open, setOpen] = useState(false);
 
   return (
-    <Box as="footer" bg="bg.paper" color="fg.default" py={12} mt="auto" borderTopWidth="1px" borderColor="brand.200">
+    <Box as="footer" bg="bg.paper" color="fg.default" py={12} mt="auto" borderTopWidth="1px" borderColor="border.subtle">
       <Box maxW="6xl" mx="auto" px={{base: 4, md: 8}}>
         <SimpleGrid columns={{base: 1, md: 3}} gap={8}>
           <Box>
@@ -45,7 +45,7 @@ export default function Footer() {
             <ContactUsDialog open={open} onClose={() => setOpen(false)} />
           </Box>
         </SimpleGrid>
-        <Box borderTopWidth="1px" borderColor="brand.200" mt={10} pt={6} textAlign="center">
+        <Box borderTopWidth="1px" borderColor="border.subtle" mt={10} pt={6} textAlign="center">
           <Text fontSize="sm" color="fg.muted">
             © {dayjs().year()} SimpleOutcome. All rights reserved.
           </Text>
