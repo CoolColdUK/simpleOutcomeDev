@@ -3,7 +3,7 @@
 ## 1. Technology Stack
 
 - Language: **TypeScript (strict)**
-- Backend: **Supabase** (Auth now; Postgres/RLS later)
+- Backend: **Supabase** (Auth, Postgres, RLS)
 - Frontend (`packages/web`): **Next.js (App Router)** + **React** + **Chakra UI v3**, deployed on **Vercel**
 - Monorepo: **npm workspaces** + **Lerna**
 
@@ -31,6 +31,14 @@ Required: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Optional:
 
 ## 5. Deploy
 
-Production only: GitHub Actions **Production** (prebuilt Vercel deploy). Do not import the GitHub repo into Vercel.
+Production only: GitHub Actions **Production**. That workflow applies `supabase/migrations` (`supabase db push`) then deploys the prebuilt Next.js app to Vercel. Do not import the GitHub repo into Vercel, and do not apply migrations from a local CLI for production.
+
+**Supabase (required when `deploy_supabase` is on, the default):**
+
+| Kind | Name | Purpose |
+| --- | --- | --- |
+| Secret | `SUPABASE_ACCESS_TOKEN` | Personal access token from Supabase Dashboard → Account → Access Tokens |
+| Secret | `SUPABASE_PRODUCTION_DB_PASSWORD` | Database password for the production project |
+| Variable | `SUPABASE_PRODUCTION_PROJECT_REF` | Project ref (the subdomain in `https://<ref>.supabase.co`) |
 
 **First-time Vercel project:** add secret `VERCEL_TOKEN`, then run **Actions → Create Vercel project**. That creates the Vercel project (root `packages/web`, no Git). Copy `VERCEL_ORG_ID` (Vercel team id, `team_…`) and `VERCEL_PROJECT_ID_PRODUCTION` from the job summary into GitHub **Settings → Secrets and variables → Actions → Variables**. Auto-writing those variables needs a GitHub PAT with **Variables: write** (classic `repo` scope); a packages-only `GH_PAT` will get HTTP 401 and can be ignored.
