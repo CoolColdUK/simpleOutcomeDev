@@ -7,7 +7,7 @@ export default async function listDbTodoCards(podId: string): Promise<readonly D
   const {data, error} = await supabase
     .from('todo_card')
     .select(
-      'id, pod_id, column_id, title, description, due_at, tags, assignee_user_id, sort_order, created_by, created_at, updated_at',
+      'id, pod_id, column_id, title, description, due_at, tags, assignee_user_id, sort_order, completed_at, created_by, created_at, updated_at',
     )
     .eq('pod_id', podId)
     .order('sort_order', {ascending: true})

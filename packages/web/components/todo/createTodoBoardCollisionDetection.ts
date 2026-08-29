@@ -13,6 +13,11 @@ export default function createTodoBoardCollisionDetection(
       });
     }
     const pointerHits = pointerWithin(args);
+    const columnIds = new Set(getColumnIds());
+    const cardHits = pointerHits.filter((hit) => !columnIds.has(String(hit.id)));
+    if (cardHits.length > 0) {
+      return cardHits;
+    }
     if (pointerHits.length > 0) {
       return pointerHits;
     }

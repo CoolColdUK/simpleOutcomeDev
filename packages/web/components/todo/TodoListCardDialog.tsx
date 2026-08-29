@@ -1,9 +1,8 @@
 'use client';
 
-import {useRef, useState} from 'react';
+import {useState} from 'react';
 import {
   Alert,
-  Button,
   DialogBackdrop,
   DialogBody,
   DialogCloseTrigger,
@@ -14,21 +13,22 @@ import {
   DialogRoot,
   DialogTitle,
   Field,
+  IconButton,
   Input,
   Stack,
   Text,
-  Textarea,
 } from '@chakra-ui/react';
 import dayjs from 'dayjs';
-import {countSoImageMarkdownUrisInBody, TODO_MAX_INLINE_IMAGES, type PodRole} from '@so/model';
+import {ArchiveIcon, SaveIcon} from '@so/component';
+import type {PodRole} from '@so/model';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 import type {DbPodMember} from '@/lib/api/db/listDbPodMembers';
 import updateDbTodoCard from '@/lib/api/db/updateDbTodoCard';
 import moveDbTodoCard from '@/lib/api/db/moveDbTodoCard';
-import uploadStorageTodoInlineImageMarkdownFragment from '@/lib/api/storage/uploadStorageTodoInlineImageMarkdownFragment';
-import TodoMarkdownBody from '@/components/todo/TodoMarkdownBody';
 import TodoListCardDialogComments from '@/components/todo/TodoListCardDialogComments';
-import insertAtCaret from '@/components/todo/insertAtCaret';
+import TodoListCardDialogDescription from '@/components/todo/TodoListCardDialogDescription';
+import TodoListCardDialogTags from '@/components/todo/TodoListCardDialogTags';
+import {todoDueAtFromInputValue, todoDueAtToInputValue} from '@/components/todo/formatTodoDueAt';
 
 export interface TodoListCardDialogProps {
   readonly open: boolean;
@@ -62,11 +62,9 @@ function TodoListCardDialogBody({
   onClose,
   onChanged,
 }: TodoListCardDialogBodyProps) {
-  const taRef = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState(card.title);
-  const [description, setDescription] = useState(card.description);
-  const [dueAt, setDueAt] = useState(card.dueAt ?? '');
-  const [tags, setTags] = useState(card.tags.join(', '));
+  const [dueAt, setDueAt] = useState(todoDueAtToInputValue(card.dueAt));
+  const [tags, setTags] = useState<readonly string[]>(card.tags);
   const [assignee, setAssignee] = useState(card.assigneeUserId ?? '');
   const [error, setError] = useState('');
 
@@ -75,12 +73,8 @@ function TodoListCardDialogBody({
     try {
       await updateDbTodoCard(card.id, {
         title,
-        description,
-        dueAt,
-        tags: tags
-          .split(',')
-          .map((t) => t.trim())
-          .filter((t) => t !== ''),
+        dueAt: todoDueAtFromInputValue(dueAt) ?? '',
+        tags,
         assigneeUserId: assignee,
       });
       onChanged();
@@ -90,39 +84,16 @@ function TodoListCardDialogBody({
     }
   };
 
+  const saveDescription = async (next: string): Promise<void> => {
+    setError('');
+    await updateDbTodoCard(card.id, {description: next});
+    onChanged();
+  };
+
   const archive = async (): Promise<void> => {
     await moveDbTodoCard(card.id, undefined, card.sortOrder);
     onChanged();
     onClose();
-  };
-
-  const onPasteImage = async (clipboardData: DataTransfer): Promise<void> => {
-    const file = [...clipboardData.items]
-      .map((item) => item.getAsFile())
-      .find((picked) => picked !== null && picked.type.startsWith('image/'));
-    if (file === undefined || file === null) {
-      return;
-    }
-    if (countSoImageMarkdownUrisInBody(description) >= TODO_MAX_INLINE_IMAGES) {
-      setError(`At most ${TODO_MAX_INLINE_IMAGES} images per card`);
-      return;
-    }
-    try {
-      const fragment = await uploadStorageTodoInlineImageMarkdownFragment(card.podId, card.id, file);
-      const ta = taRef.current;
-      if (ta === null) {
-        setDescription(`${description}\n${fragment}`);
-        return;
-      }
-      const {next, caret} = insertAtCaret(description, ta, fragment);
-      setDescription(next);
-      requestAnimationFrame(() => {
-        ta.selectionStart = caret;
-        ta.selectionEnd = caret;
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
   };
 
   const nameFor = (id: string): string => members.find((m) => m.userId === id)?.username ?? id.slice(0, 8);
@@ -143,30 +114,20 @@ function TodoListCardDialogBody({
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} />
               </Field.Root>
               <Field.Root>
-                <Field.Label>Description (markdown, paste images)</Field.Label>
-                <Textarea
-                  ref={taRef}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onPaste={(e) => {
-                    const hasImage = [...e.clipboardData.items].some((item) => item.type.startsWith('image/'));
-                    if (hasImage) {
-                      e.preventDefault();
-                      void onPasteImage(e.clipboardData);
-                    }
-                  }}
-                  rows={8}
+                <Field.Label>Description</Field.Label>
+                <TodoListCardDialogDescription
+                  podId={card.podId}
+                  cardId={card.id}
+                  description={card.description}
+                  onSaved={saveDescription}
+                  onError={setError}
                 />
               </Field.Root>
-              <TodoMarkdownBody markdown={description} />
               <Field.Root>
-                <Field.Label>Due date</Field.Label>
-                <Input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+                <Field.Label>Due</Field.Label>
+                <Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
               </Field.Root>
-              <Field.Root>
-                <Field.Label>Tags (comma separated)</Field.Label>
-                <Input value={tags} onChange={(e) => setTags(e.target.value)} />
-              </Field.Root>
+              <TodoListCardDialogTags tags={tags} onChange={setTags} />
               <Field.Root>
                 <Field.Label>Assignee</Field.Label>
                 <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
@@ -197,13 +158,13 @@ function TodoListCardDialogBody({
               ) : null}
             </Stack>
           </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => void archive()}>
-              Archive
-            </Button>
-            <Button colorPalette="brand" onClick={() => void save()}>
-              Save
-            </Button>
+          <DialogFooter justifyContent="flex-start">
+            <IconButton aria-label="Archive card" variant="outline" onClick={() => void archive()}>
+              <ArchiveIcon size={16} />
+            </IconButton>
+            <IconButton aria-label="Save card" colorPalette="brand" onClick={() => void save()}>
+              <SaveIcon size={16} />
+            </IconButton>
           </DialogFooter>
         </DialogContent>
       </DialogPositioner>

@@ -146,6 +146,7 @@ export interface Database {
           tags: string[];
           assignee_user_id: string | null;
           sort_order: number;
+          completed_at: string | null;
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -160,6 +161,7 @@ export interface Database {
           tags?: string[];
           assignee_user_id?: string | null;
           sort_order?: number;
+          completed_at?: string | null;
           created_by: string;
         };
         Update: {
@@ -170,6 +172,7 @@ export interface Database {
           tags?: string[];
           assignee_user_id?: string | null;
           sort_order?: number;
+          completed_at?: string | null;
         };
         Relationships: [];
       };

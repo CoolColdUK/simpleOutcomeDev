@@ -3,6 +3,7 @@
 import {Badge, Box, Stack, Text} from '@chakra-ui/react';
 import {todoCardStatusLabel} from '@so/model';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
+import formatTodoDueAt from '@/components/todo/formatTodoDueAt';
 
 export interface TodoListBoardCardPreviewProps {
   readonly card: DbTodoCard;
@@ -22,11 +23,13 @@ export default function TodoListBoardCardPreview({card, columnTitle, assigneeLab
       minW="240px"
     >
       <Stack gap={1}>
-        <Text fontWeight="semibold">{card.title}</Text>
+        <Text fontWeight="semibold" textDecoration={card.completedAt !== undefined ? 'line-through' : undefined}>
+          {card.title}
+        </Text>
         <Text fontSize="xs" color="fg.muted">
           {todoCardStatusLabel(columnTitle)}
         </Text>
-        {card.dueAt !== undefined ? <Text fontSize="xs">{card.dueAt}</Text> : null}
+        {formatTodoDueAt(card.dueAt) !== undefined ? <Text fontSize="xs">{formatTodoDueAt(card.dueAt)}</Text> : null}
         {assigneeLabel !== undefined ? <Text fontSize="xs">{assigneeLabel}</Text> : null}
         {card.tags.length > 0 ? (
           <Box display="flex" gap={1} flexWrap="wrap">

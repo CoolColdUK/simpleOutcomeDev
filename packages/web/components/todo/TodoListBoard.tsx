@@ -15,13 +15,16 @@ import {
 import {arrayMove, horizontalListSortingStrategy, SortableContext} from '@dnd-kit/sortable';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {AddIcon} from '@so/component';
-import {canManageTodoColumns, type PodRole} from '@so/model';
+import {applyTodoCardDrag, canManageTodoColumns, type PodRole} from '@so/model';
 import type {DbTodoColumn} from '@/lib/api/db/listDbTodoColumns';
 import listDbTodoColumns from '@/lib/api/db/listDbTodoColumns';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 import listDbTodoCards from '@/lib/api/db/listDbTodoCards';
 import moveDbTodoCard from '@/lib/api/db/moveDbTodoCard';
 import reorderDbTodoColumns from '@/lib/api/db/reorderDbTodoColumns';
+import reorderDbTodoCards from '@/lib/api/db/reorderDbTodoCards';
+import updateDbTodoCard from '@/lib/api/db/updateDbTodoCard';
+import deleteDbTodoCard from '@/lib/api/db/deleteDbTodoCard';
 import type {DbPodMember} from '@/lib/api/db/listDbPodMembers';
 import TodoListBoardColumn from '@/components/todo/TodoListBoardColumn';
 import TodoListBoardArchivePanel from '@/components/todo/TodoListBoardArchivePanel';
@@ -30,6 +33,7 @@ import TodoListCardDialog from '@/components/todo/TodoListCardDialog';
 import TodoListBoardCardPreview from '@/components/todo/TodoListBoardCardPreview';
 import destTodoColumnId from '@/components/todo/destTodoColumnId';
 import createTodoBoardCollisionDetection from '@/components/todo/createTodoBoardCollisionDetection';
+import mergeTodoCardSort from '@/components/todo/mergeTodoCardSort';
 
 export interface TodoListBoardProps {
   readonly podId: string;
@@ -48,15 +52,13 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
   const [dragType, setDragType] = useState<string | undefined>(undefined);
   const [activeCardId, setActiveCardId] = useState<string | undefined>(undefined);
   const cardsBeforeDrag = useRef<readonly DbTodoCard[]>([]);
-  const columnsRef = useRef(columns);
-  const dragTypeRef = useRef(dragType);
-  columnsRef.current = columns;
-  dragTypeRef.current = dragType;
+  const cardsRef = useRef(cards);
   const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 8}}));
   const manageCols = canManageTodoColumns(podRole, isSpaceOwner);
+  const columnIds = columns.map((c) => c.id);
   const collisionDetection = useMemo(
-    () => createTodoBoardCollisionDetection(() => dragTypeRef.current, () => columnsRef.current.map((c) => c.id)),
-    [],
+    () => createTodoBoardCollisionDetection(() => dragType, () => columnIds),
+    [columnIds, dragType],
   );
 
   const load = useCallback(async (): Promise<void> => {
@@ -68,6 +70,10 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
   useEffect(() => {
     void Promise.resolve().then(() => load());
   }, [load]);
+
+  useEffect(() => {
+    cardsRef.current = cards;
+  }, [cards]);
 
   const assigneeName = (id: string | undefined): string | undefined => {
     if (id === undefined) {
@@ -92,12 +98,16 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
     }
     const cardId = String(event.active.id);
     setCards((prev) => {
-      const dest = destTodoColumnId(String(overId), columns, prev);
-      const current = prev.find((c) => c.id === cardId);
-      if (current === undefined || current.columnId === dest) {
+      const next = applyTodoCardDrag({
+        cards: prev,
+        activeId: cardId,
+        overId: String(overId),
+        columnIds,
+      });
+      if (next === undefined) {
         return prev;
       }
-      return prev.map((c) => (c.id === cardId ? {...c, columnId: dest} : c));
+      return mergeTodoCardSort(prev, next);
     });
   };
 
@@ -134,17 +144,39 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
       return;
     }
     const cardId = String(event.active.id);
-    const dest = destTodoColumnId(String(overId), columns, cards);
-    const inDest = cards.filter((c) => c.id !== cardId && c.columnId === dest);
-    const overIndex = inDest.findIndex((c) => c.id === String(overId));
-    const sortOrder = overIndex >= 0 ? overIndex : inDest.length;
-    await moveDbTodoCard(cardId, dest, sortOrder);
+    const latest = cardsRef.current;
+    const nextItems = applyTodoCardDrag({
+      cards: latest,
+      activeId: cardId,
+      overId: String(overId),
+      columnIds,
+    });
+    const ordered = nextItems === undefined ? latest : mergeTodoCardSort(latest, nextItems);
+    setCards(ordered);
+    await reorderDbTodoCards(
+      ordered.map((c) => ({id: c.id, columnId: c.columnId, sortOrder: c.sortOrder})),
+    );
     await load();
   };
 
   const archived = cards.filter((c) => c.columnId === undefined);
   const activeCard = cards.find((c) => c.id === activeCardId);
   const activeColumnTitle = columns.find((c) => c.id === activeCard?.columnId)?.title;
+
+  const completeCard = async (card: DbTodoCard): Promise<void> => {
+    await updateDbTodoCard(card.id, {completedAt: card.completedAt === undefined ? new Date().toISOString() : ''});
+    await load();
+  };
+
+  const archiveCard = async (card: DbTodoCard): Promise<void> => {
+    await moveDbTodoCard(card.id, undefined, card.sortOrder);
+    await load();
+  };
+
+  const deleteCard = async (card: DbTodoCard): Promise<void> => {
+    await deleteDbTodoCard(card.id);
+    await load();
+  };
 
   return (
     <Stack gap={4}>
@@ -186,11 +218,21 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
                 userId={userId}
                 assigneeName={assigneeName}
                 onOpenCard={setOpenCard}
+                onCompleteCard={(card) => void completeCard(card)}
+                onArchiveCard={(card) => void archiveCard(card)}
+                onDeleteCard={(card) => void deleteCard(card)}
                 onChanged={() => void load()}
               />
             ))}
             {showArchived ? (
-              <TodoListBoardArchivePanel cards={archived} assigneeName={assigneeName} onOpenCard={setOpenCard} />
+              <TodoListBoardArchivePanel
+                cards={archived}
+                assigneeName={assigneeName}
+                onOpenCard={setOpenCard}
+                onCompleteCard={(card) => void completeCard(card)}
+                onArchiveCard={(card) => void archiveCard(card)}
+                onDeleteCard={(card) => void deleteCard(card)}
+              />
             ) : null}
           </HStack>
         </SortableContext>

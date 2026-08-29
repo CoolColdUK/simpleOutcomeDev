@@ -8,6 +8,7 @@ export interface DbTodoCard {
   readonly tags: readonly string[];
   readonly assigneeUserId: string | undefined;
   readonly sortOrder: number;
+  readonly completedAt: string | undefined;
   readonly createdBy: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -23,6 +24,7 @@ export function mapDbTodoCard(row: {
   readonly tags: string[];
   readonly assignee_user_id: string | null;
   readonly sort_order: number;
+  readonly completed_at: string | null;
   readonly created_by: string;
   readonly created_at: string;
   readonly updated_at: string;
@@ -37,6 +39,7 @@ export function mapDbTodoCard(row: {
     tags: row.tags,
     assigneeUserId: row.assignee_user_id ?? undefined,
     sortOrder: row.sort_order,
+    completedAt: row.completed_at ?? undefined,
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -21,6 +21,9 @@ export interface TodoListBoardColumnProps {
   readonly userId: string;
   readonly assigneeName: (userId: string | undefined) => string | undefined;
   readonly onOpenCard: (card: DbTodoCard) => void;
+  readonly onCompleteCard: (card: DbTodoCard) => void;
+  readonly onArchiveCard: (card: DbTodoCard) => void;
+  readonly onDeleteCard: (card: DbTodoCard) => void;
   readonly onChanged: () => void;
 }
 
@@ -32,6 +35,9 @@ export default function TodoListBoardColumn({
   userId,
   assigneeName,
   onOpenCard,
+  onCompleteCard,
+  onArchiveCard,
+  onDeleteCard,
   onChanged,
 }: TodoListBoardColumnProps) {
   const {setNodeRef: setDropRef} = useDroppable({id: column.id});
@@ -103,6 +109,9 @@ export default function TodoListBoardColumn({
             columnTitle={column.title}
             assigneeLabel={assigneeName(card.assigneeUserId)}
             onOpen={() => onOpenCard(card)}
+            onComplete={() => onCompleteCard(card)}
+            onArchive={() => onArchiveCard(card)}
+            onDelete={() => onDeleteCard(card)}
           />
         ))}
       </SortableContext>

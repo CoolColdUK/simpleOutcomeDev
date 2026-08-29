@@ -11,9 +11,19 @@ export interface TodoListBoardArchivePanelProps {
   readonly cards: readonly DbTodoCard[];
   readonly assigneeName: (userId: string | undefined) => string | undefined;
   readonly onOpenCard: (card: DbTodoCard) => void;
+  readonly onCompleteCard: (card: DbTodoCard) => void;
+  readonly onArchiveCard: (card: DbTodoCard) => void;
+  readonly onDeleteCard: (card: DbTodoCard) => void;
 }
 
-export default function TodoListBoardArchivePanel({cards, assigneeName, onOpenCard}: TodoListBoardArchivePanelProps) {
+export default function TodoListBoardArchivePanel({
+  cards,
+  assigneeName,
+  onOpenCard,
+  onCompleteCard,
+  onArchiveCard,
+  onDeleteCard,
+}: TodoListBoardArchivePanelProps) {
   const {setNodeRef} = useDroppable({id: TODO_ARCHIVE_COLUMN_ID});
 
   return (
@@ -29,6 +39,9 @@ export default function TodoListBoardArchivePanel({cards, assigneeName, onOpenCa
             columnTitle={undefined}
             assigneeLabel={assigneeName(card.assigneeUserId)}
             onOpen={() => onOpenCard(card)}
+            onComplete={() => onCompleteCard(card)}
+            onArchive={() => onArchiveCard(card)}
+            onDelete={() => onDeleteCard(card)}
           />
         ))}
       </SortableContext>
