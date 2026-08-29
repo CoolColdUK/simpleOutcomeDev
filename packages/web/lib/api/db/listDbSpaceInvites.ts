@@ -1,30 +1,54 @@
-import type {SpaceInviteMode} from '@so/model';
+import {
+  SPACE_INVITE_PAGE_SIZE,
+  type SpaceInviteStatus,
+  type SpaceInviteStatusFilter,
+} from '@so/model';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 
 export interface DbSpaceInvite {
   readonly id: string;
-  readonly mode: SpaceInviteMode;
+  readonly tokenPrefix: string;
   readonly expiresAt: string | undefined;
+  readonly maxUses: number;
+  readonly useCount: number;
   readonly createdAt: string;
   readonly disabledAt: string | undefined;
   readonly consumedAt: string | undefined;
+  readonly status: SpaceInviteStatus;
 }
 
-export default async function listDbSpaceInvites(spaceId: string): Promise<readonly DbSpaceInvite[]> {
+export interface DbSpaceInvitePage {
+  readonly invites: readonly DbSpaceInvite[];
+  readonly total: number;
+}
+
+export default async function listDbSpaceInvites(
+  spaceId: string,
+  status: SpaceInviteStatusFilter,
+  page: number,
+): Promise<DbSpaceInvitePage> {
   const supabase = getSupabaseBrowserClient();
-  const {data, error} = await supabase
-    .from('space_invite')
-    .select('id, mode, expires_at, created_at, disabled_at, consumed_at')
-    .eq('space_id', spaceId)
-    .order('created_at', {ascending: false});
+  const {data, error} = await supabase.rpc('list_space_invites', {
+    p_space_id: spaceId,
+    p_status: status,
+    p_limit: SPACE_INVITE_PAGE_SIZE,
+    p_offset: (page - 1) * SPACE_INVITE_PAGE_SIZE,
+  });
   throwIfSupabaseError(error);
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    mode: row.mode as SpaceInviteMode,
-    expiresAt: row.expires_at ?? undefined,
-    createdAt: row.created_at,
-    disabledAt: row.disabled_at ?? undefined,
-    consumedAt: row.consumed_at ?? undefined,
-  }));
+  const rows = data ?? [];
+  return {
+    invites: rows.map((row) => ({
+      id: row.id,
+      tokenPrefix: row.token_prefix,
+      expiresAt: row.expires_at ?? undefined,
+      maxUses: row.max_uses,
+      useCount: row.use_count,
+      createdAt: row.created_at,
+      disabledAt: row.disabled_at ?? undefined,
+      consumedAt: row.consumed_at ?? undefined,
+      status: row.invite_status as SpaceInviteStatus,
+    })),
+    total: rows[0]?.total_count ?? 0,
+  };
 }

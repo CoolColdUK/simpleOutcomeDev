@@ -1,0 +1,3 @@
+export const SPACE_INVITE_MAX_USES_MIN = 1;
+export const SPACE_INVITE_MAX_USES_MAX = 9999;
+export const SPACE_INVITE_MAX_USES_DEFAULT = 1;

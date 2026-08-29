@@ -4,21 +4,18 @@ import {useCallback, useEffect, useState} from 'react';
 import Link from 'next/link';
 import {useParams} from 'next/navigation';
 import {Alert, Badge, Button, Heading, HStack, Stack, Switch, Text} from '@chakra-ui/react';
-import {filterAccessiblePods, spaceRoleLabel, SpaceRole} from '@so/model';
+import {canManageSpace, filterAccessiblePods, spaceRoleLabel, SpaceRole} from '@so/model';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbSpace from '@/lib/api/db/getDbSpace';
-import listDbSpaces from '@/lib/api/db/listDbSpaces';
+import getDbSpaceMemberRole from '@/lib/api/db/getDbSpaceMemberRole';
 import listDbPods from '@/lib/api/db/listDbPods';
 import type {DbPod} from '@/lib/api/db/listDbPods';
 import listDbMyPodMemberships from '@/lib/api/db/listDbMyPodMemberships';
 import type {DbPodMembership} from '@/lib/api/db/listDbMyPodMemberships';
 import AppPageLoadingState from '@/components/app/AppPageLoadingState';
-import SpaceMembersPanel from '@/components/app/SpaceMembersPanel';
-import SpaceSettingsPanel from '@/components/app/SpaceSettingsPanel';
 import SpaceWorkspacePodCard from '@/components/app/SpaceWorkspacePodCard';
 import SpaceCreatePodDialog from '@/components/app/SpaceCreatePodDialog';
-import SpaceFindPodsDialog from '@/components/app/SpaceFindPodsDialog';
-import SpaceInvitesDialog from '@/components/app/SpaceInvitesDialog';
+import SpaceCreateInviteDialog from '@/components/app/SpaceCreateInviteDialog';
 
 export default function SpaceWorkspace() {
   const params = useParams<{spaceId: string}>();
@@ -33,7 +30,6 @@ export default function SpaceWorkspace() {
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [findOpen, setFindOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
@@ -46,9 +42,8 @@ export default function SpaceWorkspace() {
       setReady(true);
       return;
     }
-    const spaces = await listDbSpaces(user.id);
-    const mine = spaces.find((s) => s.id === spaceId);
-    if (mine === undefined) {
+    const memberRole = await getDbSpaceMemberRole(spaceId, user.id);
+    if (memberRole === undefined) {
       setError('No access to this space');
       setReady(true);
       return;
@@ -56,7 +51,7 @@ export default function SpaceWorkspace() {
     const [podRows, membershipRows] = await Promise.all([listDbPods(spaceId), listDbMyPodMemberships(user.id)]);
     setName(space.name);
     setDescription(space.description);
-    setRole(mine.role);
+    setRole(memberRole);
     setPods(podRows);
     setMemberships(membershipRows);
     setReady(true);
@@ -83,7 +78,7 @@ export default function SpaceWorkspace() {
     userId: user?.id ?? '',
     showArchived,
   });
-  const canCreate = role === SpaceRole.ADMIN || role === SpaceRole.OWNER;
+  const canCreate = canManageSpace(role);
   const isOwner = role === SpaceRole.OWNER;
   const canShowArchivedSwitch = isOwner || pods.some((p) => p.createdBy === user?.id && p.status === 'archived');
 
@@ -93,14 +88,22 @@ export default function SpaceWorkspace() {
         <Text fontSize="sm">
           <Link href="/app">← Spaces</Link>
         </Text>
-        <HStack justify="space-between" align="center" gap={3} maxW="md">
+        <HStack justify="space-between" align="center" gap={3} flexWrap="wrap">
           <Heading as="h1" size="lg">
             {name}
           </Heading>
-          {isOwner ? (
-            <Button colorPalette="brand" size="sm" onClick={() => setInviteOpen(true)}>
-              Invite
-            </Button>
+          {canCreate && spaceId !== undefined ? (
+            <HStack gap={2} flexWrap="wrap">
+              <Button colorPalette="brand" size="sm" onClick={() => setInviteOpen(true)}>
+                Invite
+              </Button>
+              <Button asChild variant="outline" colorPalette="brand" size="sm">
+                <Link href={`/app/spaces/${spaceId}/invitations`}>Invitation</Link>
+              </Button>
+              <Button asChild variant="outline" colorPalette="brand" size="sm">
+                <Link href={`/app/spaces/${spaceId}/settings`}>Settings</Link>
+              </Button>
+            </HStack>
           ) : null}
         </HStack>
         {description !== undefined ? <Text color="fg.muted">{description}</Text> : null}
@@ -130,9 +133,11 @@ export default function SpaceWorkspace() {
             Pods
           </Heading>
           <HStack gap={2}>
-            <Button variant="outline" colorPalette="brand" size="sm" onClick={() => setFindOpen(true)}>
-              Find
-            </Button>
+            {spaceId !== undefined ? (
+              <Button asChild variant="outline" colorPalette="brand" size="sm">
+                <Link href={`/app/spaces/${spaceId}/pods/find`}>Find</Link>
+              </Button>
+            ) : null}
             {canCreate ? (
               <Button colorPalette="brand" size="sm" onClick={() => setCreateOpen(true)}>
                 Create
@@ -152,25 +157,6 @@ export default function SpaceWorkspace() {
       </Stack>
       {spaceId !== undefined ? (
         <>
-          {isOwner ? (
-            <>
-              <SpaceSettingsPanel
-                key={`${name}:${description ?? ''}`}
-                spaceId={spaceId}
-                name={name}
-                description={description}
-                onSaved={() => void load()}
-              />
-              <SpaceMembersPanel spaceId={spaceId} />
-            </>
-          ) : null}
-          <SpaceFindPodsDialog
-            open={findOpen}
-            spaceId={spaceId}
-            memberPodIds={memberPodIds}
-            onClose={() => setFindOpen(false)}
-            onChanged={() => void load()}
-          />
           {canCreate ? (
             <SpaceCreatePodDialog
               open={createOpen}
@@ -182,7 +168,7 @@ export default function SpaceWorkspace() {
               }}
             />
           ) : null}
-          {isOwner ? <SpaceInvitesDialog open={inviteOpen} spaceId={spaceId} onClose={() => setInviteOpen(false)} /> : null}
+          {canCreate ? <SpaceCreateInviteDialog open={inviteOpen} spaceId={spaceId} onClose={() => setInviteOpen(false)} /> : null}
         </>
       ) : null}
       <Button asChild variant="outline" colorPalette="brand" alignSelf="start">

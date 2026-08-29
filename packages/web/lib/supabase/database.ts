@@ -61,12 +61,26 @@ export interface Database {
           id: string;
           space_id: string;
           token_hash: string;
-          mode: string;
+          token_prefix: string;
+          max_uses: number;
+          use_count: number;
           expires_at: string | null;
           created_by: string;
           created_at: string;
           disabled_at: string | null;
           consumed_at: string | null;
+        };
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      space_invite_use: {
+        Row: {
+          id: string;
+          invite_id: string;
+          space_id: string;
+          user_id: string;
+          used_at: string;
         };
         Insert: Record<string, never>;
         Update: Record<string, never>;
@@ -123,12 +137,27 @@ export interface Database {
         Returns: undefined;
       };
       create_space_invite: {
-        Args: {p_space_id: string; p_mode: string; p_expires_at: string | null};
+        Args: {p_space_id: string; p_expires_in_days: number; p_max_uses: number};
         Returns: string;
       };
       disable_space_invite: {Args: {p_invite_id: string}; Returns: undefined};
       delete_space_invite: {Args: {p_invite_id: string}; Returns: undefined};
       join_space_with_invite: {Args: {p_token: string}; Returns: string};
+      list_space_invites: {
+        Args: {p_space_id: string; p_status: string; p_limit: number; p_offset: number};
+        Returns: {
+          id: string;
+          token_prefix: string;
+          expires_at: string | null;
+          max_uses: number;
+          use_count: number;
+          created_at: string;
+          disabled_at: string | null;
+          consumed_at: string | null;
+          invite_status: string;
+          total_count: number;
+        }[];
+      };
       create_pod: {
         Args: {p_space_id: string; p_feature: string; p_name: string; p_visibility: string};
         Returns: string;

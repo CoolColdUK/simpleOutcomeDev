@@ -8,9 +8,10 @@ import updateDbSpaceMemberRole from '@/lib/api/db/updateDbSpaceMemberRole';
 
 export interface SpaceMembersPanelProps {
   readonly spaceId: string;
+  readonly canEditRoles: boolean;
 }
 
-export default function SpaceMembersPanel({spaceId}: SpaceMembersPanelProps) {
+export default function SpaceMembersPanel({spaceId, canEditRoles}: SpaceMembersPanelProps) {
   const [members, setMembers] = useState<readonly DbSpaceMember[]>([]);
   const [error, setError] = useState('');
 
@@ -49,7 +50,7 @@ export default function SpaceMembersPanel({spaceId}: SpaceMembersPanelProps) {
           <Text>
             {member.username ?? member.userId.slice(0, 8)} · {spaceRoleLabel(member.role)}
           </Text>
-          {member.role !== SpaceRole.OWNER ? (
+          {canEditRoles && member.role !== SpaceRole.OWNER ? (
             <HStack>
               <Button size="xs" colorPalette="brand" onClick={() => void setRole(member.userId, SpaceRole.ADMIN)}>
                 Admin
