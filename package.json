@@ -3,7 +3,8 @@
   "name": "simple-outcome",
   "version": "0.1.0",
   "scripts": {
-    "build": "npm run build:model && npm run build:web",
+    "build": "npm run build:model && npm run build:component && npm run build:web",
+    "build:component": "lerna exec --scope=@so/component -- npm run build:prod",
     "build:model": "lerna exec --scope=@so/model -- npm run build:prod",
     "build:web": "lerna exec --scope=@so/web -- npm run build:prod",
     "check": "npm run lint && npm run build",

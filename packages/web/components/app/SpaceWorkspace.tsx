@@ -3,7 +3,7 @@
 import {useCallback, useEffect, useState} from 'react';
 import Link from 'next/link';
 import {useParams} from 'next/navigation';
-import {Alert, Badge, Button, Heading, HStack, Stack, Switch, Text} from '@chakra-ui/react';
+import {Alert, Badge, Button, Heading, HStack, Stack, Text} from '@chakra-ui/react';
 import {canManageSpace, filterAccessiblePods, spaceRoleLabel, SpaceRole} from '@so/model';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbSpace from '@/lib/api/db/getDbSpace';
@@ -16,6 +16,7 @@ import AppPageLoadingState from '@/components/app/AppPageLoadingState';
 import SpaceWorkspacePodCard from '@/components/app/SpaceWorkspacePodCard';
 import SpaceCreatePodDialog from '@/components/app/SpaceCreatePodDialog';
 import SpaceCreateInviteDialog from '@/components/app/SpaceCreateInviteDialog';
+import SpaceFindPodsDialog from '@/components/app/SpaceFindPodsDialog';
 
 export default function SpaceWorkspace() {
   const params = useParams<{spaceId: string}>();
@@ -31,6 +32,7 @@ export default function SpaceWorkspace() {
   const [ready, setReady] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     if (user === undefined || spaceId === undefined) {
@@ -85,9 +87,6 @@ export default function SpaceWorkspace() {
   return (
     <Stack gap={8}>
       <Stack gap={2}>
-        <Text fontSize="sm">
-          <Link href="/app">← Spaces</Link>
-        </Text>
         <HStack justify="space-between" align="center" gap={3} flexWrap="wrap">
           <Heading as="h1" size="lg">
             {name}
@@ -116,26 +115,15 @@ export default function SpaceWorkspace() {
           <Alert.Description>{error}</Alert.Description>
         </Alert.Root>
       ) : null}
-      {canShowArchivedSwitch ? (
-        <HStack>
-          <Switch.Root checked={showArchived} onCheckedChange={(e) => setShowArchived(e.checked)}>
-            <Switch.HiddenInput />
-            <Switch.Control>
-              <Switch.Thumb />
-            </Switch.Control>
-            <Switch.Label>Show archived</Switch.Label>
-          </Switch.Root>
-        </HStack>
-      ) : null}
       <Stack gap={3}>
-        <HStack justify="space-between" align="center" gap={3} maxW="md">
+        <HStack justify="space-between" align="center" gap={3}>
           <Heading as="h2" size="md">
             Pods
           </Heading>
           <HStack gap={2}>
             {spaceId !== undefined ? (
-              <Button asChild variant="outline" colorPalette="brand" size="sm">
-                <Link href={`/app/spaces/${spaceId}/pods/find`}>Find</Link>
+              <Button variant="outline" colorPalette="brand" size="sm" onClick={() => setFindOpen(true)}>
+                Find
               </Button>
             ) : null}
             {canCreate ? (
@@ -157,6 +145,15 @@ export default function SpaceWorkspace() {
       </Stack>
       {spaceId !== undefined ? (
         <>
+          <SpaceFindPodsDialog
+            open={findOpen}
+            spaceId={spaceId}
+            showArchived={showArchived}
+            canShowArchivedSwitch={canShowArchivedSwitch}
+            onShowArchivedChange={setShowArchived}
+            onClose={() => setFindOpen(false)}
+            onJoined={() => void load()}
+          />
           {canCreate ? (
             <SpaceCreatePodDialog
               open={createOpen}
@@ -171,9 +168,6 @@ export default function SpaceWorkspace() {
           {canCreate ? <SpaceCreateInviteDialog open={inviteOpen} spaceId={spaceId} onClose={() => setInviteOpen(false)} /> : null}
         </>
       ) : null}
-      <Button asChild variant="outline" colorPalette="brand" alignSelf="start">
-        <Link href="/app">Back</Link>
-      </Button>
     </Stack>
   );
 }

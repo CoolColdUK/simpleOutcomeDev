@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {Button, Flex, Text, useSlotRecipe} from '@chakra-ui/react';
+import {Button, Flex, HStack, Text, useSlotRecipe} from '@chakra-ui/react';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 
 export default function AppHeader() {
@@ -15,9 +15,14 @@ export default function AppHeader() {
 
   return (
     <Flex as="header" css={styles.root}>
-      <Text asChild css={styles.brand}>
-        <Link href="/app">SimpleOutcome</Link>
-      </Text>
+      <HStack gap={4}>
+        <Text asChild css={styles.brand}>
+          <Link href="/app">SimpleOutcome</Link>
+        </Text>
+        <Button asChild variant="ghost" colorPalette="brand" size="sm">
+          <Link href="/app">Spaces</Link>
+        </Button>
+      </HStack>
       <Button variant="outline" colorPalette="brand" size="sm" onClick={() => void signOut()}>
         Sign out
       </Button>

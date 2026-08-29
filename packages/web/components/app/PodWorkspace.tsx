@@ -1,9 +1,8 @@
 'use client';
 
 import {useCallback, useEffect, useState} from 'react';
-import Link from 'next/link';
 import {useParams, useRouter} from 'next/navigation';
-import {Alert, Button, Heading, Stack, Text} from '@chakra-ui/react';
+import {Alert, Heading, Stack, Tabs, Text} from '@chakra-ui/react';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbPod from '@/lib/api/db/getDbPod';
 import type {DbPod} from '@/lib/api/db/listDbPods';
@@ -16,7 +15,7 @@ import featureKindLabel from '@/lib/pod/featureKindLabel';
 import {FeatureKind, PodRole, PodStatus, SpaceRole} from '@so/model';
 import AppPageLoadingState from '@/components/app/AppPageLoadingState';
 import PodWorkspaceAccess from '@/components/app/PodWorkspaceAccess';
-import PodEditDialog from '@/components/app/PodEditDialog';
+import PodWorkspaceSettingsTab from '@/components/app/PodWorkspaceSettingsTab';
 import TodoListBoard from '@/components/todo/TodoListBoard';
 
 export default function PodWorkspace() {
@@ -29,7 +28,6 @@ export default function PodWorkspace() {
   const [requests, setRequests] = useState<readonly DbPodJoinRequest[]>([]);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     if (user === undefined) {
@@ -87,9 +85,6 @@ export default function PodWorkspace() {
 
   return (
     <Stack gap={6}>
-      <Text fontSize="sm">
-        <Link href={`/app/spaces/${params.spaceId}`}>← Back to space</Link>
-      </Text>
       <Heading as="h1" size="lg">
         {pod.name ?? featureKindLabel(pod.feature)}
       </Heading>
@@ -102,42 +97,47 @@ export default function PodWorkspace() {
           <Alert.Description>{error}</Alert.Description>
         </Alert.Root>
       ) : null}
-      {canManage ? (
-        <Button variant="outline" colorPalette="brand" alignSelf="start" onClick={() => setEditOpen(true)}>
-          Edit title and description
-        </Button>
-      ) : null}
-      {pod.feature === FeatureKind.TODO_LIST && user !== undefined ? (
-        <TodoListBoard
-          podId={pod.id}
-          userId={user.id}
-          members={members}
-          podRole={myRole}
-          isSpaceOwner={spaceRole === SpaceRole.OWNER}
-        />
-      ) : (
-        <Text>This feature is coming soon. You can still manage access here.</Text>
-      )}
-      {canManage ? (
-        <Button colorPalette="brand" alignSelf="start" onClick={() => void archive()}>
-          {pod.status === PodStatus.ARCHIVED ? 'Restore pod' : 'Archive pod'}
-        </Button>
-      ) : null}
-      {spaceRole === SpaceRole.OWNER ? (
-        <Button variant="outline" colorPalette="brand" alignSelf="start" onClick={() => void remove()}>
-          Delete pod
-        </Button>
-      ) : null}
-      <PodWorkspaceAccess
-        podId={pod.id}
-        members={members}
-        requests={requests}
-        canAddMembers={canApprove}
-        canApprove={canApprove}
-        onChanged={() => void load()}
-        onError={setError}
-      />
-      <PodEditDialog open={editOpen} pod={pod} onClose={() => setEditOpen(false)} onSaved={() => void load()} />
+      <Tabs.Root defaultValue="board" variant="line">
+        <Tabs.List>
+          <Tabs.Trigger value="board">Board</Tabs.Trigger>
+          <Tabs.Trigger value="members">Members</Tabs.Trigger>
+          <Tabs.Trigger value="settings">Settings</Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="board">
+          {pod.feature === FeatureKind.TODO_LIST && user !== undefined ? (
+            <TodoListBoard
+              podId={pod.id}
+              userId={user.id}
+              members={members}
+              podRole={myRole}
+              isSpaceOwner={spaceRole === SpaceRole.OWNER}
+            />
+          ) : (
+            <Text>This feature is coming soon. You can still manage access here.</Text>
+          )}
+        </Tabs.Content>
+        <Tabs.Content value="members">
+          <PodWorkspaceAccess
+            podId={pod.id}
+            members={members}
+            requests={requests}
+            canAddMembers={canApprove}
+            canApprove={canApprove}
+            onChanged={() => void load()}
+            onError={setError}
+          />
+        </Tabs.Content>
+        <Tabs.Content value="settings">
+          <PodWorkspaceSettingsTab
+            pod={pod}
+            canManage={canManage}
+            isSpaceOwner={spaceRole === SpaceRole.OWNER}
+            onArchive={() => void archive()}
+            onDelete={() => void remove()}
+            onSaved={() => void load()}
+          />
+        </Tabs.Content>
+      </Tabs.Root>
     </Stack>
   );
 }

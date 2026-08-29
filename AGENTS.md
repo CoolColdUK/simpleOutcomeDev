@@ -13,6 +13,7 @@
 | --- | --- |
 | `/packages/web` | Next.js app (`@so/web`) |
 | `/packages/model` | Shared types and valibot schemas (`@so/model`) |
+| `/packages/component` | Shared UI primitives and SVG icons (`@so/component`) |
 
 ## 3. Conventions
 

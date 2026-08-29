@@ -104,6 +104,10 @@ jobs:
         if: ${{ inputs.deploy_vercel }}
         run: npm run build:model
 
+      - name: Build component (production)
+        if: ${{ inputs.deploy_vercel }}
+        run: npm run build:component
+
       # ------------------------- Supabase -------------------------
       - name: Setup Supabase CLI
         if: ${{ inputs.deploy_supabase }}

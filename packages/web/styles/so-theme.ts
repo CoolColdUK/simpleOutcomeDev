@@ -31,7 +31,7 @@ const appShellRecipe = defineSlotRecipe({
     main: {
       px: {base: 4, md: 8},
       py: 10,
-      maxW: 'sizes.page',
+      maxW: '6xl',
       mx: 'auto',
       w: 'full',
     },
@@ -114,7 +114,7 @@ const soExtension = defineConfig({
         },
       },
       sizes: {
-        page: {value: '48rem'},
+        page: {value: '72rem'},
       },
       shadows: {
         card: {value: '0 1px 3px rgba(75, 54, 33, 0.12)'},

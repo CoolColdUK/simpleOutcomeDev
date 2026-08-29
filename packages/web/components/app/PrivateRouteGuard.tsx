@@ -7,7 +7,7 @@ import AppLoginForm from './AppLoginForm';
 import AppHeader from './AppHeader';
 import RegisterAppServiceWorker from './RegisterAppServiceWorker';
 import UsernameGate from './UsernameGate';
-import {Box, useSlotRecipe} from '@chakra-ui/react';
+import {Box, Container, useSlotRecipe} from '@chakra-ui/react';
 
 export interface PrivateRouteGuardProps {
   readonly children: ReactNode;
@@ -31,7 +31,7 @@ export default function PrivateRouteGuard({children}: PrivateRouteGuardProps) {
       <RegisterAppServiceWorker />
       <AppHeader />
       <UsernameGate userId={user.id}>
-        <Box css={styles.main}>{children}</Box>
+        <Container css={styles.main}>{children}</Container>
       </UsernameGate>
     </Box>
   );

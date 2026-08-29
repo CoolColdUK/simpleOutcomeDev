@@ -1,5 +1,6 @@
-import SpaceFindPodsPage from '@/components/app/SpaceFindPodsPage';
+import {redirect} from 'next/navigation';
 
-export default function SpaceFindPodsRoute() {
-  return <SpaceFindPodsPage />;
+export default async function SpaceFindPodsRoute({params}: {params: Promise<{spaceId: string}>}) {
+  const {spaceId} = await params;
+  redirect(`/app/spaces/${spaceId}`);
 }

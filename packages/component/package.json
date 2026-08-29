@@ -1,0 +1,56 @@
+{
+  "private": true,
+  "name": "@so/component",
+  "version": "0.6.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "scripts": {
+    "build": "tsdown",
+    "build:prod": "tsdown",
+    "build:staging": "tsdown",
+    "clean:dist": "rm -rf dist && rm -rf tsconfig.tsbuildinfo",
+    "clean:node": "rm -rf node_modules",
+    "lint": "tsc --noEmit",
+    "pack": "npm run pack:web",
+    "pack:web": "mkdir -p ../web/.component && npm pack --pack-destination=../web/.component",
+    "test": "jest",
+    "test:unit": "jest"
+  },
+  "types": "dist/index.d.mts",
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "dependencies": {
+    "tsdown": "^0.22.14"
+  },
+  "devDependencies": {
+    "@coolcolduk/jest-config": "^6",
+    "@coolcolduk/ts-config": "^6",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^6"
+  },
+  "engines": {
+    "node": "24"
+  },
+  "jest": {
+    "preset": "@coolcolduk/jest-config",
+    "rootDir": "./src"
+  }
+}

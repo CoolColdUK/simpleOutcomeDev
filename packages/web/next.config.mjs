@@ -8,7 +8,7 @@ const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, '../..'),
   experimental: {
-    optimizePackageImports: ['@chakra-ui/react'],
+    optimizePackageImports: ['@chakra-ui/react', '@so/component'],
   },
   images: {
     formats: ['image/avif', 'image/webp'],
