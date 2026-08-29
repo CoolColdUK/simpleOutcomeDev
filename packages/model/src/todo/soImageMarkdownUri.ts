@@ -23,6 +23,13 @@ export function countSoImageMarkdownUrisInBody(body: string): number {
   return [...body.matchAll(/!\[[^\]]*\]\(soimg:([^)]+)\)/g)].length;
 }
 
+export function replaceSoImageMarkdownSrc(markdown: string, objectPath: string, href: string): string {
+  const dest = `](<${href}>)`;
+  const encodedNeedle = `](${encodeSoImageMarkdownUri(objectPath)})`;
+  const rawNeedle = `](${SO_IMAGE_MARKDOWN_URI_PREFIX}${objectPath})`;
+  return markdown.split(encodedNeedle).join(dest).split(rawNeedle).join(dest);
+}
+
 export function extractSoImageObjectPathsFromBody(body: string): string[] {
   const paths: string[] = [];
   const seen = new Set<string>();

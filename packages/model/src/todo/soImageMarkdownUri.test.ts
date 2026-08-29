@@ -3,6 +3,7 @@ import {
   decodeSoImageMarkdownUri,
   countSoImageMarkdownUrisInBody,
   extractSoImageObjectPathsFromBody,
+  replaceSoImageMarkdownSrc,
 } from './soImageMarkdownUri';
 
 describe('soImageMarkdownUri', () => {
@@ -13,6 +14,15 @@ describe('soImageMarkdownUri', () => {
 
   it('returns undefined for other urls', () => {
     expect(decodeSoImageMarkdownUri('https://example.com/a.png')).toBeUndefined();
+  });
+
+  it('replaces encoded and raw soimg destinations', () => {
+    const path = 'pod/card/img.png';
+    const href = 'https://cdn.example/img.png?token=a';
+    const encoded = `before ![x](${encodeSoImageMarkdownUri(path)}) after`;
+    expect(replaceSoImageMarkdownSrc(encoded, path, href)).toBe(`before ![x](<${href}>) after`);
+    const raw = `![x](soimg:${path})`;
+    expect(replaceSoImageMarkdownSrc(raw, path, href)).toBe(`![x](<${href}>)`);
   });
 
   it('counts and extracts from markdown', () => {

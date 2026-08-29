@@ -65,6 +65,12 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
     const [colRows, cardRows] = await Promise.all([listDbTodoColumns(podId), listDbTodoCards(podId)]);
     setColumns(colRows);
     setCards(cardRows);
+    setOpenCard((current) => {
+      if (current === undefined) {
+        return undefined;
+      }
+      return cardRows.find((row) => row.id === current.id) ?? current;
+    });
   }, [podId]);
 
   useEffect(() => {

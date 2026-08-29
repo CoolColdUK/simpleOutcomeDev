@@ -1,6 +1,6 @@
 'use client';
 
-import {useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Box, Button, HStack, Stack, Text, Textarea} from '@chakra-ui/react';
 import {CancelIcon, SaveIcon} from '@so/component';
 import {countSoImageMarkdownUrisInBody, TODO_MAX_INLINE_IMAGES} from '@so/model';
@@ -25,8 +25,13 @@ export default function TodoListCardDialogDescription({
 }: TodoListCardDialogDescriptionProps) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState(description);
   const [draft, setDraft] = useState(description);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setBody(description);
+  }, [description]);
 
   const onPasteImage = async (clipboardData: DataTransfer): Promise<void> => {
     const file = [...clipboardData.items]
@@ -61,6 +66,7 @@ export default function TodoListCardDialogDescription({
     setSaving(true);
     try {
       await onSaved(draft);
+      setBody(draft);
       setEditing(false);
     } finally {
       setSaving(false);
@@ -77,16 +83,16 @@ export default function TodoListCardDialogDescription({
         borderColor="border.subtle"
         borderRadius="md"
         onDoubleClick={() => {
-          setDraft(description);
+          setDraft(body);
           setEditing(true);
         }}
       >
-        {description.trim() === '' ? (
+        {body.trim() === '' ? (
           <Text fontSize="sm" color="fg.muted">
             Double-click to edit description
           </Text>
         ) : (
-          <TodoMarkdownBody markdown={description} />
+          <TodoMarkdownBody markdown={body} />
         )}
       </Box>
     );
@@ -118,7 +124,7 @@ export default function TodoListCardDialogDescription({
           variant="outline"
           disabled={saving}
           onClick={() => {
-            setDraft(description);
+            setDraft(body);
             setEditing(false);
           }}
         >
@@ -126,6 +132,18 @@ export default function TodoListCardDialogDescription({
           Cancel
         </Button>
       </HStack>
+      <Text fontSize="xs" color="fg.muted">
+        Preview
+      </Text>
+      <Box w="full" p={2} borderWidth="1px" borderColor="border.subtle" borderRadius="md">
+        {draft.trim() === '' ? (
+          <Text fontSize="sm" color="fg.muted">
+            Nothing to preview
+          </Text>
+        ) : (
+          <TodoMarkdownBody markdown={draft} />
+        )}
+      </Box>
     </Stack>
   );
 }
