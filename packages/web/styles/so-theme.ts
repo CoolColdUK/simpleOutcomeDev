@@ -2,17 +2,23 @@ import {createSystem, defaultConfig, defineConfig, defineSlotRecipe} from '@chak
 
 const appHeaderRecipe = defineSlotRecipe({
   className: 'so-app-header',
-  slots: ['root', 'brand'],
+  slots: ['root', 'inner', 'brand'],
   base: {
     root: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      px: {base: 4, md: 8},
-      py: 4,
+      w: 'full',
       borderBottomWidth: '1px',
       borderColor: 'border.subtle',
       bg: 'bg.header',
+    },
+    inner: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      maxW: '6xl',
+      mx: 'auto',
+      w: 'full',
+      px: {base: 4, md: 8},
+      py: 4,
     },
     brand: {
       fontWeight: '800',

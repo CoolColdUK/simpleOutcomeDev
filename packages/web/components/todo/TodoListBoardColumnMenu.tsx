@@ -2,6 +2,7 @@
 
 import {IconButton, Menu, Portal} from '@chakra-ui/react';
 import {ArchiveIcon, DeleteIcon, MoreVertIcon} from '@so/component';
+import AppIconTooltip from '@/components/app/AppIconTooltip';
 import archiveDbTodoCardsByColumn from '@/lib/api/db/archiveDbTodoCardsByColumn';
 import deleteDbTodoColumn from '@/lib/api/db/deleteDbTodoColumn';
 
@@ -14,11 +15,13 @@ export interface TodoListBoardColumnMenuProps {
 export default function TodoListBoardColumnMenu({columnId, canManageColumns, onChanged}: TodoListBoardColumnMenuProps) {
   return (
     <Menu.Root>
-      <Menu.Trigger asChild>
-        <IconButton aria-label="Column actions" size="xs" variant="ghost">
-          <MoreVertIcon size={16} />
-        </IconButton>
-      </Menu.Trigger>
+      <AppIconTooltip label="Column actions">
+        <Menu.Trigger asChild>
+          <IconButton aria-label="Column actions" size="xs" variant="ghost">
+            <MoreVertIcon size={16} />
+          </IconButton>
+        </Menu.Trigger>
+      </AppIconTooltip>
       <Portal>
         <Menu.Positioner>
           <Menu.Content>

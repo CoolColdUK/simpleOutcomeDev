@@ -70,6 +70,7 @@ export default function TodoListCardDialogDescription({
   if (!editing) {
     return (
       <Box
+        w="full"
         minH="4rem"
         p={2}
         borderWidth="1px"
@@ -92,8 +93,9 @@ export default function TodoListCardDialogDescription({
   }
 
   return (
-    <Stack gap={2}>
+    <Stack gap={2} w="full">
       <Textarea
+        w="full"
         ref={taRef}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}

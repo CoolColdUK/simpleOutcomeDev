@@ -15,6 +15,9 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) {
     return;
   }
+  if (url.pathname.startsWith('/_next/')) {
+    return;
+  }
   if (url.pathname.startsWith('/app')) {
     event.respondWith(
       fetch(request).catch(() => caches.match(request).then((cached) => cached ?? Response.error())),

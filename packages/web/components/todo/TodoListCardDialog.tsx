@@ -13,8 +13,10 @@ import {
   DialogRoot,
   DialogTitle,
   Field,
+  HStack,
   IconButton,
   Input,
+  NativeSelect,
   Stack,
   Text,
 } from '@chakra-ui/react';
@@ -28,6 +30,7 @@ import moveDbTodoCard from '@/lib/api/db/moveDbTodoCard';
 import TodoListCardDialogComments from '@/components/todo/TodoListCardDialogComments';
 import TodoListCardDialogDescription from '@/components/todo/TodoListCardDialogDescription';
 import TodoListCardDialogTags from '@/components/todo/TodoListCardDialogTags';
+import AppIconTooltip from '@/components/app/AppIconTooltip';
 import {todoDueAtFromInputValue, todoDueAtToInputValue} from '@/components/todo/formatTodoDueAt';
 
 export interface TodoListCardDialogProps {
@@ -102,18 +105,18 @@ function TodoListCardDialogBody({
     <DialogRoot open={open} onOpenChange={(event) => (!event.open ? onClose() : undefined)} size="lg">
       <DialogBackdrop />
       <DialogPositioner>
-        <DialogContent>
+        <DialogContent w="full">
           <DialogHeader>
             <DialogTitle>Card</DialogTitle>
             <DialogCloseTrigger />
           </DialogHeader>
           <DialogBody>
-            <Stack gap={3}>
-              <Field.Root>
+            <Stack gap={3} w="full">
+              <Field.Root w="full">
                 <Field.Label>Title</Field.Label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} />
               </Field.Root>
-              <Field.Root>
+              <Field.Root w="full">
                 <Field.Label>Description</Field.Label>
                 <TodoListCardDialogDescription
                   podId={card.podId}
@@ -123,22 +126,26 @@ function TodoListCardDialogBody({
                   onError={setError}
                 />
               </Field.Root>
-              <Field.Root>
-                <Field.Label>Due</Field.Label>
-                <Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
-              </Field.Root>
+              <HStack align="start" gap={4} w="full" flexWrap="wrap">
+                <Field.Root flex="1" minW="12rem">
+                  <Field.Label>Due</Field.Label>
+                  <Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+                </Field.Root>
+                <Field.Root flex="1" minW="12rem">
+                  <Field.Label>Assignee</Field.Label>
+                  <NativeSelect.Root w="full">
+                    <NativeSelect.Field value={assignee} onChange={(e) => setAssignee(e.target.value)}>
+                      <option value="">Unassigned</option>
+                      {members.map((m) => (
+                        <option key={m.userId} value={m.userId}>
+                          {m.username ?? m.userId.slice(0, 8)}
+                        </option>
+                      ))}
+                    </NativeSelect.Field>
+                  </NativeSelect.Root>
+                </Field.Root>
+              </HStack>
               <TodoListCardDialogTags tags={tags} onChange={setTags} />
-              <Field.Root>
-                <Field.Label>Assignee</Field.Label>
-                <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-                  <option value="">Unassigned</option>
-                  {members.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.username ?? m.userId.slice(0, 8)}
-                    </option>
-                  ))}
-                </select>
-              </Field.Root>
               <Text fontSize="xs" color="fg.muted">
                 Created {dayjs(card.createdAt).format('YYYY-MM-DD HH:mm')} · Updated{' '}
                 {dayjs(card.updatedAt).format('YYYY-MM-DD HH:mm')}
@@ -159,12 +166,16 @@ function TodoListCardDialogBody({
             </Stack>
           </DialogBody>
           <DialogFooter justifyContent="flex-start">
-            <IconButton aria-label="Archive card" variant="outline" onClick={() => void archive()}>
-              <ArchiveIcon size={16} />
-            </IconButton>
-            <IconButton aria-label="Save card" colorPalette="brand" onClick={() => void save()}>
-              <SaveIcon size={16} />
-            </IconButton>
+            <AppIconTooltip label="Archive card">
+              <IconButton aria-label="Archive card" variant="outline" onClick={() => void archive()}>
+                <ArchiveIcon size={16} />
+              </IconButton>
+            </AppIconTooltip>
+            <AppIconTooltip label="Save card">
+              <IconButton aria-label="Save card" colorPalette="brand" onClick={() => void save()}>
+                <SaveIcon size={16} />
+              </IconButton>
+            </AppIconTooltip>
           </DialogFooter>
         </DialogContent>
       </DialogPositioner>

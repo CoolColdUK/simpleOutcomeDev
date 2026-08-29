@@ -2,6 +2,7 @@
 
 import {Circle, HStack, IconButton} from '@chakra-ui/react';
 import {ArchiveIcon, DeleteIcon, TickIcon} from '@so/component';
+import AppIconTooltip from '@/components/app/AppIconTooltip';
 
 export interface TodoListBoardCardHoverActionsProps {
   readonly complete: boolean;
@@ -30,30 +31,36 @@ export default function TodoListBoardCardHoverActions({
       onClick={stop}
       onPointerDown={stop}
     >
-      <IconButton
-        className={complete ? undefined : 'todo-card-hover'}
-        aria-label={complete ? 'Mark incomplete' : 'Mark complete'}
-        variant="ghost"
-        size="xs"
-        onClick={onComplete}
-      >
-        <Circle
-          size="22px"
-          borderWidth="2px"
-          borderColor={complete ? 'green.500' : 'border.emphasized'}
-          bg={complete ? 'green.500' : 'bg.paper'}
-          color="white"
+      <AppIconTooltip label={complete ? 'Mark incomplete' : 'Mark complete'}>
+        <IconButton
+          className={complete ? undefined : 'todo-card-hover'}
+          aria-label={complete ? 'Mark incomplete' : 'Mark complete'}
+          variant="ghost"
+          size="xs"
+          onClick={onComplete}
         >
-          {complete ? <TickIcon size={14} /> : null}
-        </Circle>
-      </IconButton>
+          <Circle
+            size="22px"
+            borderWidth="2px"
+            borderColor={complete ? 'green.500' : 'border.emphasized'}
+            bg={complete ? 'green.500' : 'bg.paper'}
+            color="white"
+          >
+            {complete ? <TickIcon size={14} /> : null}
+          </Circle>
+        </IconButton>
+      </AppIconTooltip>
       <HStack className="todo-card-hover" gap={0}>
-        <IconButton aria-label="Archive card" size="xs" variant="ghost" onClick={onArchive}>
-          <ArchiveIcon size={14} />
-        </IconButton>
-        <IconButton aria-label="Delete card" size="xs" variant="ghost" onClick={onDelete}>
-          <DeleteIcon size={14} />
-        </IconButton>
+        <AppIconTooltip label="Archive card">
+          <IconButton aria-label="Archive card" size="xs" variant="ghost" onClick={onArchive}>
+            <ArchiveIcon size={14} />
+          </IconButton>
+        </AppIconTooltip>
+        <AppIconTooltip label="Delete card">
+          <IconButton aria-label="Delete card" size="xs" variant="ghost" onClick={onDelete}>
+            <DeleteIcon size={14} />
+          </IconButton>
+        </AppIconTooltip>
       </HStack>
     </HStack>
   );

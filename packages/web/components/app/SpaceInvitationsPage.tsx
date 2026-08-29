@@ -1,7 +1,6 @@
 'use client';
 
 import {useCallback, useEffect, useState} from 'react';
-import Link from 'next/link';
 import {useParams} from 'next/navigation';
 import {Alert, Badge, Button, Heading, HStack, Stack, Text} from '@chakra-ui/react';
 import {
@@ -24,7 +23,6 @@ export default function SpaceInvitationsPage() {
   const params = useParams<{spaceId: string}>();
   const spaceId = params.spaceId;
   const {user} = useSupabaseAuthState();
-  const [name, setName] = useState('');
   const [allowed, setAllowed] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -46,12 +44,10 @@ export default function SpaceInvitationsPage() {
     }
     if (!canManageSpace(role)) {
       setError('Admin or owner role is required');
-      setName(space.name);
       setReady(true);
       return;
     }
     const listed = await listDbSpaceInvites(spaceId, status, page);
-    setName(space.name);
     setAllowed(true);
     setInvites(listed.invites);
     setTotal(listed.total);
@@ -75,14 +71,9 @@ export default function SpaceInvitationsPage() {
 
   return (
     <Stack gap={6}>
-      <Stack gap={2}>
-        <Text fontSize="sm">
-          <Link href={`/app/spaces/${spaceId}`}>← {name || 'Space'}</Link>
-        </Text>
-        <Heading as="h1" size="lg">
-          Invitations
-        </Heading>
-      </Stack>
+      <Heading as="h1" size="lg">
+        Invitations
+      </Heading>
       {error !== '' ? (
         <Alert.Root status="error">
           <Alert.Description>{error}</Alert.Description>

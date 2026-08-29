@@ -7,6 +7,7 @@ import {GripDotsIcon} from '@so/component';
 import {todoCardStatusLabel} from '@so/model';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 import TodoListBoardCardHoverActions from '@/components/todo/TodoListBoardCardHoverActions';
+import AppIconTooltip from '@/components/app/AppIconTooltip';
 import formatTodoDueAt from '@/components/todo/formatTodoDueAt';
 
 export interface TodoListBoardCardProps {
@@ -68,16 +69,18 @@ export default function TodoListBoardCard({
           <Text fontWeight="semibold" textDecoration={complete ? 'line-through' : undefined}>
             {card.title}
           </Text>
-          <Box
-            {...attributes}
-            {...listeners}
-            cursor="grab"
-            color="fg.muted"
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Drag card"
-          >
-            <GripDotsIcon size={14} />
-          </Box>
+          <AppIconTooltip label="Move card">
+            <Box
+              {...attributes}
+              {...listeners}
+              cursor="grab"
+              color="fg.muted"
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Move card"
+            >
+              <GripDotsIcon size={14} />
+            </Box>
+          </AppIconTooltip>
         </Box>
         <Text fontSize="xs" color="fg.muted">
           {todoCardStatusLabel(columnTitle)}

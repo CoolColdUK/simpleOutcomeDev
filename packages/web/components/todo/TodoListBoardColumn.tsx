@@ -10,6 +10,7 @@ import type {DbTodoColumn} from '@/lib/api/db/listDbTodoColumns';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 import TodoListBoardCard from '@/components/todo/TodoListBoardCard';
 import TodoListBoardColumnMenu from '@/components/todo/TodoListBoardColumnMenu';
+import AppIconTooltip from '@/components/app/AppIconTooltip';
 import updateDbTodoColumn from '@/lib/api/db/updateDbTodoColumn';
 import createDbTodoCard from '@/lib/api/db/createDbTodoCard';
 
@@ -81,16 +82,18 @@ export default function TodoListBoardColumn({
     >
       <HStack gap={1} align="center">
         {canManageColumns ? (
-          <Stack
-            {...attributes}
-            {...listeners}
-            cursor="grab"
-            color="fg.muted"
-            aria-label="Drag column"
-            py={1}
-          >
-            <GripDotsIcon size={14} />
-          </Stack>
+          <AppIconTooltip label="Move column">
+            <Stack
+              {...attributes}
+              {...listeners}
+              cursor="grab"
+              color="fg.muted"
+              aria-label="Move column"
+              py={1}
+            >
+              <GripDotsIcon size={14} />
+            </Stack>
+          </AppIconTooltip>
         ) : null}
         {canManageColumns ? (
           <Input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => void saveTitle()} />

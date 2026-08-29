@@ -1,9 +1,8 @@
 'use client';
 
 import {useCallback, useEffect, useState} from 'react';
-import Link from 'next/link';
 import {useParams} from 'next/navigation';
-import {Alert, Heading, Stack, Text} from '@chakra-ui/react';
+import {Alert, Heading, Stack} from '@chakra-ui/react';
 import {SpaceRole, canManageSpace} from '@so/model';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbSpace from '@/lib/api/db/getDbSpace';
@@ -61,14 +60,9 @@ export default function SpaceSettingsPage() {
 
   return (
     <Stack gap={8}>
-      <Stack gap={2}>
-        <Text fontSize="sm">
-          <Link href={`/app/spaces/${spaceId}`}>← {name || 'Space'}</Link>
-        </Text>
-        <Heading as="h1" size="lg">
-          Settings
-        </Heading>
-      </Stack>
+      <Heading as="h1" size="lg">
+        Settings
+      </Heading>
       {error !== '' ? (
         <Alert.Root status="error">
           <Alert.Description>{error}</Alert.Description>

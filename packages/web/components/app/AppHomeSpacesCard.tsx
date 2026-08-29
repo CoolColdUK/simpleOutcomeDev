@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {Badge, Box, Heading, HStack, Icon, Tooltip, useSlotRecipe} from '@chakra-ui/react';
+import {Badge, Box, Heading, HStack, Tooltip, useSlotRecipe} from '@chakra-ui/react';
 import {spaceRoleLabel} from '@so/model';
 import type {SpaceListItem} from '@/lib/api/db/spaceListItem';
 
@@ -37,16 +37,15 @@ export default function AppHomeSpacesCard({space}: AppHomeSpacesCardProps) {
                     e.stopPropagation();
                   }}
                 >
-                  <Icon viewBox="0 0 24 24" boxSize={5}>
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
                     <path
                       d="M12 11v5M12 8h.01"
-                      fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
                     />
-                  </Icon>
+                  </svg>
                 </Box>
               </Tooltip.Trigger>
               <Tooltip.Positioner>
