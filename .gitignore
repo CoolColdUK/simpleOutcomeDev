@@ -5,7 +5,7 @@ node_modules
 .pnp.*
 
 # testing
-/coverage
+coverage
 
 # production
 dist
@@ -36,4 +36,3 @@ packages/web/.vercel
 
 # Supabase
 .supabase
-packages/model/src/coverage/
