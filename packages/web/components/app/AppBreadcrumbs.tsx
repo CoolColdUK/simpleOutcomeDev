@@ -14,6 +14,11 @@ interface Crumb {
   readonly href: string | undefined;
 }
 
+interface NamedEntity {
+  readonly id: string;
+  readonly name: string;
+}
+
 function leafLabel(leaf: 'settings' | 'invitations' | 'join'): string {
   if (leaf === 'settings') {
     return 'Settings';
@@ -42,25 +47,36 @@ function buildCrumbs(
 export default function AppBreadcrumbs() {
   const pathname = usePathname();
   const parsed = parseAppBreadcrumbPath(pathname);
-  const [spaceName, setSpaceName] = useState<string | undefined>(undefined);
-  const [podName, setPodName] = useState<string | undefined>(undefined);
+  const [space, setSpace] = useState<NamedEntity | undefined>(undefined);
+  const [pod, setPod] = useState<NamedEntity | undefined>(undefined);
 
   useEffect(() => {
-    setSpaceName(undefined);
-    setPodName(undefined);
     const spaceId = parsed.spaceId;
     const podId = parsed.podId;
+    let cancelled = false;
     void Promise.all([
       spaceId === undefined ? Promise.resolve(undefined) : getDbSpace(spaceId),
       podId === undefined ? Promise.resolve(undefined) : getDbPod(podId),
     ])
-      .then(([space, pod]) => {
-        setSpaceName(space?.name);
-        setPodName(pod === undefined ? undefined : (pod.name ?? featureKindLabel(pod.feature)));
+      .then(([spaceRow, podRow]) => {
+        if (cancelled) {
+          return;
+        }
+        setSpace(spaceRow === undefined ? undefined : {id: spaceRow.id, name: spaceRow.name});
+        if (podRow === undefined) {
+          setPod(undefined);
+          return;
+        }
+        setPod({id: podRow.id, name: podRow.name ?? featureKindLabel(podRow.feature)});
       })
       .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
   }, [parsed.spaceId, parsed.podId]);
 
+  const spaceName = space !== undefined && space.id === parsed.spaceId ? space.name : undefined;
+  const podName = pod !== undefined && pod.id === parsed.podId ? pod.name : undefined;
   const crumbs = buildCrumbs(parsed.spaceId, spaceName, parsed.podId, podName, parsed.leaf);
 
   return (

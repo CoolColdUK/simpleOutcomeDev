@@ -1,6 +1,6 @@
 'use client';
 
-import {Box} from '@chakra-ui/react';
+import {Box, Image} from '@chakra-ui/react';
 import ReactMarkdown, {defaultUrlTransform, type Components} from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import soMarkdown from '@/lib/markdown/soMarkdown.module.css';
@@ -28,7 +28,7 @@ const markdownComponents: Components = {
     if (typeof src !== 'string' || src === '') {
       return null;
     }
-    return <img src={src} alt={alt ?? ''} />;
+    return <Image src={src} alt={alt ?? ''} />;
   },
 };
 

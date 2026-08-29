@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useRef, useState} from 'react';
+import {useRef, useState} from 'react';
 import {Box, Button, HStack, Stack, Text, Textarea} from '@chakra-ui/react';
 import {CancelIcon, SaveIcon} from '@so/component';
 import {countSoImageMarkdownUrisInBody, TODO_MAX_INLINE_IMAGES} from '@so/model';
@@ -25,13 +25,10 @@ export default function TodoListCardDialogDescription({
 }: TodoListCardDialogDescriptionProps) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [editing, setEditing] = useState(false);
-  const [body, setBody] = useState(description);
+  const [localBody, setLocalBody] = useState<string | undefined>(undefined);
   const [draft, setDraft] = useState(description);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setBody(description);
-  }, [description]);
+  const body = localBody ?? description;
 
   const onPasteImage = async (clipboardData: DataTransfer): Promise<void> => {
     const file = [...clipboardData.items]
@@ -66,7 +63,7 @@ export default function TodoListCardDialogDescription({
     setSaving(true);
     try {
       await onSaved(draft);
-      setBody(draft);
+      setLocalBody(draft);
       setEditing(false);
     } finally {
       setSaving(false);
