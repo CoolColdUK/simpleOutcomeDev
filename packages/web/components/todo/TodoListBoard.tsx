@@ -55,7 +55,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
   const cardsRef = useRef(cards);
   const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 8}}));
   const manageCols = canManageTodoColumns(podRole, isSpaceOwner);
-  const columnIds = columns.map((c) => c.id);
+  const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
   const collisionDetection = useMemo(
     () => createTodoBoardCollisionDetection(() => dragType, () => columnIds),
     [columnIds, dragType],
@@ -113,7 +113,17 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
       if (next === undefined) {
         return prev;
       }
-      return mergeTodoCardSort(prev, next);
+      const ordered = mergeTodoCardSort(prev, next);
+      const unchanged = ordered.every(
+        (card, index) =>
+          card.id === prev[index]?.id &&
+          card.columnId === prev[index]?.columnId &&
+          card.sortOrder === prev[index]?.sortOrder,
+      );
+      if (unchanged) {
+        return prev;
+      }
+      return ordered;
     });
   };
 

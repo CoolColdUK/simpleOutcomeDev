@@ -1,6 +1,6 @@
 'use client';
 
-import {IconButton, Menu, Portal} from '@chakra-ui/react';
+import {Box, IconButton, Menu, Portal} from '@chakra-ui/react';
 import {ArchiveIcon, DeleteIcon, MoreVertIcon} from '@so/component';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import archiveDbTodoCardsByColumn from '@/lib/api/db/archiveDbTodoCardsByColumn';
@@ -14,14 +14,16 @@ export interface TodoListBoardColumnMenuProps {
 
 export default function TodoListBoardColumnMenu({columnId, canManageColumns, onChanged}: TodoListBoardColumnMenuProps) {
   return (
-    <Menu.Root>
-      <AppIconTooltip label="Column actions">
-        <Menu.Trigger asChild>
-          <IconButton aria-label="Column actions" size="xs" variant="ghost">
-            <MoreVertIcon size={16} />
-          </IconButton>
-        </Menu.Trigger>
-      </AppIconTooltip>
+    <Menu.Root positioning={{placement: 'bottom-end'}}>
+      <Menu.Trigger asChild>
+        <Box display="inline-flex">
+          <AppIconTooltip label="Column actions">
+            <IconButton aria-label="Column actions" size="xs" variant="ghost">
+              <MoreVertIcon size={16} />
+            </IconButton>
+          </AppIconTooltip>
+        </Box>
+      </Menu.Trigger>
       <Portal>
         <Menu.Positioner>
           <Menu.Content>
