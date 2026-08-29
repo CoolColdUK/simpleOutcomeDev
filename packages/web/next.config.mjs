@@ -10,6 +10,9 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['@chakra-ui/react'],
   },
+  images: {
+    formats: ['image/avif', 'image/webp'],
+  },
 };
 
 export default nextConfig;

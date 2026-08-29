@@ -1,8 +1,14 @@
 'use client';
 
-import {Box, Button, Heading, Text} from '@chakra-ui/react';
+import Image from 'next/image';
+import {Box, Button, Heading, Icon, Link, Text, Tooltip} from '@chakra-ui/react';
 import {useState} from 'react';
 import ContactUsDialog from './ContactUsDialog';
+
+const HERO_IMAGE_SRC = '/images/bailey-zindel-NRQV-hBF10M-unsplash.jpg';
+const HERO_IMAGE_ALT = 'Lake surrounded by trees. Photo by Bailey Zindel on Unsplash';
+const HERO_PHOTOGRAPHER_HREF = 'https://unsplash.com/@baileyzindel?utm_source=simpleoutcome&utm_medium=referral';
+const HERO_UNSPLASH_HREF = 'https://unsplash.com/?utm_source=simpleoutcome&utm_medium=referral';
 
 export default function HeroSection() {
   const [open, setOpen] = useState(false);
@@ -10,10 +16,13 @@ export default function HeroSection() {
   return (
     <Box position="relative" w="100%" minH={{base: '400px', md: '520px'}} overflow="hidden" mb={6}>
       <Box position="absolute" inset="0" zIndex={1}>
-        <img
-          src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80"
-          alt="Latte minimalist background"
-          style={{width: '100%', height: '100%', objectFit: 'cover'}}
+        <Image
+          src={HERO_IMAGE_SRC}
+          alt={HERO_IMAGE_ALT}
+          fill
+          priority
+          sizes="100vw"
+          style={{objectFit: 'cover'}}
         />
       </Box>
       <Box
@@ -49,6 +58,30 @@ export default function HeroSection() {
           REQUEST A QUOTE
         </Button>
         <ContactUsDialog open={open} onClose={() => setOpen(false)} />
+      </Box>
+      <Box position="absolute" bottom={3} right={4} zIndex={4}>
+        <Tooltip.Root openDelay={200}>
+          <Tooltip.Trigger asChild>
+            <Box as="span" display="inline-flex" color="fg.muted" aria-label={HERO_IMAGE_ALT} cursor="help">
+              <Icon viewBox="0 0 24 24" boxSize={5}>
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+                <path d="M12 11v5M12 8h.01" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </Icon>
+            </Box>
+          </Tooltip.Trigger>
+          <Tooltip.Positioner>
+            <Tooltip.Content maxW="xs">
+              Photo by{' '}
+              <Link href={HERO_PHOTOGRAPHER_HREF} target="_blank" rel="noreferrer" textDecoration="underline">
+                Bailey Zindel
+              </Link>{' '}
+              on{' '}
+              <Link href={HERO_UNSPLASH_HREF} target="_blank" rel="noreferrer" textDecoration="underline">
+                Unsplash
+              </Link>
+            </Tooltip.Content>
+          </Tooltip.Positioner>
+        </Tooltip.Root>
       </Box>
     </Box>
   );
