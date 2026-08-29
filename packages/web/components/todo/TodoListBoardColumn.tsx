@@ -17,6 +17,7 @@ export interface TodoListBoardColumnProps {
   readonly column: DbTodoColumn;
   readonly cards: readonly DbTodoCard[];
   readonly canManageColumns: boolean;
+  readonly sortDisabled: boolean;
   readonly userId: string;
   readonly assigneeName: (userId: string | undefined) => string | undefined;
   readonly onOpenCard: (card: DbTodoCard) => void;
@@ -27,6 +28,7 @@ export default function TodoListBoardColumn({
   column,
   cards,
   canManageColumns,
+  sortDisabled,
   userId,
   assigneeName,
   onOpenCard,
@@ -36,7 +38,7 @@ export default function TodoListBoardColumn({
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} = useSortable({
     id: column.id,
     data: {type: 'column'},
-    disabled: !canManageColumns,
+    disabled: !canManageColumns || sortDisabled,
   });
   const [title, setTitle] = useState(column.title);
   const [cardTitle, setCardTitle] = useState('');
@@ -58,7 +60,11 @@ export default function TodoListBoardColumn({
         setNodeRef(node);
         setDropRef(node);
       }}
-      style={{transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1}}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: isDragging ? undefined : transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
       minW="260px"
       maxW="280px"
       gap={2}

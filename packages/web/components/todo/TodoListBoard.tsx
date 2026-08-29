@@ -1,11 +1,21 @@
 'use client';
 
 import {Box, Button, HStack, Stack, Switch} from '@chakra-ui/react';
-import {DndContext, PointerSensor, closestCorners, useSensor, useSensors, type DragEndEvent} from '@dnd-kit/core';
+import {
+  DndContext,
+  DragOverlay,
+  MeasuringStrategy,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
 import {arrayMove, horizontalListSortingStrategy, SortableContext} from '@dnd-kit/sortable';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {AddIcon} from '@so/component';
-import {TODO_ARCHIVE_COLUMN_ID, canManageTodoColumns, type PodRole} from '@so/model';
+import {canManageTodoColumns, type PodRole} from '@so/model';
 import type {DbTodoColumn} from '@/lib/api/db/listDbTodoColumns';
 import listDbTodoColumns from '@/lib/api/db/listDbTodoColumns';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
@@ -17,6 +27,9 @@ import TodoListBoardColumn from '@/components/todo/TodoListBoardColumn';
 import TodoListBoardArchivePanel from '@/components/todo/TodoListBoardArchivePanel';
 import TodoListAddColumnDialog from '@/components/todo/TodoListAddColumnDialog';
 import TodoListCardDialog from '@/components/todo/TodoListCardDialog';
+import TodoListBoardCardPreview from '@/components/todo/TodoListBoardCardPreview';
+import destTodoColumnId from '@/components/todo/destTodoColumnId';
+import createTodoBoardCollisionDetection from '@/components/todo/createTodoBoardCollisionDetection';
 
 export interface TodoListBoardProps {
   readonly podId: string;
@@ -26,24 +39,25 @@ export interface TodoListBoardProps {
   readonly isSpaceOwner: boolean;
 }
 
-function destColumnId(overId: string, columns: readonly DbTodoColumn[], cards: readonly DbTodoCard[]): string | undefined {
-  if (overId === TODO_ARCHIVE_COLUMN_ID) {
-    return undefined;
-  }
-  if (columns.some((c) => c.id === overId)) {
-    return overId;
-  }
-  return cards.find((c) => c.id === overId)?.columnId;
-}
-
 export default function TodoListBoard({podId, userId, members, podRole, isSpaceOwner}: TodoListBoardProps) {
   const [columns, setColumns] = useState<readonly DbTodoColumn[]>([]);
   const [cards, setCards] = useState<readonly DbTodoCard[]>([]);
   const [openCard, setOpenCard] = useState<DbTodoCard | undefined>(undefined);
   const [addOpen, setAddOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [dragType, setDragType] = useState<string | undefined>(undefined);
+  const [activeCardId, setActiveCardId] = useState<string | undefined>(undefined);
+  const cardsBeforeDrag = useRef<readonly DbTodoCard[]>([]);
+  const columnsRef = useRef(columns);
+  const dragTypeRef = useRef(dragType);
+  columnsRef.current = columns;
+  dragTypeRef.current = dragType;
   const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 8}}));
   const manageCols = canManageTodoColumns(podRole, isSpaceOwner);
+  const collisionDetection = useMemo(
+    () => createTodoBoardCollisionDetection(() => dragTypeRef.current, () => columnsRef.current.map((c) => c.id)),
+    [],
+  );
 
   const load = useCallback(async (): Promise<void> => {
     const [colRows, cardRows] = await Promise.all([listDbTodoColumns(podId), listDbTodoCards(podId)]);
@@ -62,14 +76,53 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
     return members.find((m) => m.userId === id)?.username ?? id.slice(0, 8);
   };
 
-  const onDragEnd = async (event: DragEndEvent): Promise<void> => {
+  const onDragStart = (event: DragStartEvent): void => {
+    const type = event.active.data.current?.type;
+    setDragType(typeof type === 'string' ? type : undefined);
+    if (type === 'card') {
+      setActiveCardId(String(event.active.id));
+      cardsBeforeDrag.current = cards;
+    }
+  };
+
+  const onDragOver = (event: DragOverEvent): void => {
     const overId = event.over?.id;
-    if (overId === undefined) {
+    if (overId === undefined || event.active.data.current?.type !== 'card') {
       return;
     }
-    if (event.active.data.current?.type === 'column') {
+    const cardId = String(event.active.id);
+    setCards((prev) => {
+      const dest = destTodoColumnId(String(overId), columns, prev);
+      const current = prev.find((c) => c.id === cardId);
+      if (current === undefined || current.columnId === dest) {
+        return prev;
+      }
+      return prev.map((c) => (c.id === cardId ? {...c, columnId: dest} : c));
+    });
+  };
+
+  const onDragCancel = (): void => {
+    if (dragType === 'card') {
+      setCards(cardsBeforeDrag.current);
+    }
+    setDragType(undefined);
+    setActiveCardId(undefined);
+  };
+
+  const onDragEnd = async (event: DragEndEvent): Promise<void> => {
+    const overId = event.over?.id;
+    const type = dragType;
+    setDragType(undefined);
+    setActiveCardId(undefined);
+    if (overId === undefined) {
+      if (type === 'card') {
+        setCards(cardsBeforeDrag.current);
+      }
+      return;
+    }
+    if (type === 'column') {
       const from = columns.findIndex((c) => c.id === String(event.active.id));
-      const overColumnId = destColumnId(String(overId), columns, cards);
+      const overColumnId = destTodoColumnId(String(overId), columns, cards);
       const to = columns.findIndex((c) => c.id === overColumnId);
       if (from < 0 || to < 0 || from === to) {
         return;
@@ -81,7 +134,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
       return;
     }
     const cardId = String(event.active.id);
-    const dest = destColumnId(String(overId), columns, cards);
+    const dest = destTodoColumnId(String(overId), columns, cards);
     const inDest = cards.filter((c) => c.id !== cardId && c.columnId === dest);
     const overIndex = inDest.findIndex((c) => c.id === String(overId));
     const sortOrder = overIndex >= 0 ? overIndex : inDest.length;
@@ -90,6 +143,8 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
   };
 
   const archived = cards.filter((c) => c.columnId === undefined);
+  const activeCard = cards.find((c) => c.id === activeCardId);
+  const activeColumnTitle = columns.find((c) => c.id === activeCard?.columnId)?.title;
 
   return (
     <Stack gap={4}>
@@ -110,7 +165,15 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
           <Switch.Label>Show archived</Switch.Label>
         </Switch.Root>
       </HStack>
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={(e) => void onDragEnd(e)}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        measuring={{droppable: {strategy: MeasuringStrategy.Always}}}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragCancel={onDragCancel}
+        onDragEnd={(e) => void onDragEnd(e)}
+      >
         <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
           <HStack align="start" overflowX="auto" gap={3}>
             {columns.map((column) => (
@@ -119,6 +182,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
                 column={column}
                 cards={cards.filter((c) => c.columnId === column.id)}
                 canManageColumns={manageCols}
+                sortDisabled={dragType === 'card'}
                 userId={userId}
                 assigneeName={assigneeName}
                 onOpenCard={setOpenCard}
@@ -130,6 +194,15 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
             ) : null}
           </HStack>
         </SortableContext>
+        <DragOverlay>
+          {activeCard !== undefined ? (
+            <TodoListBoardCardPreview
+              card={activeCard}
+              columnTitle={activeColumnTitle}
+              assigneeLabel={assigneeName(activeCard.assigneeUserId)}
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
       {manageCols ? (
         <TodoListAddColumnDialog

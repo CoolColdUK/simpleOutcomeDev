@@ -17,13 +17,17 @@ export interface TodoListBoardCardProps {
 export default function TodoListBoardCard({card, columnTitle, assigneeLabel, onOpen}: TodoListBoardCardProps) {
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} = useSortable({
     id: card.id,
-    data: {type: 'card'},
+    data: {type: 'card', columnId: card.columnId},
   });
 
   return (
     <Box
       ref={setNodeRef}
-      style={{transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1}}
+      style={{
+        transform: isDragging ? undefined : CSS.Transform.toString(transform),
+        transition: isDragging ? undefined : transition,
+        opacity: isDragging ? 0 : 1,
+      }}
       borderWidth="1px"
       borderColor="border.emphasized"
       borderRadius="md"

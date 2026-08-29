@@ -1,10 +1,10 @@
 'use client';
 
-import {Button, Stack, Text} from '@chakra-ui/react';
+import {useState} from 'react';
+import {Alert, Button, Field, Input, Stack, Text, Textarea} from '@chakra-ui/react';
 import {PodStatus} from '@so/model';
 import type {DbPod} from '@/lib/api/db/listDbPods';
-import PodEditDialog from '@/components/app/PodEditDialog';
-import {useState} from 'react';
+import updateDbPod from '@/lib/api/db/updateDbPod';
 
 export interface PodWorkspaceSettingsTabProps {
   readonly pod: DbPod;
@@ -23,14 +23,45 @@ export default function PodWorkspaceSettingsTab({
   onDelete,
   onSaved,
 }: PodWorkspaceSettingsTabProps) {
-  const [editOpen, setEditOpen] = useState(false);
+  const [name, setName] = useState(pod.name ?? '');
+  const [description, setDescription] = useState(pod.description ?? '');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const save = async (): Promise<void> => {
+    setError('');
+    setSaving(true);
+    try {
+      await updateDbPod(pod.id, name, pod.visibility, description);
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <Stack gap={4} align="start">
+    <Stack gap={4} align="start" maxW="md">
       {canManage ? (
-        <Button variant="outline" colorPalette="brand" onClick={() => setEditOpen(true)}>
-          Edit title and description
-        </Button>
+        <Stack gap={3} w="full">
+          <Field.Root>
+            <Field.Label>Title</Field.Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </Field.Root>
+          <Field.Root>
+            <Field.Label>Description</Field.Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          </Field.Root>
+          {error !== '' ? (
+            <Alert.Root status="error">
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Root>
+          ) : null}
+          <Button colorPalette="brand" loading={saving} onClick={() => void save()} alignSelf="start">
+            Save
+          </Button>
+        </Stack>
       ) : (
         <Text color="fg.muted">Only pod owners and space owners can change settings.</Text>
       )}
@@ -44,7 +75,6 @@ export default function PodWorkspaceSettingsTab({
           Delete pod
         </Button>
       ) : null}
-      <PodEditDialog open={editOpen} pod={pod} onClose={() => setEditOpen(false)} onSaved={onSaved} />
     </Stack>
   );
 }

@@ -129,6 +129,7 @@ export default function PodWorkspace() {
         </Tabs.Content>
         <Tabs.Content value="settings">
           <PodWorkspaceSettingsTab
+            key={`${pod.name ?? ''}:${pod.description ?? ''}`}
             pod={pod}
             canManage={canManage}
             isSpaceOwner={spaceRole === SpaceRole.OWNER}
