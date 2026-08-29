@@ -1,7 +1,9 @@
+export type AppBreadcrumbLeaf = 'settings' | 'invitations' | 'join' | 'account';
+
 export interface ParsedAppBreadcrumbPath {
   readonly spaceId: string | undefined;
   readonly podId: string | undefined;
-  readonly leaf: 'settings' | 'invitations' | 'join' | undefined;
+  readonly leaf: AppBreadcrumbLeaf | undefined;
 }
 
 export default function parseAppBreadcrumbPath(pathname: string): ParsedAppBreadcrumbPath {
@@ -11,6 +13,9 @@ export default function parseAppBreadcrumbPath(pathname: string): ParsedAppBread
   }
   if (parts[1] === 'join') {
     return {spaceId: undefined, podId: undefined, leaf: 'join'};
+  }
+  if (parts[1] === 'settings') {
+    return {spaceId: undefined, podId: undefined, leaf: 'account'};
   }
   if (parts[1] !== 'spaces' || parts[2] === undefined) {
     return {spaceId: undefined, podId: undefined, leaf: undefined};

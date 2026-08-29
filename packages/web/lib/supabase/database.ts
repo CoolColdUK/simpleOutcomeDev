@@ -6,6 +6,7 @@ export interface Database {
           id: string;
           username: string | null;
           username_normalized: string | null;
+          display_name: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -13,10 +14,12 @@ export interface Database {
           id: string;
           username?: string | null;
           username_normalized?: string | null;
+          display_name?: string | null;
         };
         Update: {
           username?: string | null;
           username_normalized?: string | null;
+          display_name?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -217,6 +220,7 @@ export interface Database {
       create_space: {Args: {p_name: string; p_description?: string}; Returns: string};
       update_space: {Args: {p_space_id: string; p_name: string; p_description?: string}; Returns: undefined};
       update_profile_username: {Args: {p_username: string}; Returns: undefined};
+      update_profile_display_name: {Args: {p_display_name: string}; Returns: undefined};
       update_space_member_role: {
         Args: {p_space_id: string; p_user_id: string; p_role: string};
         Returns: undefined;

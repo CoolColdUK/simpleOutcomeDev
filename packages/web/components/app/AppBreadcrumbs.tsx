@@ -6,7 +6,7 @@ import {usePathname} from 'next/navigation';
 import {Breadcrumb} from '@chakra-ui/react';
 import getDbPod from '@/lib/api/db/getDbPod';
 import getDbSpace from '@/lib/api/db/getDbSpace';
-import parseAppBreadcrumbPath from '@/lib/app/parseAppBreadcrumbPath';
+import parseAppBreadcrumbPath, {type AppBreadcrumbLeaf} from '@/lib/app/parseAppBreadcrumbPath';
 import featureKindLabel from '@/lib/pod/featureKindLabel';
 
 interface Crumb {
@@ -19,12 +19,15 @@ interface NamedEntity {
   readonly name: string;
 }
 
-function leafLabel(leaf: 'settings' | 'invitations' | 'join'): string {
+function leafLabel(leaf: AppBreadcrumbLeaf): string {
   if (leaf === 'settings') {
     return 'Settings';
   }
   if (leaf === 'invitations') {
     return 'Invitations';
+  }
+  if (leaf === 'account') {
+    return 'Account';
   }
   return 'Join';
 }
@@ -34,7 +37,7 @@ function buildCrumbs(
   spaceName: string | undefined,
   podId: string | undefined,
   podName: string | undefined,
-  leaf: 'settings' | 'invitations' | 'join' | undefined,
+  leaf: AppBreadcrumbLeaf | undefined,
 ): readonly Crumb[] {
   const spaces: readonly Crumb[] = [{label: 'Spaces', href: '/app'}];
   const spaceCrumbs: readonly Crumb[] =
