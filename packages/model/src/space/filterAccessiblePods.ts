@@ -1,7 +1,7 @@
 import type {PodStatus} from './podStatus';
 import type {PodVisibility} from './podVisibility';
 import type {FeatureKind} from './featureKind';
-import type {SpaceRole} from './spaceRole';
+import {SpaceRole} from './spaceRole';
 
 export interface AccessiblePod {
   readonly id: string;
@@ -26,12 +26,12 @@ export default function filterAccessiblePods<T extends AccessiblePod>(input: Fil
       if (!input.showArchived) {
         return false;
       }
-      if (input.spaceRole === 'space_owner') {
+      if (input.spaceRole === SpaceRole.OWNER) {
         return true;
       }
       return pod.createdBy === input.userId;
     }
-    if (input.spaceRole === 'space_owner') {
+    if (input.spaceRole === SpaceRole.OWNER) {
       return true;
     }
     return memberIds.has(pod.id);

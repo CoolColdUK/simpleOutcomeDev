@@ -1,11 +1,11 @@
-import type {PodRole} from '@so/model';
+import {PodRole} from '@so/model';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 
 export default async function updateDbPodMemberRole(
   podId: string,
   userId: string,
-  role: Exclude<PodRole, 'pod_owner'>,
+  role: Exclude<PodRole, PodRole.OWNER>,
 ): Promise<void> {
   const supabase = getSupabaseBrowserClient();
   const {error} = await supabase.rpc('update_pod_member_role', {

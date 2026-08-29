@@ -4,14 +4,15 @@ import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 export interface DbSpace {
   readonly id: string;
   readonly name: string;
+  readonly description: string | undefined;
 }
 
 export default async function getDbSpace(spaceId: string): Promise<DbSpace | undefined> {
   const supabase = getSupabaseBrowserClient();
-  const {data, error} = await supabase.from('space').select('id, name').eq('id', spaceId).maybeSingle();
+  const {data, error} = await supabase.from('space').select('id, name, description').eq('id', spaceId).maybeSingle();
   throwIfSupabaseError(error);
   if (data === undefined || data === null) {
     return undefined;
   }
-  return {id: data.id, name: data.name};
+  return {id: data.id, name: data.name, description: data.description ?? undefined};
 }

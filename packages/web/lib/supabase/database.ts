@@ -25,14 +25,17 @@ export interface Database {
         Row: {
           id: string;
           name: string;
+          description: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
+          description?: string | null;
         };
         Update: {
           name?: string;
+          description?: string | null;
         };
         Relationships: [];
       };
@@ -112,7 +115,8 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      create_space: {Args: {p_name: string}; Returns: string};
+      create_space: {Args: {p_name: string; p_description?: string}; Returns: string};
+      update_space: {Args: {p_space_id: string; p_name: string; p_description?: string}; Returns: undefined};
       update_profile_username: {Args: {p_username: string}; Returns: undefined};
       update_space_member_role: {
         Args: {p_space_id: string; p_user_id: string; p_role: string};

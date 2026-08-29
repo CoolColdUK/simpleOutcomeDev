@@ -1,4 +1,5 @@
 import filterAccessiblePods from './filterAccessiblePods';
+import {SpaceRole} from './spaceRole';
 
 describe('filterAccessiblePods', () => {
   const base = {id: 'p1', createdBy: 'u1', status: 'active' as const};
@@ -8,7 +9,7 @@ describe('filterAccessiblePods', () => {
       filterAccessiblePods({
         pods: [{...base, status: 'archived'}],
         memberPodIds: [],
-        spaceRole: 'space_owner',
+        spaceRole: SpaceRole.OWNER,
         userId: 'u1',
         showArchived: false,
       }),
@@ -21,7 +22,7 @@ describe('filterAccessiblePods', () => {
       filterAccessiblePods({
         pods: [archived],
         memberPodIds: [],
-        spaceRole: 'space_owner',
+        spaceRole: SpaceRole.OWNER,
         userId: 'owner',
         showArchived: true,
       }),
@@ -33,7 +34,7 @@ describe('filterAccessiblePods', () => {
       filterAccessiblePods({
         pods: [base],
         memberPodIds: [],
-        spaceRole: 'space_user',
+        spaceRole: SpaceRole.USER,
         userId: 'u2',
         showArchived: false,
       }),

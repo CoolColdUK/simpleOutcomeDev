@@ -16,7 +16,7 @@ import addDbPodMemberByUsername from '@/lib/api/db/addDbPodMemberByUsername';
 import approveDbPodJoinRequest from '@/lib/api/db/approveDbPodJoinRequest';
 import denyDbPodJoinRequest from '@/lib/api/db/denyDbPodJoinRequest';
 import featureKindLabel from '@/lib/pod/featureKindLabel';
-import type {SpaceRole} from '@so/model';
+import {PodRole, SpaceRole} from '@so/model';
 import AppPageLoadingState from '@/components/app/AppPageLoadingState';
 
 export default function PodWorkspace() {
@@ -24,7 +24,7 @@ export default function PodWorkspace() {
   const router = useRouter();
   const {user} = useSupabaseAuthState();
   const [pod, setPod] = useState<DbPod | undefined>(undefined);
-  const [spaceRole, setSpaceRole] = useState<SpaceRole>('space_user');
+  const [spaceRole, setSpaceRole] = useState<SpaceRole>(SpaceRole.USER);
   const [members, setMembers] = useState<readonly DbPodMember[]>([]);
   const [requests, setRequests] = useState<readonly DbPodJoinRequest[]>([]);
   const [addUsername, setAddUsername] = useState('');
@@ -43,7 +43,7 @@ export default function PodWorkspace() {
     }
     const spaces = await listDbSpaces(user.id);
     const mine = spaces.find((s) => s.id === params.spaceId);
-    setSpaceRole(mine?.role ?? 'space_user');
+    setSpaceRole(mine?.role ?? SpaceRole.USER);
     setPod(row);
     setMembers(await listDbPodMembers(params.podId));
     setRequests(await listDbPodJoinRequests(params.podId).catch(() => []));
@@ -70,10 +70,10 @@ export default function PodWorkspace() {
   }
 
   const myRole = members.find((m) => m.userId === user?.id)?.role;
-  const isPodOwner = myRole === 'pod_owner';
-  const isPodAdmin = myRole === 'pod_admin';
-  const canManage = isPodOwner || spaceRole === 'space_owner';
-  const canApprove = isPodOwner || isPodAdmin || spaceRole === 'space_owner';
+  const isPodOwner = myRole === PodRole.OWNER;
+  const isPodAdmin = myRole === PodRole.ADMIN;
+  const canManage = isPodOwner || spaceRole === SpaceRole.OWNER;
+  const canApprove = isPodOwner || isPodAdmin || spaceRole === SpaceRole.OWNER;
   const canAddMembers = canApprove;
 
   const archive = async (): Promise<void> => {
@@ -89,7 +89,7 @@ export default function PodWorkspace() {
   const addMember = async (): Promise<void> => {
     setError('');
     try {
-      await addDbPodMemberByUsername(pod.id, addUsername.trim(), 'pod_user');
+      await addDbPodMemberByUsername(pod.id, addUsername.trim(), PodRole.USER);
       setAddUsername('');
       await load();
     } catch (e) {
@@ -119,7 +119,7 @@ export default function PodWorkspace() {
           {pod.status === 'archived' ? 'Restore' : 'Archive'}
         </Button>
       ) : null}
-      {spaceRole === 'space_owner' ? (
+      {spaceRole === SpaceRole.OWNER ? (
         <Button variant="outline" colorPalette="brand" alignSelf="start" onClick={() => void remove()}>
           Delete pod
         </Button>

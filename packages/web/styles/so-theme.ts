@@ -72,8 +72,18 @@ const spaceCardRecipe = defineSlotRecipe({
       p: 4,
       borderRadius: 'md',
       borderWidth: '1px',
-      borderColor: 'border.subtle',
+      borderColor: 'border.emphasized',
       boxShadow: 'card',
+      maxW: 'md',
+      w: 'full',
+      cursor: 'pointer',
+      display: 'block',
+      textDecoration: 'none',
+      color: 'inherit',
+      _hover: {
+        borderColor: 'brand.600',
+        boxShadow: 'md',
+      },
     },
   },
 });
@@ -130,6 +140,12 @@ const soExtension = defineConfig({
         'border.subtle': {
           value: {base: '{colors.brand.200}', _dark: '{colors.brand.700}'},
         },
+        border: {
+          value: {base: '{colors.brand.600}', _dark: '{colors.brand.400}'},
+        },
+        'border.emphasized': {
+          value: {base: '{colors.brand.700}', _dark: '{colors.brand.300}'},
+        },
       },
     },
     slotRecipes: {
@@ -137,6 +153,28 @@ const soExtension = defineConfig({
       appShell: appShellRecipe,
       authCard: authCardRecipe,
       spaceCard: spaceCardRecipe,
+    },
+    recipes: {
+      input: {
+        variants: {
+          variant: {
+            outline: {
+              borderColor: 'border.emphasized',
+              _hover: {borderColor: 'brand.700'},
+            },
+          },
+        },
+      },
+      textarea: {
+        variants: {
+          variant: {
+            outline: {
+              borderColor: 'border.emphasized',
+              _hover: {borderColor: 'brand.700'},
+            },
+          },
+        },
+      },
     },
   },
   globalCss: {

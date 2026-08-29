@@ -3,28 +3,29 @@
 import {useCallback, useEffect, useState} from 'react';
 import Link from 'next/link';
 import {useParams} from 'next/navigation';
-import {Alert, Button, Heading, HStack, Stack, Switch, Text} from '@chakra-ui/react';
-import {filterAccessiblePods} from '@so/model';
+import {Alert, Badge, Button, Heading, HStack, Stack, Switch, Text} from '@chakra-ui/react';
+import {filterAccessiblePods, spaceRoleLabel, SpaceRole} from '@so/model';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbSpace from '@/lib/api/db/getDbSpace';
 import listDbSpaces from '@/lib/api/db/listDbSpaces';
 import listDbPods from '@/lib/api/db/listDbPods';
 import type {DbPod} from '@/lib/api/db/listDbPods';
 import listDbMyPodMemberships from '@/lib/api/db/listDbMyPodMemberships';
-import type {SpaceRole} from '@so/model';
 import featureKindLabel from '@/lib/pod/featureKindLabel';
 import AppPageLoadingState from '@/components/app/AppPageLoadingState';
 import SpaceInvitesPanel from '@/components/app/SpaceInvitesPanel';
 import SpaceMembersPanel from '@/components/app/SpaceMembersPanel';
 import SpaceFindPodsPanel from '@/components/app/SpaceFindPodsPanel';
 import SpaceCreatePodPanel from '@/components/app/SpaceCreatePodPanel';
+import SpaceSettingsPanel from '@/components/app/SpaceSettingsPanel';
 
 export default function SpaceWorkspace() {
   const params = useParams<{spaceId: string}>();
   const spaceId = params.spaceId;
   const {user} = useSupabaseAuthState();
   const [name, setName] = useState('');
-  const [role, setRole] = useState<SpaceRole>('space_user');
+  const [description, setDescription] = useState<string | undefined>(undefined);
+  const [role, setRole] = useState<SpaceRole>(SpaceRole.USER);
   const [pods, setPods] = useState<readonly DbPod[]>([]);
   const [memberPodIds, setMemberPodIds] = useState<readonly string[]>([]);
   const [showArchived, setShowArchived] = useState(false);
@@ -50,6 +51,7 @@ export default function SpaceWorkspace() {
     }
     const [podRows, memberships] = await Promise.all([listDbPods(spaceId), listDbMyPodMemberships(user.id)]);
     setName(space.name);
+    setDescription(space.description);
     setRole(mine.role);
     setPods(podRows);
     setMemberPodIds(memberships.map((m) => m.podId));
@@ -76,7 +78,7 @@ export default function SpaceWorkspace() {
     userId: user?.id ?? '',
     showArchived,
   });
-  const canShowArchivedSwitch = role === 'space_owner' || pods.some((p) => p.createdBy === user?.id && p.status === 'archived');
+  const canShowArchivedSwitch = role === SpaceRole.OWNER || pods.some((p) => p.createdBy === user?.id && p.status === 'archived');
 
   return (
     <Stack gap={8}>
@@ -87,7 +89,10 @@ export default function SpaceWorkspace() {
         <Heading as="h1" size="lg">
           {name}
         </Heading>
-        <Text color="fg.muted">{role.replaceAll('_', ' ')}</Text>
+        {description !== undefined ? <Text color="fg.muted">{description}</Text> : null}
+        <Badge colorPalette="brand" variant="subtle" alignSelf="start">
+          {spaceRoleLabel(role)}
+        </Badge>
       </Stack>
       {error !== '' ? (
         <Alert.Root status="error">
@@ -124,11 +129,18 @@ export default function SpaceWorkspace() {
       {spaceId !== undefined ? (
         <>
           <SpaceFindPodsPanel spaceId={spaceId} memberPodIds={memberPodIds} onChanged={() => void load()} />
-          {role === 'space_admin' || role === 'space_owner' ? (
+          {role === SpaceRole.ADMIN || role === SpaceRole.OWNER ? (
             <SpaceCreatePodPanel spaceId={spaceId} onCreated={() => void load()} />
           ) : null}
-          {role === 'space_owner' ? (
+          {role === SpaceRole.OWNER ? (
             <>
+              <SpaceSettingsPanel
+                key={`${name}:${description ?? ''}`}
+                spaceId={spaceId}
+                name={name}
+                description={description}
+                onSaved={() => void load()}
+              />
               <SpaceInvitesPanel spaceId={spaceId} />
               <SpaceMembersPanel spaceId={spaceId} />
             </>
