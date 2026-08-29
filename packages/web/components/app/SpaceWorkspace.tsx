@@ -11,13 +11,14 @@ import listDbSpaces from '@/lib/api/db/listDbSpaces';
 import listDbPods from '@/lib/api/db/listDbPods';
 import type {DbPod} from '@/lib/api/db/listDbPods';
 import listDbMyPodMemberships from '@/lib/api/db/listDbMyPodMemberships';
-import featureKindLabel from '@/lib/pod/featureKindLabel';
+import type {DbPodMembership} from '@/lib/api/db/listDbMyPodMemberships';
 import AppPageLoadingState from '@/components/app/AppPageLoadingState';
-import SpaceInvitesPanel from '@/components/app/SpaceInvitesPanel';
 import SpaceMembersPanel from '@/components/app/SpaceMembersPanel';
-import SpaceFindPodsPanel from '@/components/app/SpaceFindPodsPanel';
-import SpaceCreatePodPanel from '@/components/app/SpaceCreatePodPanel';
 import SpaceSettingsPanel from '@/components/app/SpaceSettingsPanel';
+import SpaceWorkspacePodCard from '@/components/app/SpaceWorkspacePodCard';
+import SpaceCreatePodDialog from '@/components/app/SpaceCreatePodDialog';
+import SpaceFindPodsDialog from '@/components/app/SpaceFindPodsDialog';
+import SpaceInvitesDialog from '@/components/app/SpaceInvitesDialog';
 
 export default function SpaceWorkspace() {
   const params = useParams<{spaceId: string}>();
@@ -27,10 +28,13 @@ export default function SpaceWorkspace() {
   const [description, setDescription] = useState<string | undefined>(undefined);
   const [role, setRole] = useState<SpaceRole>(SpaceRole.USER);
   const [pods, setPods] = useState<readonly DbPod[]>([]);
-  const [memberPodIds, setMemberPodIds] = useState<readonly string[]>([]);
+  const [memberships, setMemberships] = useState<readonly DbPodMembership[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     if (user === undefined || spaceId === undefined) {
@@ -49,12 +53,12 @@ export default function SpaceWorkspace() {
       setReady(true);
       return;
     }
-    const [podRows, memberships] = await Promise.all([listDbPods(spaceId), listDbMyPodMemberships(user.id)]);
+    const [podRows, membershipRows] = await Promise.all([listDbPods(spaceId), listDbMyPodMemberships(user.id)]);
     setName(space.name);
     setDescription(space.description);
     setRole(mine.role);
     setPods(podRows);
-    setMemberPodIds(memberships.map((m) => m.podId));
+    setMemberships(membershipRows);
     setReady(true);
   }, [spaceId, user]);
 
@@ -71,6 +75,7 @@ export default function SpaceWorkspace() {
     return <AppPageLoadingState />;
   }
 
+  const memberPodIds = memberships.map((m) => m.podId);
   const visible = filterAccessiblePods({
     pods,
     memberPodIds,
@@ -78,7 +83,9 @@ export default function SpaceWorkspace() {
     userId: user?.id ?? '',
     showArchived,
   });
-  const canShowArchivedSwitch = role === SpaceRole.OWNER || pods.some((p) => p.createdBy === user?.id && p.status === 'archived');
+  const canCreate = role === SpaceRole.ADMIN || role === SpaceRole.OWNER;
+  const isOwner = role === SpaceRole.OWNER;
+  const canShowArchivedSwitch = isOwner || pods.some((p) => p.createdBy === user?.id && p.status === 'archived');
 
   return (
     <Stack gap={8}>
@@ -86,9 +93,16 @@ export default function SpaceWorkspace() {
         <Text fontSize="sm">
           <Link href="/app">← Spaces</Link>
         </Text>
-        <Heading as="h1" size="lg">
-          {name}
-        </Heading>
+        <HStack justify="space-between" align="center" gap={3} maxW="md">
+          <Heading as="h1" size="lg">
+            {name}
+          </Heading>
+          {isOwner ? (
+            <Button colorPalette="brand" size="sm" onClick={() => setInviteOpen(true)}>
+              Invite
+            </Button>
+          ) : null}
+        </HStack>
         {description !== undefined ? <Text color="fg.muted">{description}</Text> : null}
         <Badge colorPalette="brand" variant="subtle" alignSelf="start">
           {spaceRoleLabel(role)}
@@ -111,28 +125,34 @@ export default function SpaceWorkspace() {
         </HStack>
       ) : null}
       <Stack gap={3}>
-        <Heading as="h2" size="md">
-          Pods
-        </Heading>
-        {visible.map((pod) => (
-          <HStack key={pod.id} justify="space-between" borderWidth="1px" borderColor="border.subtle" p={3} borderRadius="md">
-            <Link href={`/app/spaces/${spaceId}/pods/${pod.id}`}>
-              {pod.name ?? featureKindLabel(pod.feature)} ({pod.status})
-            </Link>
-            <Text fontSize="sm" color="fg.muted">
-              {pod.visibility}
-            </Text>
+        <HStack justify="space-between" align="center" gap={3} maxW="md">
+          <Heading as="h2" size="md">
+            Pods
+          </Heading>
+          <HStack gap={2}>
+            <Button variant="outline" colorPalette="brand" size="sm" onClick={() => setFindOpen(true)}>
+              Find
+            </Button>
+            {canCreate ? (
+              <Button colorPalette="brand" size="sm" onClick={() => setCreateOpen(true)}>
+                Create
+              </Button>
+            ) : null}
           </HStack>
+        </HStack>
+        {visible.map((pod) => (
+          <SpaceWorkspacePodCard
+            key={pod.id}
+            spaceId={spaceId ?? ''}
+            pod={pod}
+            role={memberships.find((m) => m.podId === pod.id)?.role}
+          />
         ))}
-        {visible.length === 0 ? <Text color="fg.muted">No pods yet. Find or add a feature.</Text> : null}
+        {visible.length === 0 ? <Text color="fg.muted">No pods yet. Find or create one.</Text> : null}
       </Stack>
       {spaceId !== undefined ? (
         <>
-          <SpaceFindPodsPanel spaceId={spaceId} memberPodIds={memberPodIds} onChanged={() => void load()} />
-          {role === SpaceRole.ADMIN || role === SpaceRole.OWNER ? (
-            <SpaceCreatePodPanel spaceId={spaceId} onCreated={() => void load()} />
-          ) : null}
-          {role === SpaceRole.OWNER ? (
+          {isOwner ? (
             <>
               <SpaceSettingsPanel
                 key={`${name}:${description ?? ''}`}
@@ -141,10 +161,28 @@ export default function SpaceWorkspace() {
                 description={description}
                 onSaved={() => void load()}
               />
-              <SpaceInvitesPanel spaceId={spaceId} />
               <SpaceMembersPanel spaceId={spaceId} />
             </>
           ) : null}
+          <SpaceFindPodsDialog
+            open={findOpen}
+            spaceId={spaceId}
+            memberPodIds={memberPodIds}
+            onClose={() => setFindOpen(false)}
+            onChanged={() => void load()}
+          />
+          {canCreate ? (
+            <SpaceCreatePodDialog
+              open={createOpen}
+              spaceId={spaceId}
+              onClose={() => setCreateOpen(false)}
+              onCreated={() => {
+                setCreateOpen(false);
+                void load();
+              }}
+            />
+          ) : null}
+          {isOwner ? <SpaceInvitesDialog open={inviteOpen} spaceId={spaceId} onClose={() => setInviteOpen(false)} /> : null}
         </>
       ) : null}
       <Button asChild variant="outline" colorPalette="brand" alignSelf="start">

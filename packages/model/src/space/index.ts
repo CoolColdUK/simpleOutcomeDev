@@ -1,6 +1,7 @@
 export {SpaceRole} from './spaceRole';
 export {default as spaceRoleLabel} from './spaceRoleLabel';
 export {PodRole} from './podRole';
+export {default as podRoleLabel} from './podRoleLabel';
 export {POD_VISIBILITIES, type PodVisibility} from './podVisibility';
 export {POD_STATUSES, type PodStatus} from './podStatus';
 export {FEATURE_KINDS, type FeatureKind} from './featureKind';
