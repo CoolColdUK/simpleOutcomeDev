@@ -7,6 +7,7 @@ export default async function createDbPod(
   feature: FeatureKind,
   name: string,
   visibility: PodVisibility,
+  description: string,
 ): Promise<string> {
   const supabase = getSupabaseBrowserClient();
   const {data, error} = await supabase.rpc('create_pod', {
@@ -14,6 +15,7 @@ export default async function createDbPod(
     p_feature: feature,
     p_name: name,
     p_visibility: visibility,
+    p_description: description,
   });
   throwIfSupabaseError(error);
   if (data === undefined || data === null) {

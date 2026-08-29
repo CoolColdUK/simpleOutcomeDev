@@ -1,13 +1,13 @@
-import type {SpaceInviteStatus} from './spaceInviteStatus';
+import {SpaceInviteStatus} from './spaceInviteStatus';
 
 export default function spaceInviteStatusLabel(status: SpaceInviteStatus): string {
-  if (status === 'active') {
+  if (status === SpaceInviteStatus.ACTIVE) {
     return 'active';
   }
-  if (status === 'expired') {
+  if (status === SpaceInviteStatus.EXPIRED) {
     return 'expired';
   }
-  if (status === 'exhausted') {
+  if (status === SpaceInviteStatus.EXHAUSTED) {
     return 'exhausted';
   }
   return 'disabled';

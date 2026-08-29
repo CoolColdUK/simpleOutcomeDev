@@ -1,4 +1,4 @@
-import type {SpaceInviteStatus} from './spaceInviteStatus';
+import {SpaceInviteStatus} from './spaceInviteStatus';
 
 export interface DeriveSpaceInviteStatusInput {
   readonly disabledAt: string | undefined;
@@ -10,13 +10,13 @@ export interface DeriveSpaceInviteStatusInput {
 
 export default function deriveSpaceInviteStatus(input: DeriveSpaceInviteStatusInput): SpaceInviteStatus {
   if (input.disabledAt !== undefined) {
-    return 'disabled';
+    return SpaceInviteStatus.DISABLED;
   }
   if (input.expiresAt !== undefined && input.expiresAt <= input.nowIso) {
-    return 'expired';
+    return SpaceInviteStatus.EXPIRED;
   }
   if (input.useCount >= input.maxUses) {
-    return 'exhausted';
+    return SpaceInviteStatus.EXHAUSTED;
   }
-  return 'active';
+  return SpaceInviteStatus.ACTIVE;
 }

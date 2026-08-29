@@ -92,6 +92,7 @@ export interface Database {
           space_id: string;
           feature: string;
           name: string | null;
+          description: string | null;
           visibility: string;
           status: string;
           created_by: string;
@@ -111,6 +112,87 @@ export interface Database {
         };
         Insert: Record<string, never>;
         Update: Record<string, never>;
+        Relationships: [];
+      };
+      todo_column: {
+        Row: {
+          id: string;
+          pod_id: string;
+          title: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pod_id: string;
+          title: string;
+          sort_order?: number;
+        };
+        Update: {
+          title?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      todo_card: {
+        Row: {
+          id: string;
+          pod_id: string;
+          column_id: string | null;
+          title: string;
+          description: string;
+          due_at: string | null;
+          tags: string[];
+          assignee_user_id: string | null;
+          sort_order: number;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pod_id: string;
+          column_id?: string | null;
+          title: string;
+          description?: string;
+          due_at?: string | null;
+          tags?: string[];
+          assignee_user_id?: string | null;
+          sort_order?: number;
+          created_by: string;
+        };
+        Update: {
+          column_id?: string | null;
+          title?: string;
+          description?: string;
+          due_at?: string | null;
+          tags?: string[];
+          assignee_user_id?: string | null;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      todo_card_comment: {
+        Row: {
+          id: string;
+          pod_id: string;
+          card_id: string;
+          body: string;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pod_id: string;
+          card_id: string;
+          body: string;
+          created_by: string;
+        };
+        Update: {
+          body?: string;
+        };
         Relationships: [];
       };
       pod_join_request: {
@@ -159,11 +241,17 @@ export interface Database {
         }[];
       };
       create_pod: {
-        Args: {p_space_id: string; p_feature: string; p_name: string; p_visibility: string};
+        Args: {
+          p_space_id: string;
+          p_feature: string;
+          p_name: string;
+          p_visibility: string;
+          p_description?: string;
+        };
         Returns: string;
       };
       update_pod: {
-        Args: {p_pod_id: string; p_name: string; p_visibility: string};
+        Args: {p_pod_id: string; p_name: string; p_visibility: string; p_description?: string};
         Returns: undefined;
       };
       set_pod_status: {Args: {p_pod_id: string; p_status: string}; Returns: undefined};

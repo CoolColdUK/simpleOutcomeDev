@@ -16,3 +16,5 @@ Marketing site and personal app shell. Monorepo: `packages/web` (Next.js) and `p
 3. **Actions → Production** to build and deploy.
 
 See `AGENTS.md`.
+
+Todo list storage: after production migrate, confirm `moddatetime` and bucket `pod-private` in the Supabase dashboard.

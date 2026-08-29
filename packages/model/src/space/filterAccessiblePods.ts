@@ -1,4 +1,4 @@
-import type {PodStatus} from './podStatus';
+import {PodStatus} from './podStatus';
 import type {PodVisibility} from './podVisibility';
 import type {FeatureKind} from './featureKind';
 import {SpaceRole} from './spaceRole';
@@ -22,7 +22,7 @@ export interface FilterAccessiblePodsInput<T extends AccessiblePod> {
 export default function filterAccessiblePods<T extends AccessiblePod>(input: FilterAccessiblePodsInput<T>): readonly T[] {
   const memberIds = new Set(input.memberPodIds);
   return input.pods.filter((pod) => {
-    if (pod.status === 'archived') {
+    if (pod.status === PodStatus.ARCHIVED) {
       if (!input.showArchived) {
         return false;
       }

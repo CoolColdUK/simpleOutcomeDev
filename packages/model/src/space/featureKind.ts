@@ -1,3 +1,4 @@
-export const FEATURE_KINDS = ['todo_list', 'shopping_list'] as const;
-
-export type FeatureKind = (typeof FEATURE_KINDS)[number];
+export enum FeatureKind {
+  TODO_LIST = 'todo_list',
+  SHOPPING_LIST = 'shopping_list',
+}

@@ -1,7 +1,7 @@
 import * as v from 'valibot';
-import {FEATURE_KINDS, type FeatureKind} from './featureKind';
+import {FeatureKind} from './featureKind';
 
-export const featureKindSchema = v.picklist(FEATURE_KINDS);
+export const featureKindSchema = v.enum(FeatureKind);
 
 export default function parseFeatureKind(input: unknown): FeatureKind {
   return v.parse(featureKindSchema, input);

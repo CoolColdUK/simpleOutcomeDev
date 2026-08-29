@@ -1,4 +1,4 @@
-import type {FeatureKind, PodVisibility} from '@so/model';
+import {FeatureKind, PodStatus, PodVisibility} from '@so/model';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 
@@ -9,8 +9,8 @@ export default async function searchDbPods(spaceId: string, query: string): Prom
     .from('pod')
     .select('id, feature, name, visibility, status')
     .eq('space_id', spaceId)
-    .eq('status', 'active')
-    .in('visibility', ['open', 'request']);
+    .eq('status', PodStatus.ACTIVE)
+    .in('visibility', [PodVisibility.OPEN, PodVisibility.REQUEST]);
   const filtered =
     trimmed === ''
       ? request

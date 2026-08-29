@@ -6,10 +6,10 @@ import {useParams} from 'next/navigation';
 import {Alert, Badge, Button, Heading, HStack, Stack, Text} from '@chakra-ui/react';
 import {
   SPACE_INVITE_PAGE_SIZE,
-  SPACE_INVITE_STATUS_FILTERS,
+  SpaceInviteStatus,
+  SpaceInviteStatusFilter,
   canManageSpace,
   spaceInviteStatusLabel,
-  type SpaceInviteStatusFilter,
 } from '@so/model';
 import dayjs from 'dayjs';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
@@ -28,7 +28,7 @@ export default function SpaceInvitationsPage() {
   const [allowed, setAllowed] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
-  const [status, setStatus] = useState<SpaceInviteStatusFilter>('all');
+  const [status, setStatus] = useState<SpaceInviteStatusFilter>(SpaceInviteStatusFilter.ALL);
   const [page, setPage] = useState(1);
   const [invites, setInvites] = useState<readonly DbSpaceInvite[]>([]);
   const [total, setTotal] = useState(0);
@@ -91,7 +91,7 @@ export default function SpaceInvitationsPage() {
       {allowed ? (
         <>
           <HStack gap={2} flexWrap="wrap">
-            {SPACE_INVITE_STATUS_FILTERS.map((item) => (
+            {Object.values(SpaceInviteStatusFilter).map((item) => (
               <Button
                 key={item}
                 size="sm"
@@ -102,7 +102,7 @@ export default function SpaceInvitationsPage() {
                   setStatus(item);
                 }}
               >
-                {item === 'all' ? 'All' : spaceInviteStatusLabel(item)}
+                {item === SpaceInviteStatusFilter.ALL ? 'All' : spaceInviteStatusLabel(item as unknown as SpaceInviteStatus)}
               </Button>
             ))}
           </HStack>

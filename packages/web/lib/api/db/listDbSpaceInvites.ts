@@ -1,8 +1,4 @@
-import {
-  SPACE_INVITE_PAGE_SIZE,
-  type SpaceInviteStatus,
-  type SpaceInviteStatusFilter,
-} from '@so/model';
+import {SPACE_INVITE_PAGE_SIZE, SpaceInviteStatus, SpaceInviteStatusFilter} from '@so/model';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 

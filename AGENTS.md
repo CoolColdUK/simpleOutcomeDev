@@ -41,4 +41,6 @@ Production only: GitHub Actions **Production**. That workflow applies `supabase/
 | Secret | `SUPABASE_PRODUCTION_DB_PASSWORD` | Database password for the production project |
 | Variable | `SUPABASE_PRODUCTION_PROJECT_REF` | Project ref (the subdomain in `https://<ref>.supabase.co`) |
 
-**First-time Vercel project:** add secret `VERCEL_TOKEN`, then run **Actions → Create Vercel project**. That creates the Vercel project (root `packages/web`, no Git). Copy `VERCEL_ORG_ID` (Vercel team id, `team_…`) and `VERCEL_PROJECT_ID_PRODUCTION` from the job summary into GitHub **Settings → Secrets and variables → Actions → Variables**. Auto-writing those variables needs a GitHub PAT with **Variables: write** (classic `repo` scope); a packages-only `GH_PAT` will get HTTP 401 and can be ignored.
+## 6. Todo list (after first feature migration)
+
+After Production `db push`, confirm Dashboard **Database → Extensions → moddatetime** and **Storage → pod-private** (private, 5MB, jpeg/png). No new Vercel env vars. Do not enable Realtime or `uuid-ossp`. Local: `supabase db reset` so the migration applies.

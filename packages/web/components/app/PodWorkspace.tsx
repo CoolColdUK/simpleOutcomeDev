@@ -3,7 +3,7 @@
 import {useCallback, useEffect, useState} from 'react';
 import Link from 'next/link';
 import {useParams, useRouter} from 'next/navigation';
-import {Alert, Button, Field, Heading, HStack, Input, Stack, Text} from '@chakra-ui/react';
+import {Alert, Button, Heading, Stack, Text} from '@chakra-ui/react';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbPod from '@/lib/api/db/getDbPod';
 import type {DbPod} from '@/lib/api/db/listDbPods';
@@ -12,12 +12,12 @@ import listDbPodMembers, {type DbPodMember} from '@/lib/api/db/listDbPodMembers'
 import listDbPodJoinRequests, {type DbPodJoinRequest} from '@/lib/api/db/listDbPodJoinRequests';
 import updateDbPodStatus from '@/lib/api/db/updateDbPodStatus';
 import deleteDbPod from '@/lib/api/db/deleteDbPod';
-import addDbPodMemberByUsername from '@/lib/api/db/addDbPodMemberByUsername';
-import approveDbPodJoinRequest from '@/lib/api/db/approveDbPodJoinRequest';
-import denyDbPodJoinRequest from '@/lib/api/db/denyDbPodJoinRequest';
 import featureKindLabel from '@/lib/pod/featureKindLabel';
-import {PodRole, SpaceRole} from '@so/model';
+import {FeatureKind, PodRole, PodStatus, SpaceRole} from '@so/model';
 import AppPageLoadingState from '@/components/app/AppPageLoadingState';
+import PodWorkspaceAccess from '@/components/app/PodWorkspaceAccess';
+import PodEditDialog from '@/components/app/PodEditDialog';
+import TodoListBoard from '@/components/todo/TodoListBoard';
 
 export default function PodWorkspace() {
   const params = useParams<{spaceId: string; podId: string}>();
@@ -27,9 +27,9 @@ export default function PodWorkspace() {
   const [spaceRole, setSpaceRole] = useState<SpaceRole>(SpaceRole.USER);
   const [members, setMembers] = useState<readonly DbPodMember[]>([]);
   const [requests, setRequests] = useState<readonly DbPodJoinRequest[]>([]);
-  const [addUsername, setAddUsername] = useState('');
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     if (user === undefined) {
@@ -74,10 +74,9 @@ export default function PodWorkspace() {
   const isPodAdmin = myRole === PodRole.ADMIN;
   const canManage = isPodOwner || spaceRole === SpaceRole.OWNER;
   const canApprove = isPodOwner || isPodAdmin || spaceRole === SpaceRole.OWNER;
-  const canAddMembers = canApprove;
 
   const archive = async (): Promise<void> => {
-    await updateDbPodStatus(pod.id, pod.status === 'archived' ? 'active' : 'archived');
+    await updateDbPodStatus(pod.id, pod.status === PodStatus.ARCHIVED ? PodStatus.ACTIVE : PodStatus.ARCHIVED);
     await load();
   };
 
@@ -86,25 +85,15 @@ export default function PodWorkspace() {
     router.replace(`/app/spaces/${params.spaceId}`);
   };
 
-  const addMember = async (): Promise<void> => {
-    setError('');
-    try {
-      await addDbPodMemberByUsername(pod.id, addUsername.trim(), PodRole.USER);
-      setAddUsername('');
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
   return (
     <Stack gap={6}>
       <Text fontSize="sm">
-        <Link href={`/app/spaces/${params.spaceId}`}>← {params.spaceId.slice(0, 8)}</Link>
+        <Link href={`/app/spaces/${params.spaceId}`}>← Back to space</Link>
       </Text>
       <Heading as="h1" size="lg">
         {pod.name ?? featureKindLabel(pod.feature)}
       </Heading>
+      {pod.description !== undefined ? <Text>{pod.description}</Text> : null}
       <Text color="fg.muted">
         {featureKindLabel(pod.feature)} · {pod.visibility} · {pod.status}
       </Text>
@@ -113,10 +102,25 @@ export default function PodWorkspace() {
           <Alert.Description>{error}</Alert.Description>
         </Alert.Root>
       ) : null}
-      <Text>This feature is coming soon. You can still manage access here.</Text>
+      {canManage ? (
+        <Button variant="outline" colorPalette="brand" alignSelf="start" onClick={() => setEditOpen(true)}>
+          Edit title and description
+        </Button>
+      ) : null}
+      {pod.feature === FeatureKind.TODO_LIST && user !== undefined ? (
+        <TodoListBoard
+          podId={pod.id}
+          userId={user.id}
+          members={members}
+          podRole={myRole}
+          isSpaceOwner={spaceRole === SpaceRole.OWNER}
+        />
+      ) : (
+        <Text>This feature is coming soon. You can still manage access here.</Text>
+      )}
       {canManage ? (
         <Button colorPalette="brand" alignSelf="start" onClick={() => void archive()}>
-          {pod.status === 'archived' ? 'Restore' : 'Archive'}
+          {pod.status === PodStatus.ARCHIVED ? 'Restore pod' : 'Archive pod'}
         </Button>
       ) : null}
       {spaceRole === SpaceRole.OWNER ? (
@@ -124,45 +128,16 @@ export default function PodWorkspace() {
           Delete pod
         </Button>
       ) : null}
-      {canAddMembers ? (
-        <Stack maxW="sm" gap={2}>
-          <Field.Root>
-            <Field.Label>Add space member by username</Field.Label>
-            <Input value={addUsername} onChange={(e) => setAddUsername(e.target.value)} />
-          </Field.Root>
-          <Button colorPalette="brand" onClick={() => void addMember()}>
-            Add as pod user
-          </Button>
-        </Stack>
-      ) : null}
-      <Stack gap={2}>
-        <Heading as="h2" size="md">
-          Members
-        </Heading>
-        {members.map((m) => (
-          <Text key={m.userId}>
-            {m.username ?? m.userId.slice(0, 8)} · {m.role.replaceAll('_', ' ')}
-          </Text>
-        ))}
-      </Stack>
-      {canApprove && requests.length > 0 ? (
-        <Stack gap={2}>
-          <Heading as="h2" size="md">
-            Join requests
-          </Heading>
-          {requests.map((req) => (
-            <HStack key={req.id}>
-              <Text>{req.username ?? req.userId.slice(0, 8)}</Text>
-              <Button size="sm" colorPalette="brand" onClick={() => void approveDbPodJoinRequest(req.id).then(load)}>
-                Approve
-              </Button>
-              <Button size="sm" variant="outline" colorPalette="brand" onClick={() => void denyDbPodJoinRequest(req.id).then(load)}>
-                Deny
-              </Button>
-            </HStack>
-          ))}
-        </Stack>
-      ) : null}
+      <PodWorkspaceAccess
+        podId={pod.id}
+        members={members}
+        requests={requests}
+        canAddMembers={canApprove}
+        canApprove={canApprove}
+        onChanged={() => void load()}
+        onError={setError}
+      />
+      <PodEditDialog open={editOpen} pod={pod} onClose={() => setEditOpen(false)} onSaved={() => void load()} />
     </Stack>
   );
 }

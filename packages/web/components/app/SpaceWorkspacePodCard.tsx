@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {Badge, Box, Heading, HStack, Stack, Text, useSlotRecipe} from '@chakra-ui/react';
-import {podRoleLabel, type PodRole} from '@so/model';
+import {podRoleLabel, PodStatus, type PodRole} from '@so/model';
 import type {DbPod} from '@/lib/api/db/listDbPods';
 import featureKindLabel from '@/lib/pod/featureKindLabel';
 
@@ -25,6 +25,11 @@ export default function SpaceWorkspacePodCard({spaceId, pod, role}: SpaceWorkspa
             <Heading as="h3" size="md">
               {title}
             </Heading>
+            {pod.description !== undefined ? (
+              <Text fontSize="sm" color="fg.muted">
+                {pod.description}
+              </Text>
+            ) : null}
             {pod.name !== undefined ? (
               <Text fontSize="sm" color="fg.muted">
                 {featureKindLabel(pod.feature)}
@@ -40,7 +45,7 @@ export default function SpaceWorkspacePodCard({spaceId, pod, role}: SpaceWorkspa
             <Badge colorPalette="brand" variant="outline">
               {pod.visibility}
             </Badge>
-            {pod.status === 'archived' ? (
+            {pod.status === PodStatus.ARCHIVED ? (
               <Badge colorPalette="gray" variant="subtle">
                 archived
               </Badge>

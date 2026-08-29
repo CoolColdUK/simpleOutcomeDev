@@ -1,4 +1,5 @@
 import deriveSpaceInviteStatus from './deriveSpaceInviteStatus';
+import {SpaceInviteStatus} from './spaceInviteStatus';
 
 const nowIso = '2026-08-29T10:00:00.000Z';
 
@@ -12,7 +13,7 @@ describe('deriveSpaceInviteStatus', () => {
         maxUses: 10,
         nowIso,
       }),
-    ).toBe('disabled');
+    ).toBe(SpaceInviteStatus.DISABLED);
   });
 
   it('returns expired when past expiry', () => {
@@ -24,7 +25,7 @@ describe('deriveSpaceInviteStatus', () => {
         maxUses: 10,
         nowIso,
       }),
-    ).toBe('expired');
+    ).toBe(SpaceInviteStatus.EXPIRED);
   });
 
   it('returns exhausted when uses are spent', () => {
@@ -36,7 +37,7 @@ describe('deriveSpaceInviteStatus', () => {
         maxUses: 3,
         nowIso,
       }),
-    ).toBe('exhausted');
+    ).toBe(SpaceInviteStatus.EXHAUSTED);
   });
 
   it('returns active otherwise', () => {
@@ -48,6 +49,6 @@ describe('deriveSpaceInviteStatus', () => {
         maxUses: 3,
         nowIso,
       }),
-    ).toBe('active');
+    ).toBe(SpaceInviteStatus.ACTIVE);
   });
 });

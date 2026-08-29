@@ -16,8 +16,9 @@ import {
   Field,
   Input,
   Stack,
+  Textarea,
 } from '@chakra-ui/react';
-import {FEATURE_KINDS, POD_VISIBILITIES, type FeatureKind, type PodVisibility} from '@so/model';
+import {FeatureKind, PodVisibility} from '@so/model';
 import createDbPod from '@/lib/api/db/createDbPod';
 import featureKindLabel from '@/lib/pod/featureKindLabel';
 
@@ -29,9 +30,10 @@ export interface SpaceCreatePodDialogProps {
 }
 
 export default function SpaceCreatePodDialog({open, spaceId, onClose, onCreated}: SpaceCreatePodDialogProps) {
-  const [feature, setFeature] = useState<FeatureKind>('todo_list');
-  const [visibility, setVisibility] = useState<PodVisibility>('open');
+  const [feature, setFeature] = useState<FeatureKind>(FeatureKind.TODO_LIST);
+  const [visibility, setVisibility] = useState<PodVisibility>(PodVisibility.OPEN);
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -39,8 +41,9 @@ export default function SpaceCreatePodDialog({open, spaceId, onClose, onCreated}
     setError('');
     setSaving(true);
     try {
-      await createDbPod(spaceId, feature, name, visibility);
+      await createDbPod(spaceId, feature, name, visibility, description);
       setName('');
+      setDescription('');
       onCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -61,7 +64,7 @@ export default function SpaceCreatePodDialog({open, spaceId, onClose, onCreated}
           <DialogBody>
             <Stack gap={4}>
               <Stack direction="row" gap={2} flexWrap="wrap">
-                {FEATURE_KINDS.map((kind) => (
+                {Object.values(FeatureKind).map((kind) => (
                   <Button
                     key={kind}
                     size="sm"
@@ -74,7 +77,7 @@ export default function SpaceCreatePodDialog({open, spaceId, onClose, onCreated}
                 ))}
               </Stack>
               <Stack direction="row" gap={2} flexWrap="wrap">
-                {POD_VISIBILITIES.map((item) => (
+                {Object.values(PodVisibility).map((item) => (
                   <Button
                     key={item}
                     size="sm"
@@ -87,8 +90,12 @@ export default function SpaceCreatePodDialog({open, spaceId, onClose, onCreated}
                 ))}
               </Stack>
               <Field.Root>
-                <Field.Label>Name (optional)</Field.Label>
+                <Field.Label>Title</Field.Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
+              </Field.Root>
+              <Field.Root>
+                <Field.Label>Description</Field.Label>
+                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
               </Field.Root>
               {error !== '' ? (
                 <Alert.Root status="error">
