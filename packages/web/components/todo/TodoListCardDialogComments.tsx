@@ -1,7 +1,7 @@
 'use client';
 
 import {Button, HStack, Input, Stack, Text} from '@chakra-ui/react';
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import dayjs from 'dayjs';
 import type {DbTodoCardComment} from '@/lib/api/db/listDbTodoCardComments';
 import listDbTodoCardComments from '@/lib/api/db/listDbTodoCardComments';
@@ -30,13 +30,13 @@ export default function TodoListCardDialogComments({
   const [body, setBody] = useState('');
   const canDeleteAny = canManageTodoColumns(podRole, isSpaceOwner);
 
-  const load = async (): Promise<void> => {
+  const load = useCallback(async (): Promise<void> => {
     setRows(await listDbTodoCardComments(cardId));
-  };
+  }, [cardId]);
 
   useEffect(() => {
-    void load();
-  }, [cardId]);
+    void Promise.resolve().then(() => load());
+  }, [load]);
 
   const add = async (): Promise<void> => {
     await createDbTodoCardComment(podId, cardId, body, userId);

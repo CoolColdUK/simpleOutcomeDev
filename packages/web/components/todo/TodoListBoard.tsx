@@ -47,7 +47,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
   }, [podId]);
 
   useEffect(() => {
-    void load();
+    void Promise.resolve().then(() => load());
   }, [load]);
 
   const assigneeName = (id: string | undefined): string | undefined => {

@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useRef, useState} from 'react';
+import {useRef, useState} from 'react';
 import {
   Alert,
   Button,
@@ -41,7 +41,18 @@ export interface TodoListCardDialogProps {
   readonly onChanged: () => void;
 }
 
-export default function TodoListCardDialog({
+export default function TodoListCardDialog(props: TodoListCardDialogProps) {
+  if (props.card === undefined) {
+    return null;
+  }
+  return <TodoListCardDialogBody key={props.card.id} {...props} card={props.card} />;
+}
+
+interface TodoListCardDialogBodyProps extends Omit<TodoListCardDialogProps, 'card'> {
+  readonly card: DbTodoCard;
+}
+
+function TodoListCardDialogBody({
   open,
   card,
   members,
@@ -50,30 +61,14 @@ export default function TodoListCardDialog({
   isSpaceOwner,
   onClose,
   onChanged,
-}: TodoListCardDialogProps) {
+}: TodoListCardDialogBodyProps) {
   const taRef = useRef<HTMLTextAreaElement>(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [dueAt, setDueAt] = useState('');
-  const [tags, setTags] = useState('');
-  const [assignee, setAssignee] = useState('');
+  const [title, setTitle] = useState(card.title);
+  const [description, setDescription] = useState(card.description);
+  const [dueAt, setDueAt] = useState(card.dueAt ?? '');
+  const [tags, setTags] = useState(card.tags.join(', '));
+  const [assignee, setAssignee] = useState(card.assigneeUserId ?? '');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (card === undefined) {
-      return;
-    }
-    setTitle(card.title);
-    setDescription(card.description);
-    setDueAt(card.dueAt ?? '');
-    setTags(card.tags.join(', '));
-    setAssignee(card.assigneeUserId ?? '');
-    setError('');
-  }, [card]);
-
-  if (card === undefined) {
-    return null;
-  }
 
   const save = async (): Promise<void> => {
     setError('');
