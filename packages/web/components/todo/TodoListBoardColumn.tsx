@@ -90,6 +90,7 @@ export default function TodoListBoardColumn({
               color="fg.muted"
               aria-label="Move column"
               py={1}
+              style={{touchAction: 'none'}}
             >
               <GripDotsIcon size={14} />
             </Stack>

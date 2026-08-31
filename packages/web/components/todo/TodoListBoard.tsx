@@ -1,11 +1,12 @@
 'use client';
 
-import {Box, Button, HStack, Stack, Switch} from '@chakra-ui/react';
+import {HStack, Stack} from '@chakra-ui/react';
 import {
   DndContext,
   DragOverlay,
   MeasuringStrategy,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -14,8 +15,14 @@ import {
 } from '@dnd-kit/core';
 import {arrayMove, horizontalListSortingStrategy, SortableContext} from '@dnd-kit/sortable';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {AddIcon} from '@so/component';
-import {applyTodoCardDrag, canManageTodoColumns, type PodRole} from '@so/model';
+import {
+  applyTodoCardDrag,
+  canManageTodoColumns,
+  filterTodoCardsByTags,
+  listUniqueTodoCardTags,
+  sortTodoCardsByColumnOrder,
+  type PodRole,
+} from '@so/model';
 import type {DbTodoColumn} from '@/lib/api/db/listDbTodoColumns';
 import listDbTodoColumns from '@/lib/api/db/listDbTodoColumns';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
@@ -31,9 +38,12 @@ import TodoListBoardArchivePanel from '@/components/todo/TodoListBoardArchivePan
 import TodoListAddColumnDialog from '@/components/todo/TodoListAddColumnDialog';
 import TodoListCardDialog from '@/components/todo/TodoListCardDialog';
 import TodoListBoardCardPreview from '@/components/todo/TodoListBoardCardPreview';
+import TodoListBoardToolbar from '@/components/todo/TodoListBoardToolbar';
+import TodoListBoardSingleList from '@/components/todo/TodoListBoardSingleList';
 import destTodoColumnId from '@/components/todo/destTodoColumnId';
 import createTodoBoardCollisionDetection from '@/components/todo/createTodoBoardCollisionDetection';
 import mergeTodoCardSort from '@/components/todo/mergeTodoCardSort';
+import useTodoPodSingleListMode from '@/lib/todo/useTodoPodSingleListMode';
 
 export interface TodoListBoardProps {
   readonly podId: string;
@@ -49,16 +59,34 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
   const [openCard, setOpenCard] = useState<DbTodoCard | undefined>(undefined);
   const [addOpen, setAddOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [tagFilter, setTagFilter] = useState<readonly string[]>([]);
   const [dragType, setDragType] = useState<string | undefined>(undefined);
   const [activeCardId, setActiveCardId] = useState<string | undefined>(undefined);
+  const {enabled: singleList, setEnabled: setSingleList} = useTodoPodSingleListMode(podId);
   const cardsBeforeDrag = useRef<readonly DbTodoCard[]>([]);
   const cardsRef = useRef(cards);
-  const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 8}}));
+  const sensors = useSensors(
+    useSensor(MouseSensor, {activationConstraint: {distance: 8}}),
+    useSensor(TouchSensor, {activationConstraint: {delay: 200, tolerance: 8}}),
+  );
   const manageCols = canManageTodoColumns(podRole, isSpaceOwner);
   const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
   const collisionDetection = useMemo(
     () => createTodoBoardCollisionDetection(() => dragType, () => columnIds),
     [columnIds, dragType],
+  );
+  const taggedCards = useMemo(() => filterTodoCardsByTags(cards, tagFilter), [cards, tagFilter]);
+  const availableTags = useMemo(() => {
+    const source = showArchived ? cards : cards.filter((card) => card.columnId !== undefined);
+    return listUniqueTodoCardTags(source);
+  }, [cards, showArchived]);
+  const listCards = useMemo(() => {
+    const visible = taggedCards.filter((card) => card.columnId !== undefined || showArchived);
+    return sortTodoCardsByColumnOrder(visible, columnIds);
+  }, [taggedCards, showArchived, columnIds]);
+  const cardCountByColumn = useMemo(
+    () => Object.fromEntries(columns.map((column) => [column.id, cards.filter((card) => card.columnId === column.id).length])),
+    [columns, cards],
   );
 
   const load = useCallback(async (): Promise<void> => {
@@ -175,7 +203,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
     await load();
   };
 
-  const archived = cards.filter((c) => c.columnId === undefined);
+  const archived = taggedCards.filter((c) => c.columnId === undefined);
   const activeCard = cards.find((c) => c.id === activeCardId);
   const activeColumnTitle = columns.find((c) => c.id === activeCard?.columnId)?.title;
 
@@ -194,25 +222,24 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
     await load();
   };
 
+  const toggleTag = (tag: string): void => {
+    setTagFilter((prev) => (prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag]));
+  };
+
   return (
     <Stack gap={4}>
-      <HStack justify="space-between" flexWrap="wrap" gap={3}>
-        {manageCols ? (
-          <Button size="sm" colorPalette="brand" onClick={() => setAddOpen(true)}>
-            <AddIcon size={16} />
-            Add column
-          </Button>
-        ) : (
-          <Box />
-        )}
-        <Switch.Root checked={showArchived} onCheckedChange={(e) => setShowArchived(e.checked)}>
-          <Switch.HiddenInput />
-          <Switch.Control>
-            <Switch.Thumb />
-          </Switch.Control>
-          <Switch.Label>Show archived</Switch.Label>
-        </Switch.Root>
-      </HStack>
+      <TodoListBoardToolbar
+        canManageColumns={manageCols}
+        availableTags={availableTags}
+        selectedTags={tagFilter}
+        singleList={singleList}
+        showArchived={showArchived}
+        onAddColumn={() => setAddOpen(true)}
+        onToggleTag={toggleTag}
+        onClearTags={() => setTagFilter([])}
+        onSingleListChange={setSingleList}
+        onShowArchivedChange={setShowArchived}
+      />
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
@@ -222,36 +249,54 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
         onDragCancel={onDragCancel}
         onDragEnd={(e) => void onDragEnd(e)}
       >
-        <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-          <HStack align="start" overflowX="auto" gap={3}>
-            {columns.map((column) => (
-              <TodoListBoardColumn
-                key={column.id}
-                column={column}
-                cards={cards.filter((c) => c.columnId === column.id)}
-                canManageColumns={manageCols}
-                sortDisabled={dragType === 'card'}
-                userId={userId}
-                assigneeName={assigneeName}
-                onOpenCard={setOpenCard}
-                onCompleteCard={(card) => void completeCard(card)}
-                onArchiveCard={(card) => void archiveCard(card)}
-                onDeleteCard={(card) => void deleteCard(card)}
-                onChanged={() => void load()}
-              />
-            ))}
-            {showArchived ? (
-              <TodoListBoardArchivePanel
-                cards={archived}
-                assigneeName={assigneeName}
-                onOpenCard={setOpenCard}
-                onCompleteCard={(card) => void completeCard(card)}
-                onArchiveCard={(card) => void archiveCard(card)}
-                onDeleteCard={(card) => void deleteCard(card)}
-              />
-            ) : null}
-          </HStack>
-        </SortableContext>
+        {singleList ? (
+          <TodoListBoardSingleList
+            podId={podId}
+            userId={userId}
+            columns={columns}
+            cards={listCards}
+            cardCountByColumn={cardCountByColumn}
+            showArchived={showArchived}
+            canManageColumns={manageCols}
+            assigneeName={assigneeName}
+            onOpenCard={setOpenCard}
+            onCompleteCard={(card) => void completeCard(card)}
+            onArchiveCard={(card) => void archiveCard(card)}
+            onDeleteCard={(card) => void deleteCard(card)}
+            onChanged={() => void load()}
+          />
+        ) : (
+          <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
+            <HStack align="start" overflowX="auto" gap={3}>
+              {columns.map((column) => (
+                <TodoListBoardColumn
+                  key={column.id}
+                  column={column}
+                  cards={taggedCards.filter((c) => c.columnId === column.id)}
+                  canManageColumns={manageCols}
+                  sortDisabled={dragType === 'card'}
+                  userId={userId}
+                  assigneeName={assigneeName}
+                  onOpenCard={setOpenCard}
+                  onCompleteCard={(card) => void completeCard(card)}
+                  onArchiveCard={(card) => void archiveCard(card)}
+                  onDeleteCard={(card) => void deleteCard(card)}
+                  onChanged={() => void load()}
+                />
+              ))}
+              {showArchived ? (
+                <TodoListBoardArchivePanel
+                  cards={archived}
+                  assigneeName={assigneeName}
+                  onOpenCard={setOpenCard}
+                  onCompleteCard={(card) => void completeCard(card)}
+                  onArchiveCard={(card) => void archiveCard(card)}
+                  onDeleteCard={(card) => void deleteCard(card)}
+                />
+              ) : null}
+            </HStack>
+          </SortableContext>
+        )}
         <DragOverlay>
           {activeCard !== undefined ? (
             <TodoListBoardCardPreview

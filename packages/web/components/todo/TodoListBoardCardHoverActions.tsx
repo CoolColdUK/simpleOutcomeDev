@@ -30,6 +30,7 @@ export default function TodoListBoardCardHoverActions({
       zIndex={1}
       onClick={stop}
       onPointerDown={stop}
+      onTouchStart={stop}
     >
       <AppIconTooltip label={complete ? 'Mark incomplete' : 'Mark complete'}>
         <IconButton

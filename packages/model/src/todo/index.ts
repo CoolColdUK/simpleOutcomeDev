@@ -16,5 +16,8 @@ export {default as parseTodoColumnTitle} from './parseTodoColumnTitle';
 export {default as parseTodoCardTitle} from './parseTodoCardTitle';
 export {default as parseTodoCardCommentBody} from './parseTodoCardCommentBody';
 export {default as parseTodoCardTags} from './parseTodoCardTags';
+export {default as listUniqueTodoCardTags} from './listUniqueTodoCardTags';
+export {default as filterTodoCardsByTags} from './filterTodoCardsByTags';
+export {default as sortTodoCardsByColumnOrder} from './sortTodoCardsByColumnOrder';
 export {default as applyTodoCardDrag} from './applyTodoCardDrag';
 export type {ApplyTodoCardDragInput, TodoCardSortItem} from './applyTodoCardDrag';

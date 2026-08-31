@@ -1,19 +1,20 @@
 'use client';
 
 import {Box, Badge, Stack, Text} from '@chakra-ui/react';
+import {useEffect, useRef} from 'react';
 import {useSortable} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 import {GripDotsIcon} from '@so/component';
 import {todoCardStatusLabel} from '@so/model';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 import TodoListBoardCardHoverActions from '@/components/todo/TodoListBoardCardHoverActions';
-import AppIconTooltip from '@/components/app/AppIconTooltip';
 import formatTodoDueAt from '@/components/todo/formatTodoDueAt';
 
 export interface TodoListBoardCardProps {
   readonly card: DbTodoCard;
   readonly columnTitle: string | undefined;
   readonly assigneeLabel: string | undefined;
+  readonly statusAsTag?: boolean;
   readonly onOpen: () => void;
   readonly onComplete: () => void;
   readonly onArchive: () => void;
@@ -24,6 +25,7 @@ export default function TodoListBoardCard({
   card,
   columnTitle,
   assigneeLabel,
+  statusAsTag = false,
   onOpen,
   onComplete,
   onArchive,
@@ -35,14 +37,24 @@ export default function TodoListBoardCard({
   });
   const complete = card.completedAt !== undefined;
   const dueLabel = formatTodoDueAt(card.dueAt);
+  const skipClick = useRef(false);
+
+  useEffect(() => {
+    if (isDragging) {
+      skipClick.current = true;
+    }
+  }, [isDragging]);
 
   return (
     <Box
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       style={{
         transform: isDragging ? undefined : CSS.Transform.toString(transform),
         transition: isDragging ? undefined : transition,
         opacity: isDragging ? 0 : 1,
+        touchAction: 'manipulation',
       }}
       position="relative"
       borderWidth="1px"
@@ -51,11 +63,18 @@ export default function TodoListBoardCard({
       p={2}
       pt={7}
       bg="bg.paper"
-      cursor="pointer"
-      onClick={onOpen}
+      cursor="grab"
+      onClick={() => {
+        if (skipClick.current) {
+          skipClick.current = false;
+          return;
+        }
+        onOpen();
+      }}
       css={{
         '& .todo-card-hover': {opacity: 0},
         _hover: {'& .todo-card-hover': {opacity: 1}},
+        '@media (hover: none)': {'& .todo-card-hover': {opacity: 1}},
       }}
     >
       <TodoListBoardCardHoverActions
@@ -69,22 +88,19 @@ export default function TodoListBoardCard({
           <Text fontWeight="semibold" textDecoration={complete ? 'line-through' : undefined}>
             {card.title}
           </Text>
-          <AppIconTooltip label="Move card">
-            <Box
-              {...attributes}
-              {...listeners}
-              cursor="grab"
-              color="fg.muted"
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Move card"
-            >
-              <GripDotsIcon size={14} />
-            </Box>
-          </AppIconTooltip>
+          <Box color="fg.muted" aria-hidden>
+            <GripDotsIcon size={14} />
+          </Box>
         </Box>
-        <Text fontSize="xs" color="fg.muted">
-          {todoCardStatusLabel(columnTitle)}
-        </Text>
+        {statusAsTag ? (
+          <Badge size="sm" variant="subtle" w="fit-content">
+            {todoCardStatusLabel(columnTitle)}
+          </Badge>
+        ) : (
+          <Text fontSize="xs" color="fg.muted">
+            {todoCardStatusLabel(columnTitle)}
+          </Text>
+        )}
         {dueLabel !== undefined ? <Text fontSize="xs">{dueLabel}</Text> : null}
         {assigneeLabel !== undefined ? <Text fontSize="xs">{assigneeLabel}</Text> : null}
         {card.tags.length > 0 ? (
