@@ -1,6 +1,6 @@
 'use client';
 
-import {Box, Badge, Stack, Text} from '@chakra-ui/react';
+import {Box, Badge, HStack, Stack, Text} from '@chakra-ui/react';
 import {useEffect, useRef} from 'react';
 import {useSortable} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
@@ -8,12 +8,14 @@ import {GripDotsIcon} from '@so/component';
 import {todoCardStatusLabel} from '@so/model';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 import TodoListBoardCardHoverActions from '@/components/todo/TodoListBoardCardHoverActions';
+import TodoCardIconThumb from '@/components/todo/TodoCardIconThumb';
 import formatTodoDueAt from '@/components/todo/formatTodoDueAt';
 
 export interface TodoListBoardCardProps {
   readonly card: DbTodoCard;
   readonly columnTitle: string | undefined;
   readonly assigneeLabel: string | undefined;
+  readonly iconUrl: string | undefined;
   readonly statusAsTag?: boolean;
   readonly onOpen: () => void;
   readonly onComplete: () => void;
@@ -25,6 +27,7 @@ export default function TodoListBoardCard({
   card,
   columnTitle,
   assigneeLabel,
+  iconUrl,
   statusAsTag = false,
   onOpen,
   onComplete,
@@ -83,7 +86,9 @@ export default function TodoListBoardCard({
         onArchive={onArchive}
         onDelete={onDelete}
       />
-      <Stack gap={1}>
+      <HStack align="start" gap={2}>
+        <TodoCardIconThumb src={iconUrl} />
+        <Stack gap={1} flex="1" minW={0}>
         <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2}>
           <Text fontWeight="semibold" textDecoration={complete ? 'line-through' : undefined}>
             {card.title}
@@ -112,7 +117,8 @@ export default function TodoListBoardCard({
             ))}
           </Box>
         ) : null}
-      </Stack>
+        </Stack>
+      </HStack>
     </Box>
   );
 }

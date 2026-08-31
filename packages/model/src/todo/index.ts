@@ -1,8 +1,9 @@
-export {BUCKET_POD_PRIVATE, TODO_MAX_INLINE_IMAGES, TODO_ARCHIVE_COLUMN_ID} from './constants';
+export {BUCKET_POD_PRIVATE, TODO_MAX_INLINE_IMAGES, TODO_MAX_ICON_BYTES, TODO_ARCHIVE_COLUMN_ID} from './constants';
 export {TodoImageMime} from './todoImageMime';
 export {default as getTodoImageFileExtension} from './todoImageMime';
 export {default as normalizeTodoImageMimeFromBlobType} from './normalizeTodoImageMimeFromBlobType';
 export {default as buildTodoCardImageObjectPath} from './buildTodoCardImageObjectPath';
+export {default as buildTodoCardIconObjectPath} from './buildTodoCardIconObjectPath';
 export {
   encodeSoImageMarkdownUri,
   decodeSoImageMarkdownUri,

@@ -44,6 +44,8 @@ import destTodoColumnId from '@/components/todo/destTodoColumnId';
 import createTodoBoardCollisionDetection from '@/components/todo/createTodoBoardCollisionDetection';
 import mergeTodoCardSort from '@/components/todo/mergeTodoCardSort';
 import useTodoPodSingleListMode from '@/lib/todo/useTodoPodSingleListMode';
+import listStorageTodoCardIconSignedUrls from '@/lib/api/storage/listStorageTodoCardIconSignedUrls';
+import todoCardIconUrl from '@/lib/todo/todoCardIconUrl';
 
 export interface TodoListBoardProps {
   readonly podId: string;
@@ -60,6 +62,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
   const [addOpen, setAddOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [tagFilter, setTagFilter] = useState<readonly string[]>([]);
+  const [iconUrlByPath, setIconUrlByPath] = useState<Readonly<Record<string, string>>>({});
   const [dragType, setDragType] = useState<string | undefined>(undefined);
   const [activeCardId, setActiveCardId] = useState<string | undefined>(undefined);
   const {enabled: singleList, setEnabled: setSingleList} = useTodoPodSingleListMode(podId);
@@ -91,8 +94,11 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
 
   const load = useCallback(async (): Promise<void> => {
     const [colRows, cardRows] = await Promise.all([listDbTodoColumns(podId), listDbTodoCards(podId)]);
+    const iconPaths = cardRows.flatMap((row) => (row.iconPath === undefined ? [] : [row.iconPath]));
+    const urls = await listStorageTodoCardIconSignedUrls(iconPaths).catch(() => ({}));
     setColumns(colRows);
     setCards(cardRows);
+    setIconUrlByPath(urls);
     setOpenCard((current) => {
       if (current === undefined) {
         return undefined;
@@ -264,6 +270,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
             onArchiveCard={(card) => void archiveCard(card)}
             onDeleteCard={(card) => void deleteCard(card)}
             onChanged={() => void load()}
+            iconUrlByPath={iconUrlByPath}
           />
         ) : (
           <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
@@ -282,6 +289,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
                   onArchiveCard={(card) => void archiveCard(card)}
                   onDeleteCard={(card) => void deleteCard(card)}
                   onChanged={() => void load()}
+                  iconUrlByPath={iconUrlByPath}
                 />
               ))}
               {showArchived ? (
@@ -292,6 +300,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
                   onCompleteCard={(card) => void completeCard(card)}
                   onArchiveCard={(card) => void archiveCard(card)}
                   onDeleteCard={(card) => void deleteCard(card)}
+                  iconUrlByPath={iconUrlByPath}
                 />
               ) : null}
             </HStack>
@@ -303,6 +312,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
               card={activeCard}
               columnTitle={activeColumnTitle}
               assigneeLabel={assigneeName(activeCard.assigneeUserId)}
+              iconUrl={todoCardIconUrl(activeCard.iconPath, iconUrlByPath)}
             />
           ) : null}
         </DragOverlay>
@@ -325,6 +335,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
         isSpaceOwner={isSpaceOwner}
         onClose={() => setOpenCard(undefined)}
         onChanged={() => void load()}
+        iconUrl={todoCardIconUrl(openCard?.iconPath, iconUrlByPath)}
       />
     </Stack>
   );

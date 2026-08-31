@@ -30,8 +30,11 @@ import moveDbTodoCard from '@/lib/api/db/moveDbTodoCard';
 import TodoListCardDialogComments from '@/components/todo/TodoListCardDialogComments';
 import TodoListCardDialogDescription from '@/components/todo/TodoListCardDialogDescription';
 import TodoListCardDialogTags from '@/components/todo/TodoListCardDialogTags';
+import TodoListCardDialogIcon from '@/components/todo/TodoListCardDialogIcon';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import {todoDueAtFromInputValue, todoDueAtToInputValue} from '@/components/todo/formatTodoDueAt';
+import pickImageFileFromDataTransfer from '@/lib/todo/pickImageFileFromDataTransfer';
+import replaceTodoCardIcon from '@/lib/todo/replaceTodoCardIcon';
 
 export interface TodoListCardDialogProps {
   readonly open: boolean;
@@ -42,6 +45,7 @@ export interface TodoListCardDialogProps {
   readonly isSpaceOwner: boolean;
   readonly onClose: () => void;
   readonly onChanged: () => void;
+  readonly iconUrl: string | undefined;
 }
 
 export default function TodoListCardDialog(props: TodoListCardDialogProps) {
@@ -64,6 +68,7 @@ function TodoListCardDialogBody({
   isSpaceOwner,
   onClose,
   onChanged,
+  iconUrl,
 }: TodoListCardDialogBodyProps) {
   const [title, setTitle] = useState(card.title);
   const [dueAt, setDueAt] = useState(todoDueAtToInputValue(card.dueAt));
@@ -111,11 +116,54 @@ function TodoListCardDialogBody({
             <DialogCloseTrigger />
           </DialogHeader>
           <DialogBody>
-            <Stack gap={3} w="full">
+            <Stack
+              gap={3}
+              w="full"
+              onDragOver={(e) => {
+                if ([...e.dataTransfer.types].includes('Files')) {
+                  e.preventDefault();
+                }
+              }}
+              onDrop={(e) => {
+                const file = pickImageFileFromDataTransfer(e.dataTransfer);
+                if (file === undefined) {
+                  return;
+                }
+                e.preventDefault();
+                void replaceTodoCardIcon(card.podId, card.id, file, card.iconPath)
+                  .then(onChanged)
+                  .catch((err: unknown) => {
+                    setError(err instanceof Error ? err.message : String(err));
+                  });
+              }}
+              onPaste={(e) => {
+                if (e.target instanceof HTMLTextAreaElement) {
+                  return;
+                }
+                const file = pickImageFileFromDataTransfer(e.clipboardData);
+                if (file === undefined) {
+                  return;
+                }
+                e.preventDefault();
+                void replaceTodoCardIcon(card.podId, card.id, file, card.iconPath)
+                  .then(onChanged)
+                  .catch((err: unknown) => {
+                    setError(err instanceof Error ? err.message : String(err));
+                  });
+              }}
+            >
               <Field.Root w="full">
                 <Field.Label>Title</Field.Label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} />
               </Field.Root>
+              <TodoListCardDialogIcon
+                podId={card.podId}
+                cardId={card.id}
+                iconPath={card.iconPath}
+                iconUrl={iconUrl}
+                onChanged={onChanged}
+                onError={setError}
+              />
               <Field.Root w="full">
                 <Field.Label>Description</Field.Label>
                 <TodoListCardDialogDescription

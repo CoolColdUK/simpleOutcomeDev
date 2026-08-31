@@ -6,6 +6,7 @@ import {SortableContext, verticalListSortingStrategy} from '@dnd-kit/sortable';
 import {TODO_ARCHIVE_COLUMN_ID} from '@so/model';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 import TodoListBoardCard from '@/components/todo/TodoListBoardCard';
+import todoCardIconUrl from '@/lib/todo/todoCardIconUrl';
 
 export interface TodoListBoardArchivePanelProps {
   readonly cards: readonly DbTodoCard[];
@@ -14,6 +15,7 @@ export interface TodoListBoardArchivePanelProps {
   readonly onCompleteCard: (card: DbTodoCard) => void;
   readonly onArchiveCard: (card: DbTodoCard) => void;
   readonly onDeleteCard: (card: DbTodoCard) => void;
+  readonly iconUrlByPath: Readonly<Record<string, string>>;
 }
 
 export default function TodoListBoardArchivePanel({
@@ -23,6 +25,7 @@ export default function TodoListBoardArchivePanel({
   onCompleteCard,
   onArchiveCard,
   onDeleteCard,
+  iconUrlByPath,
 }: TodoListBoardArchivePanelProps) {
   const {setNodeRef} = useDroppable({id: TODO_ARCHIVE_COLUMN_ID});
 
@@ -38,6 +41,7 @@ export default function TodoListBoardArchivePanel({
             card={card}
             columnTitle={undefined}
             assigneeLabel={assigneeName(card.assigneeUserId)}
+            iconUrl={todoCardIconUrl(card.iconPath, iconUrlByPath)}
             onOpen={() => onOpenCard(card)}
             onComplete={() => onCompleteCard(card)}
             onArchive={() => onArchiveCard(card)}

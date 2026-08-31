@@ -150,6 +150,7 @@ export interface Database {
           assignee_user_id: string | null;
           sort_order: number;
           completed_at: string | null;
+          icon_path: string | null;
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -165,6 +166,7 @@ export interface Database {
           assignee_user_id?: string | null;
           sort_order?: number;
           completed_at?: string | null;
+          icon_path?: string | null;
           created_by: string;
         };
         Update: {
@@ -176,6 +178,7 @@ export interface Database {
           assignee_user_id?: string | null;
           sort_order?: number;
           completed_at?: string | null;
+          icon_path?: string | null;
         };
         Relationships: [];
       };

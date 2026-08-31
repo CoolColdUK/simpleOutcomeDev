@@ -1,17 +1,24 @@
 'use client';
 
-import {Badge, Box, Stack, Text} from '@chakra-ui/react';
+import {Badge, Box, HStack, Stack, Text} from '@chakra-ui/react';
 import {todoCardStatusLabel} from '@so/model';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 import formatTodoDueAt from '@/components/todo/formatTodoDueAt';
+import TodoCardIconThumb from '@/components/todo/TodoCardIconThumb';
 
 export interface TodoListBoardCardPreviewProps {
   readonly card: DbTodoCard;
   readonly columnTitle: string | undefined;
   readonly assigneeLabel: string | undefined;
+  readonly iconUrl: string | undefined;
 }
 
-export default function TodoListBoardCardPreview({card, columnTitle, assigneeLabel}: TodoListBoardCardPreviewProps) {
+export default function TodoListBoardCardPreview({
+  card,
+  columnTitle,
+  assigneeLabel,
+  iconUrl,
+}: TodoListBoardCardPreviewProps) {
   return (
     <Box
       borderWidth="1px"
@@ -22,7 +29,9 @@ export default function TodoListBoardCardPreview({card, columnTitle, assigneeLab
       boxShadow="md"
       minW="240px"
     >
-      <Stack gap={1}>
+      <HStack align="start" gap={2}>
+        <TodoCardIconThumb src={iconUrl} />
+        <Stack gap={1} flex="1" minW={0}>
         <Text fontWeight="semibold" textDecoration={card.completedAt !== undefined ? 'line-through' : undefined}>
           {card.title}
         </Text>
@@ -40,7 +49,8 @@ export default function TodoListBoardCardPreview({card, columnTitle, assigneeLab
             ))}
           </Box>
         ) : null}
-      </Stack>
+        </Stack>
+      </HStack>
     </Box>
   );
 }

@@ -8,6 +8,7 @@ import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 import TodoListBoardCard from '@/components/todo/TodoListBoardCard';
 import TodoListBoardStatusChip from '@/components/todo/TodoListBoardStatusChip';
 import TodoListBoardSingleListAdd from '@/components/todo/TodoListBoardSingleListAdd';
+import todoCardIconUrl from '@/lib/todo/todoCardIconUrl';
 
 export interface TodoListBoardSingleListProps {
   readonly podId: string;
@@ -23,6 +24,7 @@ export interface TodoListBoardSingleListProps {
   readonly onArchiveCard: (card: DbTodoCard) => void;
   readonly onDeleteCard: (card: DbTodoCard) => void;
   readonly onChanged: () => void;
+  readonly iconUrlByPath: Readonly<Record<string, string>>;
 }
 
 export default function TodoListBoardSingleList({
@@ -39,6 +41,7 @@ export default function TodoListBoardSingleList({
   onArchiveCard,
   onDeleteCard,
   onChanged,
+  iconUrlByPath,
 }: TodoListBoardSingleListProps) {
   const titleById = new Map(columns.map((column) => [column.id, column.title]));
 
@@ -84,6 +87,7 @@ export default function TodoListBoardSingleList({
               card={card}
               columnTitle={card.columnId === undefined ? undefined : titleById.get(card.columnId)}
               assigneeLabel={assigneeName(card.assigneeUserId)}
+              iconUrl={todoCardIconUrl(card.iconPath, iconUrlByPath)}
               statusAsTag
               onOpen={() => onOpenCard(card)}
               onComplete={() => onCompleteCard(card)}

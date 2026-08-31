@@ -13,6 +13,7 @@ import TodoListBoardColumnMenu from '@/components/todo/TodoListBoardColumnMenu';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import updateDbTodoColumn from '@/lib/api/db/updateDbTodoColumn';
 import createDbTodoCard from '@/lib/api/db/createDbTodoCard';
+import todoCardIconUrl from '@/lib/todo/todoCardIconUrl';
 
 export interface TodoListBoardColumnProps {
   readonly column: DbTodoColumn;
@@ -26,6 +27,7 @@ export interface TodoListBoardColumnProps {
   readonly onArchiveCard: (card: DbTodoCard) => void;
   readonly onDeleteCard: (card: DbTodoCard) => void;
   readonly onChanged: () => void;
+  readonly iconUrlByPath: Readonly<Record<string, string>>;
 }
 
 export default function TodoListBoardColumn({
@@ -40,6 +42,7 @@ export default function TodoListBoardColumn({
   onArchiveCard,
   onDeleteCard,
   onChanged,
+  iconUrlByPath,
 }: TodoListBoardColumnProps) {
   const {setNodeRef: setDropRef} = useDroppable({id: column.id});
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} = useSortable({
@@ -112,6 +115,7 @@ export default function TodoListBoardColumn({
             card={card}
             columnTitle={column.title}
             assigneeLabel={assigneeName(card.assigneeUserId)}
+            iconUrl={todoCardIconUrl(card.iconPath, iconUrlByPath)}
             onOpen={() => onOpenCard(card)}
             onComplete={() => onCompleteCard(card)}
             onArchive={() => onArchiveCard(card)}

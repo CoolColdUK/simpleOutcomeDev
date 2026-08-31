@@ -9,6 +9,7 @@ export interface UpdateDbTodoCardInput {
   readonly tags?: readonly string[];
   readonly assigneeUserId?: string | undefined;
   readonly completedAt?: string | undefined;
+  readonly iconPath?: string | undefined;
 }
 
 export default async function updateDbTodoCard(cardId: string, input: UpdateDbTodoCardInput): Promise<void> {
@@ -20,6 +21,7 @@ export default async function updateDbTodoCard(cardId: string, input: UpdateDbTo
     tags?: string[];
     assignee_user_id?: string | null;
     completed_at?: string | null;
+    icon_path?: string | null;
   } = {};
   if (input.title !== undefined) {
     patch.title = parseTodoCardTitle(input.title);
@@ -38,6 +40,9 @@ export default async function updateDbTodoCard(cardId: string, input: UpdateDbTo
   }
   if (input.completedAt !== undefined) {
     patch.completed_at = input.completedAt === '' ? null : input.completedAt;
+  }
+  if (input.iconPath !== undefined) {
+    patch.icon_path = input.iconPath === '' ? null : input.iconPath;
   }
   const {error} = await supabase.from('todo_card').update(patch).eq('id', cardId);
   throwIfSupabaseError(error);
