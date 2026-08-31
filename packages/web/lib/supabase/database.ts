@@ -7,6 +7,7 @@ export interface Database {
           username: string | null;
           username_normalized: string | null;
           display_name: string | null;
+          username_changed_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -15,11 +16,13 @@ export interface Database {
           username?: string | null;
           username_normalized?: string | null;
           display_name?: string | null;
+          username_changed_at?: string | null;
         };
         Update: {
           username?: string | null;
           username_normalized?: string | null;
           display_name?: string | null;
+          username_changed_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];

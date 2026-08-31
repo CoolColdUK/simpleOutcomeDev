@@ -63,7 +63,9 @@ export default function UsernameGate({userId, children}: UsernameGateProps) {
         <Heading as="h1" size="lg">
           Choose a username
         </Heading>
-        <Text color="fg.muted">This handle is unique and is how others in a space can add you to a pod.</Text>
+        <Text color="fg.muted">
+          This handle is unique and is how others in a space can add you to a pod. You can change it once every 30 days.
+        </Text>
         <Field.Root>
           <Field.Label>Username</Field.Label>
           <Input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="nickname" />

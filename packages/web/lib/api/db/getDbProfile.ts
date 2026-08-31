@@ -5,13 +5,14 @@ export interface DbProfile {
   readonly id: string;
   readonly username: string | undefined;
   readonly displayName: string | undefined;
+  readonly usernameChangedAt: string | undefined;
 }
 
 export default async function getDbProfile(userId: string): Promise<DbProfile | undefined> {
   const supabase = getSupabaseBrowserClient();
   const {data, error} = await supabase
     .from('profile')
-    .select('id, username, display_name')
+    .select('id, username, display_name, username_changed_at')
     .eq('id', userId)
     .maybeSingle();
   throwIfSupabaseError(error);
@@ -22,5 +23,6 @@ export default async function getDbProfile(userId: string): Promise<DbProfile | 
     id: data.id,
     username: data.username ?? undefined,
     displayName: data.display_name ?? undefined,
+    usernameChangedAt: data.username_changed_at ?? undefined,
   };
 }

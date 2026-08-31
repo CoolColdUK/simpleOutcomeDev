@@ -11,6 +11,7 @@ import AccountSettingsPasswordCard from '@/components/app/AccountSettingsPasswor
 export default function AccountSettingsPage() {
   const {user} = useSupabaseAuthState();
   const [username, setUsername] = useState('');
+  const [usernameChangedAt, setUsernameChangedAt] = useState<string | undefined>(undefined);
   const [displayName, setDisplayName] = useState('');
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -31,6 +32,7 @@ export default function AccountSettingsPage() {
           return;
         }
         setUsername(profile.username ?? '');
+        setUsernameChangedAt(profile.usernameChangedAt);
         setDisplayName(profile.displayName ?? '');
         setReady(true);
       })
@@ -62,8 +64,13 @@ export default function AccountSettingsPage() {
       ) : null}
       <AccountSettingsProfileCard
         username={username}
+        usernameChangedAt={usernameChangedAt}
         displayName={displayName}
-        onSaved={setDisplayName}
+        onUsernameSaved={(next, changedAt) => {
+          setUsername(next);
+          setUsernameChangedAt(changedAt);
+        }}
+        onDisplayNameSaved={setDisplayName}
       />
       <AccountSettingsPasswordCard />
     </Stack>
