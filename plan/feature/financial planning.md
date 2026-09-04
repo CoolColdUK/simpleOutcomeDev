@@ -2,7 +2,7 @@
 
 Personal money tracking inside a SimpleOutcome **pod**: accounts (opening balance), imported and manual transactions, categories, reusable CSV parsers, auto-categorisation with confirmation, and a date-ranged view that switches between a **category report** and a **transaction list** (same pattern as Trading Journal session detail: Report / Trades).
 
-This is a **requirements** document, not an implementation plan.
+This is a **requirements** document. Implementation: [`financial planning-implementation.md`](./financial%20planning-implementation.md).
 
 **Reference:** GoalJar (`product-management/packages/appGoalJar`) is a prior personal finance app. Use it for lessons, not as a spec to copy. Improvements called out below.
 
