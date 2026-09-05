@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@so/web",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "scripts": {
     "build:prod": "next build --webpack",
@@ -18,8 +18,8 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
-    "@so/component": "^0.10.0",
-    "@so/model": "^0.10.0",
+    "@so/component": "^0.11.0",
+    "@so/model": "^0.11.0",
     "@supabase/supabase-js": "^2.112.3",
     "dayjs": "^1.11.22",
     "framer-motion": "^13.1.0",
