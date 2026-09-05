@@ -167,6 +167,17 @@ export default function FpParserDialog({open, podId, parser, onClose, onSaved}: 
                 </Switch.Control>
                 <Switch.Label>Use first-row identifier</Switch.Label>
               </Switch.Root>
+              <Switch.Root checked={hasHeader} onCheckedChange={(e) => setHasHeader(e.checked)}>
+                <Switch.HiddenInput />
+                <Switch.Control>
+                  <Switch.Thumb />
+                </Switch.Control>
+                <Switch.Label>First data row is a header</Switch.Label>
+              </Switch.Root>
+              <Field.Root>
+                <Field.Label>Skip leading rows</Field.Label>
+                <Input type="number" value={skipRows} onChange={(e) => setSkipRows(e.target.value)} />
+              </Field.Root>
               {useIdentifier ? <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} /> : null}
               <Field.Root>
                 <Field.Label>Date format</Field.Label>

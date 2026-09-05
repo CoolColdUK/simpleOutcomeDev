@@ -10,7 +10,7 @@ export default function parsePostedDate(value: string, format: string): string |
     return undefined;
   }
   const tokenMatches = format.match(TOKEN);
-  if (tokenMatches === undefined) {
+  if (tokenMatches === null) {
     return undefined;
   }
   let rest = trimmed;
@@ -28,9 +28,9 @@ export default function parsePostedDate(value: string, format: string): string |
     rest = rest.slice(width);
     fmt = fmt.slice(idx + token.length);
   });
-  const year = Number(parts.YYYY);
-  const month = Number(parts.MM);
-  const day = Number(parts.DD);
+  const year = Number(parts['YYYY']);
+  const month = Number(parts['MM']);
+  const day = Number(parts['DD']);
   if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day) || month < 1 || month > 12 || day < 1 || day > 31) {
     return undefined;
   }

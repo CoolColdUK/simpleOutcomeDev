@@ -107,7 +107,11 @@ export default function FinancialPlanningBoard({
   }, [podId, range.start, range.end, accountFilter, showArchived]);
 
   useEffect(() => {
-    void load().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+    void Promise.resolve()
+      .then(() => load())
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : String(e));
+      });
   }, [load]);
 
   const sortedCategories = useMemo(
