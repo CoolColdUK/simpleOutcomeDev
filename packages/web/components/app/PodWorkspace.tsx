@@ -17,6 +17,7 @@ import AppPageLoadingState from '@/components/app/AppPageLoadingState';
 import PodWorkspaceAccess from '@/components/app/PodWorkspaceAccess';
 import PodWorkspaceSettingsTab from '@/components/app/PodWorkspaceSettingsTab';
 import TodoListBoard from '@/components/todo/TodoListBoard';
+import FinancialPlanningBoard from '@/components/fp/FinancialPlanningBoard';
 
 export default function PodWorkspace() {
   const params = useParams<{spaceId: string; podId: string}>();
@@ -112,9 +113,18 @@ export default function PodWorkspace() {
               podRole={myRole}
               isSpaceOwner={spaceRole === SpaceRole.OWNER}
             />
-          ) : (
+          ) : null}
+          {pod.feature === FeatureKind.FINANCIAL_PLANNING && user !== undefined ? (
+            <FinancialPlanningBoard
+              podId={pod.id}
+              userId={user.id}
+              podRole={myRole}
+              isSpaceOwner={spaceRole === SpaceRole.OWNER}
+            />
+          ) : null}
+          {pod.feature !== FeatureKind.TODO_LIST && pod.feature !== FeatureKind.FINANCIAL_PLANNING ? (
             <Text>This feature is coming soon. You can still manage access here.</Text>
-          )}
+          ) : null}
         </Tabs.Content>
         <Tabs.Content value="members">
           <PodWorkspaceAccess
@@ -133,6 +143,7 @@ export default function PodWorkspace() {
             pod={pod}
             canManage={canManage}
             isSpaceOwner={spaceRole === SpaceRole.OWNER}
+            podRole={myRole}
             onArchive={() => void archive()}
             onDelete={() => void remove()}
             onSaved={() => void load()}

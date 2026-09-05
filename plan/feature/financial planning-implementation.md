@@ -4,25 +4,25 @@ overview: Add financial_planning pods with accounts, categories, parsers, CSV im
 todos:
   - id: catalog-and-migration
     content: FeatureKind financial_planning; pod constraint + create_pod; fp_* tables, RLS, setting row defaults, permission helper; refresh database.ts
-    status: pending
+    status: completed
   - id: model
     content: "@so/model fp enums/schemas, CSV parse+sign transforms, duplicate key, auto-assign, split portions, report aggregation, permission defaults+check; Jest"
-    status: pending
+    status: completed
   - id: db-api
     content: lib/api/db one function per file ({action}DbFp{Resource}); import RPC (hash, dedup, auto-assign); undo import; delete-all
-    status: pending
+    status: completed
   - id: workspace-shell
     content: PodWorkspace board for financial_planning; settings currency + permission matrix + delete-all; featureKindLabel
-    status: pending
+    status: completed
   - id: ui-ledger
     content: Accounts, categories, manual transactions, date/account filters, Report/List tabs, budgets %, favourite/sort, confirm/bulk assign
-    status: pending
+    status: completed
   - id: ui-parser-import
     content: Parser builder (example CSV, identifier, DnD columns, live preview); import multi-file, match parser, hash dialog, import report, undo
-    status: pending
+    status: completed
   - id: ui-split-archive
     content: Bill split (portions + recurrence); archived transactions page; auto-assign re-run
-    status: pending
+    status: completed
 isProject: true
 ---
 

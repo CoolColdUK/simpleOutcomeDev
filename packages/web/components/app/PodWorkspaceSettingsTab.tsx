@@ -1,15 +1,19 @@
 'use client';
 
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Alert, Button, Field, Input, Stack, Text, Textarea} from '@chakra-ui/react';
-import {PodStatus} from '@so/model';
+import {FeatureKind, fpCan, FpAction, FpResource, PodRole, PodStatus} from '@so/model';
 import type {DbPod} from '@/lib/api/db/listDbPods';
 import updateDbPod from '@/lib/api/db/updateDbPod';
+import getDbFpSetting from '@/lib/api/db/getDbFpSetting';
+import type {DbFpSetting} from '@/lib/api/db/mapDbFpSetting';
+import FpSettingsPanel from '@/components/fp/FpSettingsPanel';
 
 export interface PodWorkspaceSettingsTabProps {
   readonly pod: DbPod;
   readonly canManage: boolean;
   readonly isSpaceOwner: boolean;
+  readonly podRole: PodRole | undefined;
   readonly onArchive: () => void;
   readonly onDelete: () => void;
   readonly onSaved: () => void;
@@ -19,6 +23,7 @@ export default function PodWorkspaceSettingsTab({
   pod,
   canManage,
   isSpaceOwner,
+  podRole,
   onArchive,
   onDelete,
   onSaved,
@@ -27,6 +32,14 @@ export default function PodWorkspaceSettingsTab({
   const [description, setDescription] = useState(pod.description ?? '');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [fpSetting, setFpSetting] = useState<DbFpSetting | undefined>(undefined);
+
+  useEffect(() => {
+    if (pod.feature !== FeatureKind.FINANCIAL_PLANNING) {
+      return;
+    }
+    void getDbFpSetting(pod.id).then(setFpSetting);
+  }, [pod.feature, pod.id]);
 
   const save = async (): Promise<void> => {
     setError('');
@@ -42,9 +55,9 @@ export default function PodWorkspaceSettingsTab({
   };
 
   return (
-    <Stack gap={4} align="start" maxW="md">
+    <Stack gap={4} align="start" maxW="3xl">
       {canManage ? (
-        <Stack gap={3} w="full">
+        <Stack gap={3} w="full" maxW="md">
           <Field.Root>
             <Field.Label>Title</Field.Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -65,6 +78,18 @@ export default function PodWorkspaceSettingsTab({
       ) : (
         <Text color="fg.muted">Only pod owners and space owners can change settings.</Text>
       )}
+      {fpSetting !== undefined ? (
+        <FpSettingsPanel
+          podId={pod.id}
+          setting={fpSetting}
+          canUpdateSettings={fpCan(podRole, isSpaceOwner, fpSetting.permission, FpResource.SETTINGS, FpAction.UPDATE)}
+          canDeleteAll={fpCan(podRole, isSpaceOwner, fpSetting.permission, FpResource.DELETE_ALL, FpAction.CREATE)}
+          onSaved={() => {
+            void getDbFpSetting(pod.id).then(setFpSetting);
+            onSaved();
+          }}
+        />
+      ) : null}
       {canManage ? (
         <Button colorPalette="brand" onClick={onArchive}>
           {pod.status === PodStatus.ARCHIVED ? 'Restore pod' : 'Archive pod'}
