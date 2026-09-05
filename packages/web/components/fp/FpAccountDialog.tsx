@@ -16,29 +16,51 @@ import {
   Input,
   NativeSelect,
   Stack,
+  Switch,
 } from '@chakra-ui/react';
 import {FpAccountKind, fpAccountKindLabel, parseFpName} from '@so/model';
 import createDbFpAccount from '@/lib/api/db/createDbFpAccount';
+import updateDbFpAccount from '@/lib/api/db/updateDbFpAccount';
+import type {DbFpAccount} from '@/lib/api/db/mapDbFpAccount';
 
 export interface FpAccountDialogProps {
   readonly open: boolean;
   readonly podId: string;
+  readonly account?: DbFpAccount;
   readonly onClose: () => void;
   readonly onSaved: () => void;
 }
 
-export default function FpAccountDialog({open, podId, onClose, onSaved}: FpAccountDialogProps) {
-  const [name, setName] = useState('');
-  const [kind, setKind] = useState<FpAccountKind>(FpAccountKind.CURRENT);
-  const [opening, setOpening] = useState('0');
+export default function FpAccountDialog(props: FpAccountDialogProps) {
+  if (!props.open) {
+    return null;
+  }
+  return <FpAccountDialogBody key={props.account?.id ?? 'new'} {...props} />;
+}
+
+function FpAccountDialogBody({open, podId, account, onClose, onSaved}: FpAccountDialogProps) {
+  const [name, setName] = useState(account?.name ?? '');
+  const [kind, setKind] = useState<FpAccountKind>(account?.kind ?? FpAccountKind.CURRENT);
+  const [opening, setOpening] = useState(String(account?.openingFund ?? 0));
+  const [notes, setNotes] = useState(account?.notes ?? '');
+  const [archived, setArchived] = useState(account?.archived ?? false);
   const [saving, setSaving] = useState(false);
 
   const save = async (): Promise<void> => {
     setSaving(true);
     try {
-      await createDbFpAccount(podId, parseFpName(name), kind, Number(opening));
-      setName('');
-      setOpening('0');
+      const parsedName = parseFpName(name);
+      if (account === undefined) {
+        await createDbFpAccount(podId, parsedName, kind, Number(opening));
+      } else {
+        await updateDbFpAccount(account.id, {
+          name: parsedName,
+          kind,
+          openingFund: Number(opening),
+          notes,
+          archived,
+        });
+      }
       onSaved();
       onClose();
     } finally {
@@ -52,7 +74,7 @@ export default function FpAccountDialog({open, podId, onClose, onSaved}: FpAccou
       <DialogPositioner>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add account</DialogTitle>
+            <DialogTitle>{account === undefined ? 'Add account' : 'Edit account'}</DialogTitle>
             <DialogCloseTrigger />
           </DialogHeader>
           <DialogBody>
@@ -77,6 +99,19 @@ export default function FpAccountDialog({open, podId, onClose, onSaved}: FpAccou
                 <Field.Label>Opening fund</Field.Label>
                 <Input type="number" value={opening} onChange={(e) => setOpening(e.target.value)} />
               </Field.Root>
+              <Field.Root>
+                <Field.Label>Notes</Field.Label>
+                <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </Field.Root>
+              {account !== undefined ? (
+                <Switch.Root checked={archived} onCheckedChange={(e) => setArchived(e.checked)}>
+                  <Switch.HiddenInput />
+                  <Switch.Control>
+                    <Switch.Thumb />
+                  </Switch.Control>
+                  <Switch.Label>Archived</Switch.Label>
+                </Switch.Root>
+              ) : null}
             </Stack>
           </DialogBody>
           <DialogFooter>
@@ -84,7 +119,7 @@ export default function FpAccountDialog({open, podId, onClose, onSaved}: FpAccou
               Cancel
             </Button>
             <Button colorPalette="brand" loading={saving} disabled={name.trim() === ''} onClick={() => void save()}>
-              Add
+              {account === undefined ? 'Add' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>

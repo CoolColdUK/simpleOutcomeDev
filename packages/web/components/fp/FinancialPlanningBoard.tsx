@@ -1,7 +1,7 @@
 'use client';
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {Alert, Button, HStack, NativeSelect, Stack, Tabs, Text} from '@chakra-ui/react';
+import {Alert, HStack, Stack, Tabs, Text} from '@chakra-ui/react';
 import {
   fpCan,
   FpAction,
@@ -14,6 +14,7 @@ import listDbFpCategories from '@/lib/api/db/listDbFpCategories';
 import listDbFpTransactions from '@/lib/api/db/listDbFpTransactions';
 import listDbFpParsers from '@/lib/api/db/listDbFpParsers';
 import listDbFpImports from '@/lib/api/db/listDbFpImports';
+import listDbFpImportFiles from '@/lib/api/db/listDbFpImportFiles';
 import getDbFpSetting from '@/lib/api/db/getDbFpSetting';
 import sumDbFpAccountBalance from '@/lib/api/db/sumDbFpAccountBalance';
 import bulkUpdateDbFpTransactionCategory from '@/lib/api/db/bulkUpdateDbFpTransactionCategory';
@@ -21,11 +22,15 @@ import confirmDbFpTransactions from '@/lib/api/db/confirmDbFpTransactions';
 import updateDbFpTransaction from '@/lib/api/db/updateDbFpTransaction';
 import applyDbFpAutoAssign from '@/lib/api/db/applyDbFpAutoAssign';
 import undoDbFpImport from '@/lib/api/db/undoDbFpImport';
+import deleteDbFpAccount from '@/lib/api/db/deleteDbFpAccount';
+import deleteDbFpCategory from '@/lib/api/db/deleteDbFpCategory';
+import deleteDbFpParser from '@/lib/api/db/deleteDbFpParser';
 import type {DbFpAccount} from '@/lib/api/db/mapDbFpAccount';
 import type {DbFpCategory} from '@/lib/api/db/mapDbFpCategory';
 import type {DbFpTransaction} from '@/lib/api/db/mapDbFpTransaction';
 import type {DbFpParser} from '@/lib/api/db/mapDbFpParser';
 import type {DbFpImport} from '@/lib/api/db/mapDbFpImport';
+import type {DbFpImportFile} from '@/lib/api/db/mapDbFpImportFile';
 import type {DbFpSetting} from '@/lib/api/db/mapDbFpSetting';
 import formatFpMoney from '@/lib/fp/formatFpMoney';
 import fpDateRangeFromPreset, {type FpDatePreset} from '@/lib/fp/fpDateRangeFromPreset';
@@ -35,9 +40,11 @@ import FpTransactionDialog from '@/components/fp/FpTransactionDialog';
 import FpParserDialog from '@/components/fp/FpParserDialog';
 import FpImportDialog from '@/components/fp/FpImportDialog';
 import FpSplitDialog from '@/components/fp/FpSplitDialog';
-import FpReportPanel from '@/components/fp/FpReportPanel';
-import FpTransactionTable from '@/components/fp/FpTransactionTable';
-import FpCategoryAssignSelect from '@/components/fp/FpCategoryAssignSelect';
+import FpLedgerPanel from '@/components/fp/FpLedgerPanel';
+import FpAccountPage from '@/components/fp/FpAccountPage';
+import FpCategoryPage from '@/components/fp/FpCategoryPage';
+import FpParserPage from '@/components/fp/FpParserPage';
+import FpImportPage from '@/components/fp/FpImportPage';
 
 export interface FinancialPlanningBoardProps {
   readonly podId: string;
@@ -58,16 +65,21 @@ export default function FinancialPlanningBoard({
   const [transactions, setTransactions] = useState<readonly DbFpTransaction[]>([]);
   const [parsers, setParsers] = useState<readonly DbFpParser[]>([]);
   const [imports, setImports] = useState<readonly DbFpImport[]>([]);
+  const [importFiles, setImportFiles] = useState<readonly DbFpImportFile[]>([]);
   const [setting, setSetting] = useState<DbFpSetting | undefined>(undefined);
   const [error, setError] = useState('');
   const [preset, setPreset] = useState<FpDatePreset>('this_month');
   const [accountFilter, setAccountFilter] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
+  const [section, setSection] = useState('ledger');
   const [accountOpen, setAccountOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<DbFpAccount | undefined>(undefined);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<DbFpCategory | undefined>(undefined);
   const [txOpen, setTxOpen] = useState(false);
   const [parserOpen, setParserOpen] = useState(false);
+  const [editingParser, setEditingParser] = useState<DbFpParser | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
   const [splitId, setSplitId] = useState<string | undefined>(undefined);
   const [splitDate, setSplitDate] = useState<string | undefined>(undefined);
@@ -78,7 +90,7 @@ export default function FinancialPlanningBoard({
 
   const load = useCallback(async (): Promise<void> => {
     setError('');
-    const [acc, cats, txs, pars, imps, set] = await Promise.all([
+    const [acc, cats, txs, pars, imps, files, set] = await Promise.all([
       listDbFpAccounts(podId),
       listDbFpCategories(podId),
       listDbFpTransactions(podId, {
@@ -89,6 +101,7 @@ export default function FinancialPlanningBoard({
       }),
       listDbFpParsers(podId),
       listDbFpImports(podId),
+      listDbFpImportFiles(podId),
       getDbFpSetting(podId),
     ]);
     setAccounts(acc);
@@ -96,6 +109,7 @@ export default function FinancialPlanningBoard({
     setTransactions(txs);
     setParsers(pars);
     setImports(imps);
+    setImportFiles(files);
     setSetting(set);
     const next: Record<string, number> = {};
     await Promise.all(
@@ -129,6 +143,12 @@ export default function FinancialPlanningBoard({
     setSelected(next);
   };
 
+  const runOrError = (work: () => Promise<void>): void => {
+    void work().catch((e: unknown) => {
+      setError(e instanceof Error ? e.message : String(e));
+    });
+  };
+
   const currency = setting?.currency ?? 'GBP';
   const visibleAccounts = accounts.filter((a) => !a.archived);
 
@@ -146,150 +166,163 @@ export default function FinancialPlanningBoard({
           </Text>
         ))}
       </HStack>
-      <HStack gap={2} flexWrap="wrap">
-        {can(FpResource.ACCOUNT, FpAction.CREATE) ? (
-          <Button size="sm" onClick={() => setAccountOpen(true)}>
-            Account
-          </Button>
-        ) : null}
-        {can(FpResource.CATEGORY, FpAction.CREATE) ? (
-          <Button size="sm" onClick={() => setCategoryOpen(true)}>
-            Category
-          </Button>
-        ) : null}
-        {can(FpResource.TRANSACTION, FpAction.CREATE) ? (
-          <Button size="sm" onClick={() => setTxOpen(true)}>
-            Transaction
-          </Button>
-        ) : null}
-        {can(FpResource.PARSER, FpAction.CREATE) ? (
-          <Button size="sm" onClick={() => setParserOpen(true)}>
-            Parser
-          </Button>
-        ) : null}
-        {can(FpResource.IMPORT, FpAction.CREATE) ? (
-          <Button size="sm" colorPalette="brand" onClick={() => setImportOpen(true)}>
-            Import
-          </Button>
-        ) : null}
-        {can(FpResource.TRANSACTION, FpAction.UPDATE) ? (
-          <Button size="sm" variant="outline" onClick={() => void applyDbFpAutoAssign(podId).then(() => load())}>
-            Re-run rules
-          </Button>
-        ) : null}
-      </HStack>
-      <HStack gap={2} flexWrap="wrap">
-        <NativeSelect.Root maxW="180px">
-          <NativeSelect.Field value={preset} onChange={(e) => setPreset(e.target.value as FpDatePreset)}>
-            <option value="this_month">This month</option>
-            <option value="last_month">Last month</option>
-            <option value="last_30">Last 30 days</option>
-            <option value="this_year">This year</option>
-            <option value="all">All time</option>
-          </NativeSelect.Field>
-        </NativeSelect.Root>
-        <NativeSelect.Root maxW="180px">
-          <NativeSelect.Field value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
-            <option value="">All accounts</option>
-            {visibleAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </NativeSelect.Field>
-        </NativeSelect.Root>
-        <Button size="sm" variant="outline" onClick={() => setShowArchived(!showArchived)}>
-          {showArchived ? 'Hide archived' : 'Archived'}
-        </Button>
-      </HStack>
-      <Tabs.Root defaultValue="report" variant="enclosed">
+      <Tabs.Root
+        value={section}
+        onValueChange={(event) => setSection(event.value)}
+        variant="line"
+      >
         <Tabs.List>
-          <Tabs.Trigger value="report">Report</Tabs.Trigger>
-          <Tabs.Trigger value="list">Transactions</Tabs.Trigger>
+          <Tabs.Trigger value="ledger">Ledger</Tabs.Trigger>
+          <Tabs.Trigger value="accounts">Accounts</Tabs.Trigger>
+          <Tabs.Trigger value="categories">Categories</Tabs.Trigger>
+          <Tabs.Trigger value="parsers">Parsers</Tabs.Trigger>
+          <Tabs.Trigger value="imports">Imports</Tabs.Trigger>
         </Tabs.List>
-        <Tabs.Content value="report">
-          <FpReportPanel
-            transactions={transactions}
+        <Tabs.Content value="ledger">
+          <FpLedgerPanel
+            accounts={visibleAccounts}
             categories={sortedCategories}
+            transactions={transactions}
+            currency={currency}
+            preset={preset}
+            accountFilter={accountFilter}
+            showArchived={showArchived}
+            selected={selected}
             start={range.start}
             end={range.end}
-            currency={currency}
+            can={can}
+            onPreset={setPreset}
+            onAccountFilter={setAccountFilter}
+            onToggleArchived={() => setShowArchived(!showArchived)}
+            onAddTransaction={() => setTxOpen(true)}
+            onImport={() => setImportOpen(true)}
+            onRerunRules={() => runOrError(() => applyDbFpAutoAssign(podId).then(() => load()))}
+            onToggleRow={toggle}
+            onAssign={(id) =>
+              runOrError(() =>
+                bulkUpdateDbFpTransactionCategory([...selected], id).then(() => {
+                  setSelected(new Set());
+                  return load();
+                }),
+              )
+            }
+            onConfirm={() =>
+              runOrError(() =>
+                confirmDbFpTransactions([...selected]).then(() => {
+                  setSelected(new Set());
+                  return load();
+                }),
+              )
+            }
+            onArchive={(id) => runOrError(() => updateDbFpTransaction(id, {archived: !showArchived}).then(() => load()))}
+            onSplit={(id, date) => {
+              setSplitId(id);
+              setSplitDate(date);
+            }}
           />
         </Tabs.Content>
-        <Tabs.Content value="list">
-          <Stack gap={3}>
-            {selected.size > 0 ? (
-              <HStack>
-                <FpCategoryAssignSelect
-                  categories={sortedCategories}
-                  onAssign={(id) =>
-                    void bulkUpdateDbFpTransactionCategory([...selected], id).then(() => {
-                      setSelected(new Set());
-                      return load();
-                    })
-                  }
-                />
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    void confirmDbFpTransactions([...selected]).then(() => {
-                      setSelected(new Set());
-                      return load();
-                    })
-                  }
-                >
-                  Confirm
-                </Button>
-              </HStack>
-            ) : null}
-            <FpTransactionTable
-              transactions={transactions}
-              accounts={accounts}
-              categories={sortedCategories}
-              currency={currency}
-              selected={selected}
-              onToggle={toggle}
-              onArchive={(id) => void updateDbFpTransaction(id, {archived: !showArchived}).then(() => load())}
-              onSplit={(id, date) => {
-                setSplitId(id);
-                setSplitDate(date);
-              }}
-              canUpdate={can(FpResource.TRANSACTION, FpAction.UPDATE)}
-              canSplit={can(FpResource.BILL_SPLIT, FpAction.CREATE)}
-            />
-          </Stack>
+        <Tabs.Content value="accounts">
+          <FpAccountPage
+            accounts={accounts}
+            balances={balances}
+            currency={currency}
+            canCreate={can(FpResource.ACCOUNT, FpAction.CREATE)}
+            canUpdate={can(FpResource.ACCOUNT, FpAction.UPDATE)}
+            canDelete={can(FpResource.ACCOUNT, FpAction.DELETE)}
+            onAdd={() => {
+              setEditingAccount(undefined);
+              setAccountOpen(true);
+            }}
+            onEdit={(account) => {
+              setEditingAccount(account);
+              setAccountOpen(true);
+            }}
+            onDelete={(account) => {
+              if (window.confirm(`Delete account “${account.name}”? This fails if it still has transactions.`)) {
+                runOrError(() => deleteDbFpAccount(account.id).then(() => load()));
+              }
+            }}
+          />
+        </Tabs.Content>
+        <Tabs.Content value="categories">
+          <FpCategoryPage
+            categories={sortedCategories}
+            canCreate={can(FpResource.CATEGORY, FpAction.CREATE)}
+            canUpdate={can(FpResource.CATEGORY, FpAction.UPDATE)}
+            canDelete={can(FpResource.CATEGORY, FpAction.DELETE)}
+            onAdd={() => {
+              setEditingCategory(undefined);
+              setCategoryOpen(true);
+            }}
+            onEdit={(category) => {
+              setEditingCategory(category);
+              setCategoryOpen(true);
+            }}
+            onDelete={(category) => {
+              if (window.confirm(`Delete category “${category.name}”? Transactions become uncategorised.`)) {
+                runOrError(() => deleteDbFpCategory(category.id).then(() => load()));
+              }
+            }}
+          />
+        </Tabs.Content>
+        <Tabs.Content value="parsers">
+          <FpParserPage
+            parsers={parsers}
+            canCreate={can(FpResource.PARSER, FpAction.CREATE)}
+            canUpdate={can(FpResource.PARSER, FpAction.UPDATE)}
+            canDelete={can(FpResource.PARSER, FpAction.DELETE)}
+            onAdd={() => {
+              setEditingParser(undefined);
+              setParserOpen(true);
+            }}
+            onEdit={(parser) => {
+              setEditingParser(parser);
+              setParserOpen(true);
+            }}
+            onDelete={(parser) => {
+              if (window.confirm(`Delete parser “${parser.name}”?`)) {
+                runOrError(() => deleteDbFpParser(parser.id).then(() => load()));
+              }
+            }}
+          />
+        </Tabs.Content>
+        <Tabs.Content value="imports">
+          <FpImportPage
+            imports={imports}
+            files={importFiles}
+            accounts={accounts}
+            parsers={parsers}
+            canCreate={can(FpResource.IMPORT, FpAction.CREATE)}
+            canUndo={can(FpResource.IMPORT, FpAction.DELETE)}
+            onImport={() => setImportOpen(true)}
+            onUndo={(imp) => {
+              if (window.confirm('Undo this import and delete its transactions?')) {
+                runOrError(() => undoDbFpImport(imp.id).then(() => load()));
+              }
+            }}
+          />
         </Tabs.Content>
       </Tabs.Root>
-      {can(FpResource.IMPORT, FpAction.READ) ? (
-        <Stack gap={1}>
-          <Text fontSize="sm" color="fg.muted">
-            Imports
-          </Text>
-          {imports.slice(0, 8).map((imp) => (
-            <HStack key={imp.id} fontSize="sm">
-              <Text>
-                {imp.createdAt.slice(0, 10)}
-                {imp.undoneAt !== undefined ? ' (undone)' : ''}
-              </Text>
-              {can(FpResource.IMPORT, FpAction.DELETE) && imp.undoneAt === undefined ? (
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => {
-                    if (window.confirm('Undo this import and delete its transactions?')) {
-                      void undoDbFpImport(imp.id).then(() => load());
-                    }
-                  }}
-                >
-                  Undo
-                </Button>
-              ) : null}
-            </HStack>
-          ))}
-        </Stack>
-      ) : null}
-      <FpAccountDialog open={accountOpen} podId={podId} onClose={() => setAccountOpen(false)} onSaved={() => void load()} />
-      <FpCategoryDialog open={categoryOpen} podId={podId} onClose={() => setCategoryOpen(false)} onSaved={() => void load()} />
+      <FpAccountDialog
+        open={accountOpen}
+        podId={podId}
+        account={editingAccount}
+        onClose={() => {
+          setAccountOpen(false);
+          setEditingAccount(undefined);
+        }}
+        onSaved={() => void load()}
+      />
+      <FpCategoryDialog
+        open={categoryOpen}
+        podId={podId}
+        category={editingCategory}
+        onClose={() => {
+          setCategoryOpen(false);
+          setEditingCategory(undefined);
+        }}
+        onSaved={() => void load()}
+      />
       <FpTransactionDialog
         open={txOpen}
         podId={podId}
@@ -299,7 +332,16 @@ export default function FinancialPlanningBoard({
         onClose={() => setTxOpen(false)}
         onSaved={() => void load()}
       />
-      <FpParserDialog open={parserOpen} podId={podId} onClose={() => setParserOpen(false)} onSaved={() => void load()} />
+      <FpParserDialog
+        open={parserOpen}
+        podId={podId}
+        parser={editingParser}
+        onClose={() => {
+          setParserOpen(false);
+          setEditingParser(undefined);
+        }}
+        onSaved={() => void load()}
+      />
       <FpImportDialog
         open={importOpen}
         podId={podId}

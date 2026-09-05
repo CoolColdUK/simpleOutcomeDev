@@ -7,6 +7,7 @@ export interface UpdateDbFpCategoryInput {
   readonly direction?: FpCategoryDirection;
   readonly budgetAmount?: number | undefined;
   readonly budgetPeriod?: FpBudgetPeriod | undefined;
+  readonly clearBudget?: boolean;
   readonly favourite?: boolean;
   readonly sortOrder?: number;
   readonly filters?: readonly FpCategoryFilter[];
@@ -29,11 +30,16 @@ export default async function updateDbFpCategory(categoryId: string, input: Upda
   if (input.direction !== undefined) {
     patch.direction = input.direction;
   }
-  if (input.budgetAmount !== undefined) {
-    patch.budget_amount = input.budgetAmount;
-  }
-  if (input.budgetPeriod !== undefined) {
-    patch.budget_period = input.budgetPeriod;
+  if (input.clearBudget === true) {
+    patch.budget_amount = null;
+    patch.budget_period = null;
+  } else {
+    if (input.budgetAmount !== undefined) {
+      patch.budget_amount = input.budgetAmount;
+    }
+    if (input.budgetPeriod !== undefined) {
+      patch.budget_period = input.budgetPeriod;
+    }
   }
   if (input.favourite !== undefined) {
     patch.favourite = input.favourite;

@@ -43,13 +43,24 @@ export interface FpParserDialogProps {
   readonly onSaved: () => void;
 }
 
-export default function FpParserDialog({open, podId, parser, onClose, onSaved}: FpParserDialogProps) {
+function mappedColumns(columnMap: FpColumnMap): readonly string[] {
+  return Object.values(columnMap).flatMap((m) => (m === undefined ? [] : [m.column]));
+}
+
+export default function FpParserDialog(props: FpParserDialogProps) {
+  if (!props.open) {
+    return null;
+  }
+  return <FpParserDialogBody key={props.parser?.id ?? 'new'} {...props} />;
+}
+
+function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDialogProps) {
   const [name, setName] = useState(parser?.name ?? '');
   const [useIdentifier, setUseIdentifier] = useState(parser?.identifier !== undefined);
   const [identifier, setIdentifier] = useState(parser?.identifier ?? '');
   const [hasHeader, setHasHeader] = useState(parser?.hasHeader ?? true);
   const [skipRows, setSkipRows] = useState(String(parser?.skipRows ?? 0));
-  const [headers, setHeaders] = useState<readonly string[]>(Object.keys(parser?.columnMap ?? {}));
+  const [headers, setHeaders] = useState<readonly string[]>(mappedColumns(parser?.columnMap ?? {}));
   const [sampleRow, setSampleRow] = useState<Record<string, string> | undefined>(undefined);
   const [columnMap, setColumnMap] = useState<FpColumnMap>(parser?.columnMap ?? {});
   const [pendingColumn, setPendingColumn] = useState<string | undefined>(undefined);
@@ -103,14 +114,21 @@ export default function FpParserDialog({open, podId, parser, onClose, onSaved}: 
           : undefined,
       };
       const opts = {
-        identifier: useIdentifier ? identifier : undefined,
         hasHeader,
         skipRows: Number(skipRows) || 0,
       };
       if (parser === undefined) {
-        await createDbFpParser(podId, parseFpName(name), map, opts);
+        await createDbFpParser(podId, parseFpName(name), map, {
+          ...opts,
+          identifier: useIdentifier ? identifier : undefined,
+        });
       } else {
-        await updateDbFpParser(parser.id, {name: parseFpName(name), columnMap: map, ...opts});
+        await updateDbFpParser(parser.id, {
+          name: parseFpName(name),
+          columnMap: map,
+          ...opts,
+          identifier: useIdentifier ? identifier : '',
+        });
       }
       onSaved();
       onClose();
