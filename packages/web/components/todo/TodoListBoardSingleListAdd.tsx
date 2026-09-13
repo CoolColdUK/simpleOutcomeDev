@@ -1,7 +1,7 @@
 'use client';
 
 import {Button, HStack, Input, NativeSelect} from '@chakra-ui/react';
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import type {DbTodoColumn} from '@/lib/api/db/listDbTodoColumns';
 import createDbTodoCard from '@/lib/api/db/createDbTodoCard';
 
@@ -23,15 +23,17 @@ export default function TodoListBoardSingleListAdd({
   const firstColumnId = columns[0]?.id ?? '';
   const [columnId, setColumnId] = useState(firstColumnId);
   const [title, setTitle] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const selected = columns.some((c) => c.id === columnId) ? columnId : firstColumnId;
 
   const addCard = async (): Promise<void> => {
-    if (selected === '') {
+    if (selected === '' || title.trim() === '') {
       return;
     }
     await createDbTodoCard(podId, selected, title, userId, cardCountByColumn[selected] ?? 0);
     setTitle('');
     onChanged();
+    titleInputRef.current?.focus();
   };
 
   if (columns.length === 0) {
@@ -50,11 +52,19 @@ export default function TodoListBoardSingleListAdd({
         </NativeSelect.Field>
       </NativeSelect.Root>
       <Input
+        ref={titleInputRef}
         flex="1"
         minW="160px"
         placeholder="New card"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' || e.nativeEvent.isComposing) {
+            return;
+          }
+          e.preventDefault();
+          void addCard();
+        }}
       />
       <Button size="sm" disabled={title.trim() === ''} onClick={() => void addCard()}>
         Add card

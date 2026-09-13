@@ -4,7 +4,7 @@ import {Button, Heading, HStack, Input, Stack} from '@chakra-ui/react';
 import {useDroppable} from '@dnd-kit/core';
 import {SortableContext, useSortable, verticalListSortingStrategy} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {GripDotsIcon} from '@so/component';
 import type {DbTodoColumn} from '@/lib/api/db/listDbTodoColumns';
 import type {DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
@@ -52,6 +52,7 @@ export default function TodoListBoardColumn({
   });
   const [title, setTitle] = useState(column.title);
   const [cardTitle, setCardTitle] = useState('');
+  const cardInputRef = useRef<HTMLInputElement>(null);
 
   const saveTitle = async (): Promise<void> => {
     await updateDbTodoColumn(column.id, title);
@@ -59,9 +60,13 @@ export default function TodoListBoardColumn({
   };
 
   const addCard = async (): Promise<void> => {
+    if (cardTitle.trim() === '') {
+      return;
+    }
     await createDbTodoCard(column.podId, column.id, cardTitle, userId, cards.length);
     setCardTitle('');
     onChanged();
+    cardInputRef.current?.focus();
   };
 
   return (
@@ -123,7 +128,19 @@ export default function TodoListBoardColumn({
           />
         ))}
       </SortableContext>
-      <Input placeholder="New card" value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} />
+      <Input
+        ref={cardInputRef}
+        placeholder="New card"
+        value={cardTitle}
+        onChange={(e) => setCardTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' || e.nativeEvent.isComposing) {
+            return;
+          }
+          e.preventDefault();
+          void addCard();
+        }}
+      />
       <Button size="sm" disabled={cardTitle.trim() === ''} onClick={() => void addCard()}>
         Add card
       </Button>
