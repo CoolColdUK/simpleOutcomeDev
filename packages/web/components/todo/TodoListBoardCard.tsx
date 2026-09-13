@@ -86,37 +86,37 @@ export default function TodoListBoardCard({
         onArchive={onArchive}
         onDelete={onDelete}
       />
-      <HStack align="start" gap={2}>
+      <HStack align="start" gap={2} mt={2}>
         <TodoCardIconThumb src={iconUrl} />
         <Stack gap={1} flex="1" minW={0}>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2}>
-          <Text fontWeight="semibold" textDecoration={complete ? 'line-through' : undefined}>
-            {card.title}
-          </Text>
-          <Box color="fg.muted" aria-hidden>
-            <GripDotsIcon size={14} />
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2}>
+            <Text fontWeight="semibold" textDecoration={complete ? 'line-through' : undefined}>
+              {card.title}
+            </Text>
+            <Box color="fg.muted" aria-hidden>
+              <GripDotsIcon size={14} />
+            </Box>
           </Box>
-        </Box>
-        {statusAsTag ? (
-          <Badge size="sm" variant="subtle" w="fit-content">
-            {todoCardStatusLabel(columnTitle)}
-          </Badge>
-        ) : (
-          <Text fontSize="xs" color="fg.muted">
-            {todoCardStatusLabel(columnTitle)}
-          </Text>
-        )}
-        {dueLabel !== undefined ? <Text fontSize="xs">{dueLabel}</Text> : null}
-        {assigneeLabel !== undefined ? <Text fontSize="xs">{assigneeLabel}</Text> : null}
-        {card.tags.length > 0 ? (
-          <Box display="flex" gap={1} flexWrap="wrap">
-            {card.tags.map((tag) => (
-              <Badge key={tag} size="sm" variant="subtle">
-                {tag}
-              </Badge>
-            ))}
-          </Box>
-        ) : null}
+          {statusAsTag ? (
+            <Badge size="sm" variant="subtle" w="fit-content">
+              {todoCardStatusLabel(columnTitle)}
+            </Badge>
+          ) : (
+            <Text fontSize="xs" color="fg.muted">
+              {todoCardStatusLabel(columnTitle)}
+            </Text>
+          )}
+          {dueLabel !== undefined ? <Text fontSize="xs">{dueLabel}</Text> : null}
+          {assigneeLabel !== undefined ? <Text fontSize="xs">{assigneeLabel}</Text> : null}
+          {card.tags.length > 0 ? (
+            <Box display="flex" gap={1} flexWrap="wrap">
+              {card.tags.map((tag) => (
+                <Badge key={tag} size="sm" variant="subtle">
+                  {tag}
+                </Badge>
+              ))}
+            </Box>
+          ) : null}
         </Stack>
       </HStack>
     </Box>
