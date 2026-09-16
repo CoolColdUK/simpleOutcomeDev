@@ -1,20 +1,22 @@
 'use client';
 
+import {useState} from 'react';
 import {SimpleGrid, Stack, Text} from '@chakra-ui/react';
 import {
-  exampleFpCsvColumnValue,
   FpAmountSign,
   FpColumnTarget,
-  fpColumnTargetLabel,
   previewFpMappedField,
   type FpColumnMap,
 } from '@so/model';
-import FpParserDialogMappingColumn from '@/components/fp/FpParserDialogMappingColumn';
 import FpParserDialogMappingField from '@/components/fp/FpParserDialogMappingField';
+import FpParserDialogMappingSample from '@/components/fp/FpParserDialogMappingSample';
 
 const TARGETS = Object.values(FpColumnTarget);
 
 export interface FpParserDialogMappingProps {
+  readonly csvFileName: string | undefined;
+  readonly hasHeader: boolean;
+  readonly skipRows: number;
   readonly headers: readonly string[];
   readonly sampleRows: readonly Record<string, string>[];
   readonly columnMap: FpColumnMap;
@@ -30,7 +32,17 @@ function uniqueColumns(headers: readonly string[], columnMap: FpColumnMap): read
   return [...new Set([...headers, ...mapped])];
 }
 
+function selectedRowIndex(rowIndex: number, rowCount: number): number {
+  if (rowCount === 0 || rowIndex >= rowCount) {
+    return 0;
+  }
+  return rowIndex;
+}
+
 export default function FpParserDialogMapping({
+  csvFileName,
+  hasHeader,
+  skipRows,
   headers,
   sampleRows,
   columnMap,
@@ -40,7 +52,11 @@ export default function FpParserDialogMapping({
   onDateFormat,
   onSign,
 }: FpParserDialogMappingProps) {
+  const [rowIndex, setRowIndex] = useState(0);
   const columns = uniqueColumns(headers, columnMap);
+  const selectedIndex = selectedRowIndex(rowIndex, sampleRows.length);
+  const sampleRow = sampleRows[selectedIndex];
+  const previewRows = sampleRow === undefined ? [] : [sampleRow];
   const resolvedMap: FpColumnMap = {
     ...columnMap,
     [FpColumnTarget.DATE]:
@@ -54,52 +70,39 @@ export default function FpParserDialogMapping({
   };
   return (
     <Stack gap={4}>
-      <Stack gap={2}>
-        <Text fontWeight="medium">CSV columns</Text>
-        <Text fontSize="sm" color="fg.muted">
-          Hover a column to see a sample value from the file.
-        </Text>
-        {columns.length === 0 ? (
-          <Text fontSize="sm" color="fg.muted">
-            Drop an example CSV to list its columns.
-          </Text>
-        ) : (
-          <SimpleGrid columns={{base: 1, sm: 2}} gap={2}>
-            {columns.map((column) => {
-              const linked = TARGETS.filter((target) => columnMap[target]?.column === column);
-              return (
-                <FpParserDialogMappingColumn
-                  key={column}
-                  column={column}
-                  example={exampleFpCsvColumnValue(sampleRows, column)}
-                  linkedLabels={linked.map((target) => fpColumnTargetLabel(target))}
-                />
-              );
-            })}
-          </SimpleGrid>
-        )}
-      </Stack>
+      <FpParserDialogMappingSample
+        csvFileName={csvFileName}
+        hasHeader={hasHeader}
+        skipRows={skipRows}
+        sampleRows={sampleRows}
+        rowIndex={selectedIndex}
+        onRowIndex={setRowIndex}
+      />
       <Stack gap={2}>
         <Text fontWeight="medium">Transaction fields</Text>
         <Text fontSize="sm" color="fg.muted">
-          Link each field to a CSV column. Linked fields show the parsed value.
+          Link each field to a CSV column. Before is the example cell; after is the parsed value.
         </Text>
         <SimpleGrid columns={{base: 1, md: 2}} gap={3}>
-          {TARGETS.map((target) => (
-            <FpParserDialogMappingField
-              key={target}
-              target={target}
-              columns={columns}
-              selectedColumn={columnMap[target]?.column}
-              dateFormat={dateFormat}
-              sign={sign}
-              preview={previewFpMappedField(sampleRows, target, resolvedMap[target])}
-              hasSampleRows={sampleRows.length > 0}
-              onSelectColumn={(column) => onAssign(target, column)}
-              onDateFormat={onDateFormat}
-              onSign={onSign}
-            />
-          ))}
+          {TARGETS.map((target) => {
+            const mapping = columnMap[target];
+            return (
+              <FpParserDialogMappingField
+                key={target}
+                target={target}
+                columns={columns}
+                selectedColumn={mapping?.column}
+                dateFormat={dateFormat}
+                sign={sign}
+                before={mapping === undefined || sampleRow === undefined ? undefined : sampleRow[mapping.column]}
+                after={previewFpMappedField(previewRows, target, resolvedMap[target])}
+                hasSampleRow={sampleRow !== undefined}
+                onSelectColumn={(column) => onAssign(target, column)}
+                onDateFormat={onDateFormat}
+                onSign={onSign}
+              />
+            );
+          })}
         </SimpleGrid>
       </Stack>
     </Stack>

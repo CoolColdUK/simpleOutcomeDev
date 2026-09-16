@@ -7,6 +7,10 @@ import {
   fpAmountSignLabel,
   fpColumnTargetLabel,
 } from '@so/model';
+import AppInfoTooltip from '@/components/app/AppInfoTooltip';
+
+const AMOUNT_SIGN_NOTE =
+  '+ve is income (money in). -ve is expense (money out), including credit-card spend.';
 
 export interface FpParserDialogMappingFieldProps {
   readonly target: FpColumnTarget;
@@ -14,28 +18,46 @@ export interface FpParserDialogMappingFieldProps {
   readonly selectedColumn: string | undefined;
   readonly dateFormat: string;
   readonly sign: FpAmountSign;
-  readonly preview: string | undefined;
-  readonly hasSampleRows: boolean;
+  readonly before: string | undefined;
+  readonly after: string | undefined;
+  readonly hasSampleRow: boolean;
   readonly onSelectColumn: (column: string | undefined) => void;
   readonly onDateFormat: (value: string) => void;
   readonly onSign: (value: FpAmountSign) => void;
 }
 
-function previewLabel(
+function beforeLabel(
   selectedColumn: string | undefined,
-  preview: string | undefined,
-  hasSampleRows: boolean,
+  before: string | undefined,
+  hasSampleRow: boolean,
 ): string {
   if (selectedColumn === undefined) {
     return 'Not linked';
   }
-  if (!hasSampleRows) {
+  if (!hasSampleRow) {
     return 'Drop a CSV to preview';
   }
-  if (preview === undefined) {
+  if (before === undefined || before.trim() === '') {
+    return '(empty)';
+  }
+  return before;
+}
+
+function afterLabel(
+  selectedColumn: string | undefined,
+  after: string | undefined,
+  hasSampleRow: boolean,
+): string {
+  if (selectedColumn === undefined) {
+    return 'Not linked';
+  }
+  if (!hasSampleRow) {
+    return 'Drop a CSV to preview';
+  }
+  if (after === undefined) {
     return 'No usable sample';
   }
-  return preview;
+  return after;
 }
 
 export default function FpParserDialogMappingField({
@@ -44,8 +66,9 @@ export default function FpParserDialogMappingField({
   selectedColumn,
   dateFormat,
   sign,
-  preview,
-  hasSampleRows,
+  before,
+  after,
+  hasSampleRow,
   onSelectColumn,
   onDateFormat,
   onSign,
@@ -58,10 +81,13 @@ export default function FpParserDialogMappingField({
       p={3}
       bg="bg.subtle"
     >
-      <HStack justify="space-between" align="start" gap={2}>
-        <Text fontSize="sm" fontWeight="medium">
-          {fpColumnTargetLabel(target)}
-        </Text>
+      <HStack justify="space-between" align="center" gap={2}>
+        <HStack gap={1}>
+          <Text fontSize="sm" fontWeight="medium">
+            {fpColumnTargetLabel(target)}
+          </Text>
+          {target === FpColumnTarget.AMOUNT ? <AppInfoTooltip label={AMOUNT_SIGN_NOTE} /> : null}
+        </HStack>
         {target === FpColumnTarget.AMOUNT ? (
           <Badge size="sm" colorPalette="brand">
             {fpAmountSignLabel(sign)}
@@ -106,9 +132,15 @@ export default function FpParserDialogMappingField({
       ) : null}
       <Text fontSize="sm">
         <Text as="span" color="fg.muted">
-          Final value:{' '}
+          Before:{' '}
         </Text>
-        {previewLabel(selectedColumn, preview, hasSampleRows)}
+        {beforeLabel(selectedColumn, before, hasSampleRow)}
+      </Text>
+      <Text fontSize="sm">
+        <Text as="span" color="fg.muted">
+          After:{' '}
+        </Text>
+        {afterLabel(selectedColumn, after, hasSampleRow)}
       </Text>
     </Stack>
   );

@@ -13,6 +13,7 @@ import {
   DialogRoot,
   DialogTitle,
   Field,
+  HStack,
   Input,
   Stack,
   Switch,
@@ -27,6 +28,7 @@ import {
 import createDbFpParser from '@/lib/api/db/createDbFpParser';
 import updateDbFpParser from '@/lib/api/db/updateDbFpParser';
 import type {DbFpParser} from '@/lib/api/db/mapDbFpParser';
+import AppInfoTooltip from '@/components/app/AppInfoTooltip';
 import FpParserDialogDropzone from '@/components/fp/FpParserDialogDropzone';
 import FpParserDialogMapping from '@/components/fp/FpParserDialogMapping';
 
@@ -56,6 +58,7 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
   const [hasHeader, setHasHeader] = useState(parser?.hasHeader ?? true);
   const [skipRows, setSkipRows] = useState(String(parser?.skipRows ?? 0));
   const [csvText, setCsvText] = useState<string | undefined>(undefined);
+  const [csvFileName, setCsvFileName] = useState<string | undefined>(undefined);
   const [headers, setHeaders] = useState<readonly string[]>(mappedColumns(parser?.columnMap ?? {}));
   const [sampleRows, setSampleRows] = useState<readonly Record<string, string>[]>([]);
   const [columnMap, setColumnMap] = useState<FpColumnMap>(parser?.columnMap ?? {});
@@ -73,6 +76,7 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
   const onFile = async (file: File): Promise<void> => {
     const text = await file.text();
     setCsvText(text);
+    setCsvFileName(file.name);
     applyCsv(text, hasHeader, skipRows);
   };
 
@@ -153,23 +157,29 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
                 </Switch.Control>
                 <Switch.Label>Use first-row identifier</Switch.Label>
               </Switch.Root>
-              <Switch.Root
-                checked={hasHeader}
-                onCheckedChange={(e) => {
-                  setHasHeader(e.checked);
-                  if (csvText !== undefined) {
-                    applyCsv(csvText, e.checked, skipRows);
-                  }
-                }}
-              >
-                <Switch.HiddenInput />
-                <Switch.Control>
-                  <Switch.Thumb />
-                </Switch.Control>
-                <Switch.Label>First data row is a header</Switch.Label>
-              </Switch.Root>
+              <HStack gap={1} align="center">
+                <Switch.Root
+                  checked={hasHeader}
+                  onCheckedChange={(e) => {
+                    setHasHeader(e.checked);
+                    if (csvText !== undefined) {
+                      applyCsv(csvText, e.checked, skipRows);
+                    }
+                  }}
+                >
+                  <Switch.HiddenInput />
+                  <Switch.Control>
+                    <Switch.Thumb />
+                  </Switch.Control>
+                  <Switch.Label>CSV has a header row</Switch.Label>
+                </Switch.Root>
+                <AppInfoTooltip label="When on, the first row after any skipped lines names the columns. Leave skip at 0 — do not set skip to 1 just because a header exists." />
+              </HStack>
               <Field.Root>
-                <Field.Label>Skip leading rows</Field.Label>
+                <HStack gap={1} align="center">
+                  <Field.Label mb={0}>Skip leading rows</Field.Label>
+                  <AppInfoTooltip label="Extra lines to ignore above the header or first data row (title, account number, blanks). Keep this at 0 if the file starts with the header. The header switch already uses that row; skip 1 would throw the header away." />
+                </HStack>
                 <Input
                   type="number"
                   value={skipRows}
@@ -183,6 +193,10 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
               </Field.Root>
               {useIdentifier ? <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} /> : null}
               <FpParserDialogMapping
+                key={csvFileName ?? 'no-csv'}
+                csvFileName={csvFileName}
+                hasHeader={hasHeader}
+                skipRows={Number(skipRows) || 0}
                 headers={headers}
                 sampleRows={sampleRows}
                 columnMap={columnMap}
