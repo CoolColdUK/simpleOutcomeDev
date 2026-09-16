@@ -2,7 +2,6 @@
 
 import {useState} from 'react';
 import {
-  Box,
   Button,
   DialogBackdrop,
   DialogBody,
@@ -14,17 +13,13 @@ import {
   DialogRoot,
   DialogTitle,
   Field,
-  HStack,
   Input,
-  NativeSelect,
   Stack,
   Switch,
-  Text,
 } from '@chakra-ui/react';
 import {
   FpAmountSign,
   FpColumnTarget,
-  mapCsvRowToFpTransaction,
   parseFpCsvTable,
   parseFpName,
   type FpColumnMap,
@@ -32,8 +27,8 @@ import {
 import createDbFpParser from '@/lib/api/db/createDbFpParser';
 import updateDbFpParser from '@/lib/api/db/updateDbFpParser';
 import type {DbFpParser} from '@/lib/api/db/mapDbFpParser';
-
-const TARGETS = Object.values(FpColumnTarget);
+import FpParserDialogDropzone from '@/components/fp/FpParserDialogDropzone';
+import FpParserDialogMapping from '@/components/fp/FpParserDialogMapping';
 
 export interface FpParserDialogProps {
   readonly open: boolean;
@@ -60,20 +55,25 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
   const [identifier, setIdentifier] = useState(parser?.identifier ?? '');
   const [hasHeader, setHasHeader] = useState(parser?.hasHeader ?? true);
   const [skipRows, setSkipRows] = useState(String(parser?.skipRows ?? 0));
+  const [csvText, setCsvText] = useState<string | undefined>(undefined);
   const [headers, setHeaders] = useState<readonly string[]>(mappedColumns(parser?.columnMap ?? {}));
-  const [sampleRow, setSampleRow] = useState<Record<string, string> | undefined>(undefined);
+  const [sampleRows, setSampleRows] = useState<readonly Record<string, string>[]>([]);
   const [columnMap, setColumnMap] = useState<FpColumnMap>(parser?.columnMap ?? {});
-  const [pendingColumn, setPendingColumn] = useState<string | undefined>(undefined);
   const [dateFormat, setDateFormat] = useState(parser?.columnMap.date?.dateFormat ?? 'DD/MM/YYYY');
   const [sign, setSign] = useState<FpAmountSign>(parser?.columnMap.amount?.sign ?? FpAmountSign.AS_IS);
   const [saving, setSaving] = useState(false);
 
-  const onFile = async (file: File): Promise<void> => {
-    const text = await file.text();
-    const table = parseFpCsvTable(text, ',', hasHeader, Number(skipRows) || 0);
+  const applyCsv = (text: string, headerFlag: boolean, skip: string): void => {
+    const table = parseFpCsvTable(text, ',', headerFlag, Number(skip) || 0);
     setIdentifier(table.headerLine);
     setHeaders(table.headers);
-    setSampleRow(table.rows[0]);
+    setSampleRows(table.rows);
+  };
+
+  const onFile = async (file: File): Promise<void> => {
+    const text = await file.text();
+    setCsvText(text);
+    applyCsv(text, hasHeader, skipRows);
   };
 
   const mappingFor = (target: FpColumnTarget, column: string) => {
@@ -86,20 +86,13 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
     return {column};
   };
 
-  const assign = (target: FpColumnTarget, column: string): void => {
+  const assign = (target: FpColumnTarget, column: string | undefined): void => {
+    if (column === undefined) {
+      setColumnMap({...columnMap, [target]: undefined});
+      return;
+    }
     setColumnMap({...columnMap, [target]: mappingFor(target, column)});
-    setPendingColumn(undefined);
   };
-
-  const preview = sampleRow === undefined ? undefined : mapCsvRowToFpTransaction(sampleRow, {
-    ...columnMap,
-    [FpColumnTarget.DATE]: columnMap[FpColumnTarget.DATE]
-      ? {...columnMap[FpColumnTarget.DATE], dateFormat}
-      : undefined,
-    [FpColumnTarget.AMOUNT]: columnMap[FpColumnTarget.AMOUNT]
-      ? {...columnMap[FpColumnTarget.AMOUNT], sign}
-      : undefined,
-  });
 
   const save = async (): Promise<void> => {
     setSaving(true);
@@ -141,7 +134,7 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
     <DialogRoot open={open} onOpenChange={(event) => (!event.open ? onClose() : undefined)}>
       <DialogBackdrop />
       <DialogPositioner>
-        <DialogContent maxW="lg">
+        <DialogContent maxW="3xl">
           <DialogHeader>
             <DialogTitle>{parser === undefined ? 'New parser' : 'Edit parser'}</DialogTitle>
             <DialogCloseTrigger />
@@ -152,32 +145,7 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
                 <Field.Label>Name</Field.Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
               </Field.Root>
-              <Box
-                borderWidth="1px"
-                borderRadius="md"
-                p={4}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const file = e.dataTransfer.files[0];
-                  if (file !== undefined) {
-                    void onFile(file);
-                  }
-                }}
-              >
-                <Text fontSize="sm">Drop an example CSV, or</Text>
-                <Input
-                  type="file"
-                  accept=".csv,text/csv"
-                  mt={2}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file !== undefined) {
-                      void onFile(file);
-                    }
-                  }}
-                />
-              </Box>
+              <FpParserDialogDropzone onFile={onFile} />
               <Switch.Root checked={useIdentifier} onCheckedChange={(e) => setUseIdentifier(e.checked)}>
                 <Switch.HiddenInput />
                 <Switch.Control>
@@ -185,7 +153,15 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
                 </Switch.Control>
                 <Switch.Label>Use first-row identifier</Switch.Label>
               </Switch.Root>
-              <Switch.Root checked={hasHeader} onCheckedChange={(e) => setHasHeader(e.checked)}>
+              <Switch.Root
+                checked={hasHeader}
+                onCheckedChange={(e) => {
+                  setHasHeader(e.checked);
+                  if (csvText !== undefined) {
+                    applyCsv(csvText, e.checked, skipRows);
+                  }
+                }}
+              >
                 <Switch.HiddenInput />
                 <Switch.Control>
                   <Switch.Thumb />
@@ -194,60 +170,28 @@ function FpParserDialogBody({open, podId, parser, onClose, onSaved}: FpParserDia
               </Switch.Root>
               <Field.Root>
                 <Field.Label>Skip leading rows</Field.Label>
-                <Input type="number" value={skipRows} onChange={(e) => setSkipRows(e.target.value)} />
+                <Input
+                  type="number"
+                  value={skipRows}
+                  onChange={(e) => {
+                    setSkipRows(e.target.value);
+                    if (csvText !== undefined) {
+                      applyCsv(csvText, hasHeader, e.target.value);
+                    }
+                  }}
+                />
               </Field.Root>
               {useIdentifier ? <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} /> : null}
-              <Field.Root>
-                <Field.Label>Date format</Field.Label>
-                <Input value={dateFormat} onChange={(e) => setDateFormat(e.target.value)} />
-              </Field.Root>
-              <Field.Root>
-                <Field.Label>Amount sign</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field value={sign} onChange={(e) => setSign(e.target.value as FpAmountSign)}>
-                    {Object.values(FpAmountSign).map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </NativeSelect.Field>
-                </NativeSelect.Root>
-              </Field.Root>
-              <Text fontSize="sm">Tap a column, then a transaction field to map.</Text>
-              <HStack flexWrap="wrap" gap={2}>
-                {headers.map((h) => (
-                  <Button
-                    key={h}
-                    size="xs"
-                    variant={pendingColumn === h ? 'solid' : 'outline'}
-                    onClick={() => setPendingColumn(h)}
-                  >
-                    {h}
-                  </Button>
-                ))}
-              </HStack>
-              <HStack flexWrap="wrap" gap={2}>
-                {TARGETS.map((t) => (
-                  <Button
-                    key={t}
-                    size="xs"
-                    colorPalette="brand"
-                    variant="outline"
-                    onClick={() => (pendingColumn === undefined ? undefined : assign(t, pendingColumn))}
-                  >
-                    {t}
-                    {columnMap[t] !== undefined ? ` ← ${columnMap[t]?.column}` : ''}
-                  </Button>
-                ))}
-              </HStack>
-              {preview !== undefined ? (
-                <Box borderWidth="1px" borderRadius="md" p={3}>
-                  <Text fontSize="sm">Preview</Text>
-                  <Text fontSize="sm">
-                    {preview.postedDate} {preview.description} {preview.amount}
-                  </Text>
-                </Box>
-              ) : null}
+              <FpParserDialogMapping
+                headers={headers}
+                sampleRows={sampleRows}
+                columnMap={columnMap}
+                dateFormat={dateFormat}
+                sign={sign}
+                onAssign={assign}
+                onDateFormat={setDateFormat}
+                onSign={setSign}
+              />
             </Stack>
           </DialogBody>
           <DialogFooter>
