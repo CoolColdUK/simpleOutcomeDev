@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {
   Box,
   Button,
@@ -18,12 +18,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
-import {
-  mapCsvRowToFpTransaction,
-  matchFpParserIdentifier,
-  parseFpCsvTable,
-  type FpParsedTransaction,
-} from '@so/model';
+import {collectFpImportRows, matchFpParserIdentifier, parseFpCsvTable} from '@so/model';
 import createDbFpImport from '@/lib/api/db/createDbFpImport';
 import applyDbFpAutoAssign from '@/lib/api/db/applyDbFpAutoAssign';
 import hasDbFpImportHash from '@/lib/api/db/hasDbFpImportHash';
@@ -41,6 +36,7 @@ export interface FpImportDialogProps {
 }
 
 export default function FpImportDialog({open, podId, accounts, parsers, onClose, onSaved}: FpImportDialogProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [parserId, setParserId] = useState(parsers[0]?.id ?? '');
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '');
@@ -82,11 +78,19 @@ export default function FpImportDialog({open, podId, accounts, parsers, onClose,
             }
           }
           const table = parseFpCsvTable(text, parser.delimiter, parser.hasHeader, parser.skipRows);
-          const rows = table.rows.flatMap((row) => {
-            const tx = mapCsvRowToFpTransaction(row, parser.columnMap);
-            return tx === undefined ? [] : [tx];
-          });
-          return {fileName: file.name, contentSha256: sha, rows: rows as FpParsedTransaction[]};
+          const collected = collectFpImportRows(
+            table.rows,
+            parser.columnMap,
+            parser.skipRows,
+            parser.hasHeader,
+          );
+          return {
+            fileName: file.name,
+            contentSha256: sha,
+            parsed: collected.parsed,
+            rows: collected.rows,
+            logs: collected.logs,
+          };
         }),
       );
       const ready = payloads.filter((p) => p !== undefined);
@@ -94,10 +98,20 @@ export default function FpImportDialog({open, podId, accounts, parsers, onClose,
         setMessage('Nothing to import');
         return;
       }
-      await createDbFpImport(podId, parser.id, accountId, ready);
+      await ready.reduce(
+        async (previous, file) => {
+          await previous;
+          await createDbFpImport(podId, parser.id, accountId, file);
+        },
+        Promise.resolve(),
+      );
       await applyDbFpAutoAssign(podId);
+      setFiles([]);
+      if (fileInputRef.current !== null) {
+        fileInputRef.current.value = '';
+      }
+      setMessage(`Imported ${ready.length} file${ready.length === 1 ? '' : 's'}.`);
       onSaved();
-      onClose();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : String(e));
     } finally {
@@ -128,6 +142,7 @@ export default function FpImportDialog({open, podId, accounts, parsers, onClose,
               >
                 <Text fontSize="sm">Drop one or more CSV files</Text>
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept=".csv,text/csv"
                   multiple

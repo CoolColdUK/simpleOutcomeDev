@@ -1,3 +1,5 @@
+import {parseFpImportLogs, type FpImportLogEntry} from '@so/model';
+
 export interface DbFpImportFile {
   readonly id: string;
   readonly importId: string;
@@ -7,6 +9,7 @@ export interface DbFpImportFile {
   readonly createdCount: number;
   readonly duplicateSkipped: number;
   readonly failed: number;
+  readonly logs: readonly FpImportLogEntry[];
 }
 
 export function mapDbFpImportFile(row: {
@@ -18,6 +21,7 @@ export function mapDbFpImportFile(row: {
   readonly created_count: number;
   readonly duplicate_skipped: number;
   readonly failed: number;
+  readonly errors?: unknown;
 }): DbFpImportFile {
   return {
     id: row.id,
@@ -28,5 +32,6 @@ export function mapDbFpImportFile(row: {
     createdCount: row.created_count,
     duplicateSkipped: row.duplicate_skipped,
     failed: row.failed,
+    logs: parseFpImportLogs(row.errors ?? []),
   };
 }

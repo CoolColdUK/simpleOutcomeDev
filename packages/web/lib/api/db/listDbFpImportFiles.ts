@@ -6,7 +6,9 @@ export default async function listDbFpImportFiles(podId: string): Promise<readon
   const supabase = getSupabaseBrowserClient();
   const {data, error} = await supabase
     .from('fp_import_file')
-    .select('id, import_id, file_name, content_sha256, parsed, created_count, duplicate_skipped, failed')
+    .select(
+      'id, import_id, file_name, content_sha256, parsed, created_count, duplicate_skipped, failed, errors',
+    )
     .eq('pod_id', podId)
     .order('created_at', {ascending: false});
   throwIfSupabaseError(error);

@@ -1,37 +1,68 @@
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
-import type {FpParsedTransaction} from '@so/model';
+import type {FpImportLogEntry, FpImportMappedRow, FpParsedTransaction} from '@so/model';
 
 export interface CreateDbFpImportFile {
   readonly fileName: string;
   readonly contentSha256: string;
-  readonly rows: readonly FpParsedTransaction[];
+  readonly parsed: number;
+  readonly rows: readonly FpImportMappedRow[];
+  readonly logs: readonly FpImportLogEntry[];
+}
+
+function rowPayload(row: FpImportMappedRow): Record<string, string | number> {
+  const tx: FpParsedTransaction = row.transaction;
+  return {
+    posted_date: tx.postedDate,
+    posted_time: tx.postedTime ?? '',
+    amount: String(tx.amount),
+    description: tx.description,
+    recipient: tx.recipient,
+    external_id: tx.externalId ?? '',
+    notes: tx.notes,
+    row_index: row.rowIndex,
+    file_line: row.fileLine,
+  };
+}
+
+function logPayload(log: FpImportLogEntry): Record<string, string | number> {
+  const base: Record<string, string | number> = {
+    kind: log.kind,
+    rowIndex: log.rowIndex,
+    message: log.message,
+  };
+  if (log.fileLine !== undefined && log.raw !== undefined) {
+    return {...base, fileLine: log.fileLine, raw: log.raw};
+  }
+  if (log.fileLine !== undefined) {
+    return {...base, fileLine: log.fileLine};
+  }
+  if (log.raw !== undefined) {
+    return {...base, raw: log.raw};
+  }
+  return base;
 }
 
 export default async function createDbFpImport(
   podId: string,
   parserId: string,
   accountId: string,
-  files: readonly CreateDbFpImportFile[],
+  file: CreateDbFpImportFile,
 ): Promise<string> {
   const supabase = getSupabaseBrowserClient();
   const {data, error} = await supabase.rpc('create_fp_import', {
     p_pod_id: podId,
     p_parser_id: parserId,
     p_account_id: accountId,
-    p_files: files.map((f) => ({
-      file_name: f.fileName,
-      content_sha256: f.contentSha256,
-      rows: f.rows.map((r) => ({
-        posted_date: r.postedDate,
-        posted_time: r.postedTime ?? '',
-        amount: String(r.amount),
-        description: r.description,
-        recipient: r.recipient,
-        external_id: r.externalId ?? '',
-        notes: r.notes,
-      })),
-    })),
+    p_files: [
+      {
+        file_name: file.fileName,
+        content_sha256: file.contentSha256,
+        parsed: file.parsed,
+        logs: file.logs.map(logPayload),
+        rows: file.rows.map(rowPayload),
+      },
+    ],
   });
   throwIfSupabaseError(error);
   if (data === undefined || data === null) {
