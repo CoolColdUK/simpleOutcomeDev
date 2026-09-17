@@ -6,6 +6,7 @@ export interface FpDuplicateFields {
   readonly description: string;
   readonly recipient: string;
   readonly externalId?: string;
+  readonly importId?: string;
 }
 
 export default function fpDuplicateKey(tx: FpDuplicateFields): string {

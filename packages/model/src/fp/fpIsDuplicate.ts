@@ -4,6 +4,13 @@ export default function fpIsDuplicate(incoming: FpDuplicateFields, existing: FpD
   if (incoming.accountId !== existing.accountId) {
     return false;
   }
+  if (
+    incoming.importId !== undefined &&
+    existing.importId !== undefined &&
+    incoming.importId === existing.importId
+  ) {
+    return false;
+  }
   if (incoming.externalId !== undefined && incoming.externalId !== '') {
     return incoming.externalId === existing.externalId;
   }

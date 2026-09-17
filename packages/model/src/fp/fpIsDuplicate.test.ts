@@ -23,6 +23,14 @@ describe('fpIsDuplicate', () => {
     expect(fpIsDuplicate({...base, postedTime: '10:00:00'}, base)).toBe(true);
   });
 
+  it('does not treat same-import repeats as duplicates', () => {
+    expect(fpIsDuplicate({...base, importId: 'imp-1'}, {...base, importId: 'imp-1'})).toBe(false);
+  });
+
+  it('still matches the same row from a different import', () => {
+    expect(fpIsDuplicate({...base, importId: 'imp-2'}, {...base, importId: 'imp-1'})).toBe(true);
+  });
+
   it('does not match across accounts', () => {
     expect(fpIsDuplicate(base, {...base, accountId: 'b'})).toBe(false);
   });
