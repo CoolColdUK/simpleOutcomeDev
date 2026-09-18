@@ -17,8 +17,14 @@ import {
   NativeSelect,
   Stack,
   Switch,
+  Textarea,
 } from '@chakra-ui/react';
-import {FpBudgetPeriod, FpCategoryDirection, fpCategoryDirectionLabel, parseFpName} from '@so/model';
+import {
+  FpBudgetPeriod,
+  FpCategoryDirection,
+  fpCategoryDirectionLabel,
+  parseFpName,
+} from '@so/model';
 import createDbFpCategory from '@/lib/api/db/createDbFpCategory';
 import updateDbFpCategory from '@/lib/api/db/updateDbFpCategory';
 import type {DbFpCategory} from '@/lib/api/db/mapDbFpCategory';
@@ -36,7 +42,7 @@ function filterText(category: DbFpCategory | undefined): string {
   if (first === undefined) {
     return '';
   }
-  return first.descriptionContains ?? '';
+  return (first.descriptionContains ?? []).join('\n');
 }
 
 export default function FpCategoryDialog(props: FpCategoryDialogProps) {
@@ -64,7 +70,11 @@ function FpCategoryDialogBody({open, podId, category, onClose, onSaved}: FpCateg
       const parsedName = parseFpName(name);
       const budgetAmount = budget.trim() === '' ? undefined : Number(budget);
       const budgetPeriod = period === '' ? undefined : period;
-      const filters = filter.trim() === '' ? [] : [{descriptionContains: filter.trim()}];
+      const patterns = filter.split(/\r?\n/).flatMap((line) => {
+        const trimmed = line.trim();
+        return trimmed === '' ? [] : [trimmed];
+      });
+      const filters = patterns.length === 0 ? [] : [{descriptionContains: patterns}];
       if (category === undefined) {
         await createDbFpCategory(podId, parsedName, direction, {
           filters,
@@ -123,7 +133,15 @@ function FpCategoryDialogBody({open, podId, category, onClose, onSaved}: FpCateg
               </Field.Root>
               <Field.Root>
                 <Field.Label>Auto-assign contains</Field.Label>
-                <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="NETFLIX" />
+                <Textarea
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder={'NETFLIX\nSPOTIFY'}
+                  minH="6rem"
+                />
+                <Field.HelperText>
+                  One pattern per line. A transaction matches if its description contains any of them.
+                </Field.HelperText>
               </Field.Root>
               <Field.Root>
                 <Field.Label>Budget amount (optional)</Field.Label>

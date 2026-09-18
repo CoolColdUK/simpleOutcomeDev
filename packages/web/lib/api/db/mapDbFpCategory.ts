@@ -1,4 +1,4 @@
-import {FpBudgetPeriod, FpCategoryDirection, type FpCategoryFilter} from '@so/model';
+import {FpBudgetPeriod, FpCategoryDirection, parseFpCategoryFilters, type FpCategoryFilter} from '@so/model';
 
 export interface DbFpCategory {
   readonly id: string;
@@ -25,7 +25,7 @@ export function mapDbFpCategory(row: {
   readonly colour: string | null;
   readonly filters: unknown;
 }): DbFpCategory {
-  const filters = Array.isArray(row.filters) ? (row.filters as FpCategoryFilter[]) : [];
+  const filters = parseFpCategoryFilters(row.filters);
   return {
     id: row.id,
     podId: row.pod_id,

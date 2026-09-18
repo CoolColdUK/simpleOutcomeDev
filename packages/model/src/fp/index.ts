@@ -38,6 +38,7 @@ export type {FpDuplicateFields} from './fpDuplicateKey';
 export {default as fpIsDuplicate} from './fpIsDuplicate';
 export {default as matchFpAutoAssignCategory} from './matchFpAutoAssignCategory';
 export type {FpCategoryFilter, FpCategoryRule, FpAutoAssignTarget} from './matchFpAutoAssignCategory';
+export {default as parseFpCategoryFilters} from './parseFpCategoryFilters';
 export {fpCountsTowardBalance, fpCountsTowardCategoryReport, fpInDateRange} from './fpTransactionReport';
 export {default as createFpSplitChildren} from './createFpSplitChildren';
 export type {FpSplitChild} from './createFpSplitChildren';

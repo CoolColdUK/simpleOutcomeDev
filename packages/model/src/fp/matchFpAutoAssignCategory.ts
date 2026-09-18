@@ -1,6 +1,6 @@
 export interface FpCategoryFilter {
-  readonly descriptionContains?: string;
-  readonly recipientContains?: string;
+  readonly descriptionContains?: readonly string[];
+  readonly recipientContains?: readonly string[];
   readonly amount?: number;
 }
 
@@ -15,20 +15,25 @@ export interface FpAutoAssignTarget {
   readonly amount: number;
 }
 
+function containsAny(haystack: string, needles: readonly string[]): boolean {
+  const lower = haystack.toLowerCase();
+  return needles.some((needle) => needle !== '' && lower.includes(needle.toLowerCase()));
+}
+
 function filterMatches(tx: FpAutoAssignTarget, filter: FpCategoryFilter): boolean {
-  const descriptionContains = filter.descriptionContains;
-  const recipientContains = filter.recipientContains;
+  const descriptionContains = filter.descriptionContains ?? [];
+  const recipientContains = filter.recipientContains ?? [];
   const amount = filter.amount;
-  const hasDescription = descriptionContains !== undefined && descriptionContains !== '';
-  const hasRecipient = recipientContains !== undefined && recipientContains !== '';
+  const hasDescription = descriptionContains.length > 0;
+  const hasRecipient = recipientContains.length > 0;
   const hasAmount = amount !== undefined;
   if (!hasDescription && !hasRecipient && !hasAmount) {
     return false;
   }
-  if (hasDescription && descriptionContains !== undefined && !tx.description.toLowerCase().includes(descriptionContains.toLowerCase())) {
+  if (hasDescription && !containsAny(tx.description, descriptionContains)) {
     return false;
   }
-  if (hasRecipient && recipientContains !== undefined && !tx.recipient.toLowerCase().includes(recipientContains.toLowerCase())) {
+  if (hasRecipient && !containsAny(tx.recipient, recipientContains)) {
     return false;
   }
   if (hasAmount && amount !== undefined && Math.abs(tx.amount - amount) >= 0.01) {
