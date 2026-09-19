@@ -274,7 +274,7 @@ export default function TodoListBoard({podId, userId, members, podRole, isSpaceO
           />
         ) : (
           <SortableContext items={columns.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-            <HStack align="start" overflowX="auto" gap={3}>
+            <HStack className="todo-print-kanban" align="start" overflowX="auto" gap={3}>
               {columns.map((column) => (
                 <TodoListBoardColumn
                   key={column.id}

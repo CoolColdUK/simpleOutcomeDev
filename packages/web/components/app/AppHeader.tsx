@@ -16,7 +16,7 @@ export default function AppHeader() {
   };
 
   return (
-    <Box as="header" css={styles.root}>
+    <Box as="header" className="no-print" css={styles.root}>
       <Flex css={styles.inner}>
         <Text asChild css={styles.brand}>
           <Link href="/app">SimpleOutcome</Link>

@@ -23,3 +23,80 @@ body {
   outline: 2px solid var(--chakra-colors-brand-500, #d7a86e);
   outline-offset: 2px;
 }
+
+.todo-print-only {
+  display: none;
+}
+
+.todo-print-root {
+  display: none;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .todo-print-only {
+    display: block !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body:not(.print-todo-card):not(.print-todo-description) [role='dialog'],
+  body:not(.print-todo-card):not(.print-todo-description) [data-part='backdrop'],
+  body:not(.print-todo-card):not(.print-todo-description) [data-part='positioner'] {
+    display: none !important;
+  }
+
+  body.print-todo-card > *:not(.todo-print-root--card),
+  body.print-todo-description > *:not(.todo-print-root--description) {
+    display: none !important;
+  }
+
+  body.print-todo-card .todo-print-root--card,
+  body.print-todo-description .todo-print-root--description {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    color: #000;
+  }
+
+  .todo-print-kanban {
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .todo-print-kanban > * {
+    min-width: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    break-inside: avoid;
+    margin-bottom: 1rem;
+    page-break-inside: avoid;
+  }
+
+  .todo-print-cards {
+    display: block !important;
+  }
+
+  .todo-print-cards > * {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 0.5rem;
+  }
+
+  .todo-print-card {
+    padding-top: 0.5rem !important;
+    box-shadow: none !important;
+    cursor: default !important;
+  }
+}

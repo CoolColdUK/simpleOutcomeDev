@@ -35,19 +35,21 @@ export default function TodoListBoardArchivePanel({
         Archive
       </Heading>
       <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-        {cards.map((card) => (
-          <TodoListBoardCard
-            key={card.id}
-            card={card}
-            columnTitle={undefined}
-            assigneeLabel={assigneeName(card.assigneeUserId)}
-            iconUrl={todoCardIconUrl(card.iconPath, iconUrlByPath)}
-            onOpen={() => onOpenCard(card)}
-            onComplete={() => onCompleteCard(card)}
-            onArchive={() => onArchiveCard(card)}
-            onDelete={() => onDeleteCard(card)}
-          />
-        ))}
+        <Stack className="todo-print-cards" gap={2}>
+          {cards.map((card) => (
+            <TodoListBoardCard
+              key={card.id}
+              card={card}
+              columnTitle={undefined}
+              assigneeLabel={assigneeName(card.assigneeUserId)}
+              iconUrl={todoCardIconUrl(card.iconPath, iconUrlByPath)}
+              onOpen={() => onOpenCard(card)}
+              onComplete={() => onCompleteCard(card)}
+              onArchive={() => onArchiveCard(card)}
+              onDelete={() => onDeleteCard(card)}
+            />
+          ))}
+        </Stack>
       </SortableContext>
     </Stack>
   );

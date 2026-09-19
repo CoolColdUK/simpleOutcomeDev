@@ -1,6 +1,6 @@
 'use client';
 
-import {Button, Heading, HStack, Input, Stack} from '@chakra-ui/react';
+import {Box, Button, Heading, HStack, Input, Stack} from '@chakra-ui/react';
 import {useDroppable} from '@dnd-kit/core';
 import {SortableContext, useSortable, verticalListSortingStrategy} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
@@ -90,60 +90,78 @@ export default function TodoListBoardColumn({
     >
       <HStack gap={1} align="center">
         {canManageColumns ? (
-          <AppIconTooltip label="Move column">
-            <Stack
-              {...attributes}
-              {...listeners}
-              cursor="grab"
-              color="fg.muted"
-              aria-label="Move column"
-              py={1}
-              style={{touchAction: 'none'}}
-            >
-              <GripDotsIcon size={14} />
-            </Stack>
-          </AppIconTooltip>
+          <Box className="no-print">
+            <AppIconTooltip label="Move column">
+              <Stack
+                {...attributes}
+                {...listeners}
+                cursor="grab"
+                color="fg.muted"
+                aria-label="Move column"
+                py={1}
+                style={{touchAction: 'none'}}
+              >
+                <GripDotsIcon size={14} />
+              </Stack>
+            </AppIconTooltip>
+          </Box>
         ) : null}
         {canManageColumns ? (
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => void saveTitle()} />
+          <>
+            <Input
+              className="no-print"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => void saveTitle()}
+            />
+            <Heading className="todo-print-only" as="h3" size="sm" flex="1">
+              {column.title}
+            </Heading>
+          </>
         ) : (
           <Heading as="h3" size="sm" flex="1">
             {column.title}
           </Heading>
         )}
-        <TodoListBoardColumnMenu columnId={column.id} canManageColumns={canManageColumns} onChanged={onChanged} />
+        <Box className="no-print">
+          <TodoListBoardColumnMenu columnId={column.id} canManageColumns={canManageColumns} onChanged={onChanged} />
+        </Box>
       </HStack>
       <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-        {cards.map((card) => (
-          <TodoListBoardCard
-            key={card.id}
-            card={card}
-            columnTitle={column.title}
-            assigneeLabel={assigneeName(card.assigneeUserId)}
-            iconUrl={todoCardIconUrl(card.iconPath, iconUrlByPath)}
-            onOpen={() => onOpenCard(card)}
-            onComplete={() => onCompleteCard(card)}
-            onArchive={() => onArchiveCard(card)}
-            onDelete={() => onDeleteCard(card)}
-          />
-        ))}
+        <Stack className="todo-print-cards" gap={2}>
+          {cards.map((card) => (
+            <TodoListBoardCard
+              key={card.id}
+              card={card}
+              columnTitle={column.title}
+              assigneeLabel={assigneeName(card.assigneeUserId)}
+              iconUrl={todoCardIconUrl(card.iconPath, iconUrlByPath)}
+              onOpen={() => onOpenCard(card)}
+              onComplete={() => onCompleteCard(card)}
+              onArchive={() => onArchiveCard(card)}
+              onDelete={() => onDeleteCard(card)}
+            />
+          ))}
+        </Stack>
       </SortableContext>
-      <Input
-        ref={cardInputRef}
-        placeholder="New card"
-        value={cardTitle}
-        onChange={(e) => setCardTitle(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key !== 'Enter' || e.nativeEvent.isComposing) {
-            return;
-          }
-          e.preventDefault();
-          void addCard();
-        }}
-      />
-      <Button size="sm" disabled={cardTitle.trim() === ''} onClick={() => void addCard()}>
-        Add card
-      </Button>
+      <Box className="no-print">
+        <Input
+          ref={cardInputRef}
+          placeholder="New card"
+          value={cardTitle}
+          onChange={(e) => setCardTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' || e.nativeEvent.isComposing) {
+              return;
+            }
+            e.preventDefault();
+            void addCard();
+          }}
+        />
+        <Button size="sm" mt={2} disabled={cardTitle.trim() === ''} onClick={() => void addCard()}>
+          Add card
+        </Button>
+      </Box>
     </Stack>
   );
 }

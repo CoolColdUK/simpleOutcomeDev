@@ -1,6 +1,6 @@
 'use client';
 
-import {Box, Button, HStack, Stack, Switch} from '@chakra-ui/react';
+import {Button, HStack, Stack, Switch} from '@chakra-ui/react';
 import {AddIcon} from '@so/component';
 import TodoListBoardTagFilter from '@/components/todo/TodoListBoardTagFilter';
 
@@ -30,16 +30,19 @@ export default function TodoListBoardToolbar({
   onShowArchivedChange,
 }: TodoListBoardToolbarProps) {
   return (
-    <Stack gap={3}>
+    <Stack className="no-print" gap={3}>
       <HStack justify="space-between" flexWrap="wrap" gap={3}>
-        {canManageColumns ? (
-          <Button size="sm" colorPalette="brand" onClick={onAddColumn}>
-            <AddIcon size={16} />
-            Add column
+        <HStack gap={2} flexWrap="wrap">
+          {canManageColumns ? (
+            <Button size="sm" colorPalette="brand" onClick={onAddColumn}>
+              <AddIcon size={16} />
+              Add column
+            </Button>
+          ) : null}
+          <Button size="sm" variant="outline" onClick={() => window.print()}>
+            Print
           </Button>
-        ) : (
-          <Box />
-        )}
+        </HStack>
         <HStack gap={4} flexWrap="wrap">
           <Switch.Root checked={singleList} onCheckedChange={(e) => onSingleListChange(e.checked)}>
             <Switch.HiddenInput />

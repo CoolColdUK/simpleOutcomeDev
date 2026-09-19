@@ -39,7 +39,7 @@ export default function TodoListBoardStatusChip({
         {todoCardStatusLabel(title)}
       </Badge>
       {showMenu && columnId !== TODO_ARCHIVE_COLUMN_ID ? (
-        <Box>
+        <Box className="no-print">
           <TodoListBoardColumnMenu
             columnId={columnId}
             canManageColumns={canManageColumns}

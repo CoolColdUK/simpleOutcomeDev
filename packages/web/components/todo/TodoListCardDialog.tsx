@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useCallback, useState} from 'react';
 import {
   Alert,
   DialogBackdrop,
@@ -19,6 +19,7 @@ import {
   NativeSelect,
   Stack,
   Text,
+  Button,
 } from '@chakra-ui/react';
 import dayjs from 'dayjs';
 import {ArchiveIcon, SaveIcon} from '@so/component';
@@ -31,10 +32,12 @@ import TodoListCardDialogComments from '@/components/todo/TodoListCardDialogComm
 import TodoListCardDialogDescription from '@/components/todo/TodoListCardDialogDescription';
 import TodoListCardDialogTags from '@/components/todo/TodoListCardDialogTags';
 import TodoListCardDialogIcon from '@/components/todo/TodoListCardDialogIcon';
+import TodoCardPrintSheet from '@/components/todo/TodoCardPrintSheet';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
-import {todoDueAtFromInputValue, todoDueAtToInputValue} from '@/components/todo/formatTodoDueAt';
+import formatTodoDueAt, {todoDueAtFromInputValue, todoDueAtToInputValue} from '@/components/todo/formatTodoDueAt';
 import pickImageFileFromDataTransfer from '@/lib/todo/pickImageFileFromDataTransfer';
 import replaceTodoCardIcon from '@/lib/todo/replaceTodoCardIcon';
+import runTodoPrint from '@/lib/todo/runTodoPrint';
 
 export interface TodoListCardDialogProps {
   readonly open: boolean;
@@ -74,7 +77,12 @@ function TodoListCardDialogBody({
   const [dueAt, setDueAt] = useState(todoDueAtToInputValue(card.dueAt));
   const [tags, setTags] = useState<readonly string[]>(card.tags);
   const [assignee, setAssignee] = useState(card.assigneeUserId ?? '');
+  const [printDescription, setPrintDescription] = useState(card.description);
   const [error, setError] = useState('');
+
+  const onDescriptionChange = useCallback((next: string) => {
+    setPrintDescription(next);
+  }, []);
 
   const save = async (): Promise<void> => {
     setError('');
@@ -105,128 +113,143 @@ function TodoListCardDialogBody({
   };
 
   const nameFor = (id: string): string => members.find((m) => m.userId === id)?.username ?? id.slice(0, 8);
+  const dueLabel = formatTodoDueAt(todoDueAtFromInputValue(dueAt));
+  const assigneeLabel = assignee === '' ? undefined : nameFor(assignee);
 
   return (
-    <DialogRoot open={open} onOpenChange={(event) => (!event.open ? onClose() : undefined)} size="lg">
-      <DialogBackdrop />
-      <DialogPositioner>
-        <DialogContent w="full">
-          <DialogHeader>
-            <DialogTitle>Card</DialogTitle>
-            <DialogCloseTrigger />
-          </DialogHeader>
-          <DialogBody>
-            <Stack
-              gap={3}
-              w="full"
-              onDragOver={(e) => {
-                if ([...e.dataTransfer.types].includes('Files')) {
+    <>
+      <TodoCardPrintSheet
+        title={title}
+        description={printDescription}
+        dueLabel={dueLabel}
+        assigneeLabel={assigneeLabel}
+        tags={tags}
+      />
+      <DialogRoot open={open} onOpenChange={(event) => (!event.open ? onClose() : undefined)} size="lg">
+        <DialogBackdrop />
+        <DialogPositioner>
+          <DialogContent w="full">
+            <DialogHeader>
+              <DialogTitle>Card</DialogTitle>
+              <DialogCloseTrigger />
+            </DialogHeader>
+            <DialogBody>
+              <Stack
+                gap={3}
+                w="full"
+                onDragOver={(e) => {
+                  if ([...e.dataTransfer.types].includes('Files')) {
+                    e.preventDefault();
+                  }
+                }}
+                onDrop={(e) => {
+                  const file = pickImageFileFromDataTransfer(e.dataTransfer);
+                  if (file === undefined) {
+                    return;
+                  }
                   e.preventDefault();
-                }
-              }}
-              onDrop={(e) => {
-                const file = pickImageFileFromDataTransfer(e.dataTransfer);
-                if (file === undefined) {
-                  return;
-                }
-                e.preventDefault();
-                void replaceTodoCardIcon(card.podId, card.id, file, card.iconPath)
-                  .then(onChanged)
-                  .catch((err: unknown) => {
-                    setError(err instanceof Error ? err.message : String(err));
-                  });
-              }}
-              onPaste={(e) => {
-                if (e.target instanceof HTMLTextAreaElement) {
-                  return;
-                }
-                const file = pickImageFileFromDataTransfer(e.clipboardData);
-                if (file === undefined) {
-                  return;
-                }
-                e.preventDefault();
-                void replaceTodoCardIcon(card.podId, card.id, file, card.iconPath)
-                  .then(onChanged)
-                  .catch((err: unknown) => {
-                    setError(err instanceof Error ? err.message : String(err));
-                  });
-              }}
-            >
-              <Field.Root w="full">
-                <Field.Label>Title</Field.Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-              </Field.Root>
-              <TodoListCardDialogIcon
-                podId={card.podId}
-                cardId={card.id}
-                iconPath={card.iconPath}
-                iconUrl={iconUrl}
-                onChanged={onChanged}
-                onError={setError}
-              />
-              <Field.Root w="full">
-                <Field.Label>Description</Field.Label>
-                <TodoListCardDialogDescription
+                  void replaceTodoCardIcon(card.podId, card.id, file, card.iconPath)
+                    .then(onChanged)
+                    .catch((err: unknown) => {
+                      setError(err instanceof Error ? err.message : String(err));
+                    });
+                }}
+                onPaste={(e) => {
+                  if (e.target instanceof HTMLTextAreaElement) {
+                    return;
+                  }
+                  const file = pickImageFileFromDataTransfer(e.clipboardData);
+                  if (file === undefined) {
+                    return;
+                  }
+                  e.preventDefault();
+                  void replaceTodoCardIcon(card.podId, card.id, file, card.iconPath)
+                    .then(onChanged)
+                    .catch((err: unknown) => {
+                      setError(err instanceof Error ? err.message : String(err));
+                    });
+                }}
+              >
+                <Field.Root w="full">
+                  <Field.Label>Title</Field.Label>
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                </Field.Root>
+                <TodoListCardDialogIcon
                   podId={card.podId}
                   cardId={card.id}
-                  description={card.description}
-                  onSaved={saveDescription}
+                  iconPath={card.iconPath}
+                  iconUrl={iconUrl}
+                  onChanged={onChanged}
                   onError={setError}
                 />
-              </Field.Root>
-              <HStack align="start" gap={4} w="full" flexWrap="wrap">
-                <Field.Root flex="1" minW="12rem">
-                  <Field.Label>Due</Field.Label>
-                  <Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+                <Field.Root w="full">
+                  <Field.Label>Description</Field.Label>
+                  <TodoListCardDialogDescription
+                    podId={card.podId}
+                    cardId={card.id}
+                    description={card.description}
+                    onSaved={saveDescription}
+                    onError={setError}
+                    onDescriptionChange={onDescriptionChange}
+                  />
                 </Field.Root>
-                <Field.Root flex="1" minW="12rem">
-                  <Field.Label>Assignee</Field.Label>
-                  <NativeSelect.Root w="full">
-                    <NativeSelect.Field value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-                      <option value="">Unassigned</option>
-                      {members.map((m) => (
-                        <option key={m.userId} value={m.userId}>
-                          {m.username ?? m.userId.slice(0, 8)}
-                        </option>
-                      ))}
-                    </NativeSelect.Field>
-                  </NativeSelect.Root>
-                </Field.Root>
-              </HStack>
-              <TodoListCardDialogTags tags={tags} onChange={setTags} />
-              <Text fontSize="xs" color="fg.muted">
-                Created {dayjs(card.createdAt).format('YYYY-MM-DD HH:mm')} · Updated{' '}
-                {dayjs(card.updatedAt).format('YYYY-MM-DD HH:mm')}
-              </Text>
-              <TodoListCardDialogComments
-                podId={card.podId}
-                cardId={card.id}
-                userId={userId}
-                podRole={podRole}
-                isSpaceOwner={isSpaceOwner}
-                nameFor={nameFor}
-              />
-              {error !== '' ? (
-                <Alert.Root status="error">
-                  <Alert.Description>{error}</Alert.Description>
-                </Alert.Root>
-              ) : null}
-            </Stack>
-          </DialogBody>
-          <DialogFooter justifyContent="flex-start">
-            <AppIconTooltip label="Archive card">
-              <IconButton aria-label="Archive card" variant="outline" onClick={() => void archive()}>
-                <ArchiveIcon size={16} />
-              </IconButton>
-            </AppIconTooltip>
-            <AppIconTooltip label="Save card">
-              <IconButton aria-label="Save card" colorPalette="brand" onClick={() => void save()}>
-                <SaveIcon size={16} />
-              </IconButton>
-            </AppIconTooltip>
-          </DialogFooter>
-        </DialogContent>
-      </DialogPositioner>
-    </DialogRoot>
+                <HStack align="start" gap={4} w="full" flexWrap="wrap">
+                  <Field.Root flex="1" minW="12rem">
+                    <Field.Label>Due</Field.Label>
+                    <Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+                  </Field.Root>
+                  <Field.Root flex="1" minW="12rem">
+                    <Field.Label>Assignee</Field.Label>
+                    <NativeSelect.Root w="full">
+                      <NativeSelect.Field value={assignee} onChange={(e) => setAssignee(e.target.value)}>
+                        <option value="">Unassigned</option>
+                        {members.map((m) => (
+                          <option key={m.userId} value={m.userId}>
+                            {m.username ?? m.userId.slice(0, 8)}
+                          </option>
+                        ))}
+                      </NativeSelect.Field>
+                    </NativeSelect.Root>
+                  </Field.Root>
+                </HStack>
+                <TodoListCardDialogTags tags={tags} onChange={setTags} />
+                <Text fontSize="xs" color="fg.muted">
+                  Created {dayjs(card.createdAt).format('YYYY-MM-DD HH:mm')} · Updated{' '}
+                  {dayjs(card.updatedAt).format('YYYY-MM-DD HH:mm')}
+                </Text>
+                <TodoListCardDialogComments
+                  podId={card.podId}
+                  cardId={card.id}
+                  userId={userId}
+                  podRole={podRole}
+                  isSpaceOwner={isSpaceOwner}
+                  nameFor={nameFor}
+                />
+                {error !== '' ? (
+                  <Alert.Root status="error">
+                    <Alert.Description>{error}</Alert.Description>
+                  </Alert.Root>
+                ) : null}
+              </Stack>
+            </DialogBody>
+            <DialogFooter justifyContent="flex-start" className="no-print">
+              <AppIconTooltip label="Archive card">
+                <IconButton aria-label="Archive card" variant="outline" onClick={() => void archive()}>
+                  <ArchiveIcon size={16} />
+                </IconButton>
+              </AppIconTooltip>
+              <Button size="sm" variant="outline" onClick={() => runTodoPrint('card')}>
+                Print card
+              </Button>
+              <AppIconTooltip label="Save card">
+                <IconButton aria-label="Save card" colorPalette="brand" onClick={() => void save()}>
+                  <SaveIcon size={16} />
+                </IconButton>
+              </AppIconTooltip>
+            </DialogFooter>
+          </DialogContent>
+        </DialogPositioner>
+      </DialogRoot>
+    </>
   );
 }

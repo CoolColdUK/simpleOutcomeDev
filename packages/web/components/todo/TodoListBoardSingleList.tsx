@@ -68,15 +68,18 @@ export default function TodoListBoardSingleList({
           />
         ) : null}
       </HStack>
-      <TodoListBoardSingleListAdd
-        podId={podId}
-        userId={userId}
-        columns={columns}
-        cardCountByColumn={cardCountByColumn}
-        onChanged={onChanged}
-      />
+      <Box className="no-print">
+        <TodoListBoardSingleListAdd
+          podId={podId}
+          userId={userId}
+          columns={columns}
+          cardCountByColumn={cardCountByColumn}
+          onChanged={onChanged}
+        />
+      </Box>
       <SortableContext items={cards.map((card) => card.id)} strategy={rectSortingStrategy}>
         <Box
+          className="todo-print-cards"
           display="grid"
           gridTemplateColumns={{base: '1fr', sm: 'repeat(auto-fill, minmax(240px, 1fr))'}}
           gap={3}

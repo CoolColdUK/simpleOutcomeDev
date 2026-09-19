@@ -1,12 +1,13 @@
 'use client';
 
 import {useEffect, useRef, useState} from 'react';
-import {Box, Button, HStack, Stack, Text, Textarea} from '@chakra-ui/react';
+import {Box, Button, HStack, Stack, Switch, Text, Textarea} from '@chakra-ui/react';
 import {CancelIcon, SaveIcon} from '@so/component';
 import {countSoImageMarkdownUrisInBody, TODO_MAX_INLINE_IMAGES} from '@so/model';
 import uploadStorageTodoInlineImageMarkdownFragment from '@/lib/api/storage/uploadStorageTodoInlineImageMarkdownFragment';
 import insertAtCaret from '@/components/todo/insertAtCaret';
 import TodoMarkdownBody from '@/components/todo/TodoMarkdownBody';
+import runTodoPrint from '@/lib/todo/runTodoPrint';
 
 export interface TodoListCardDialogDescriptionProps {
   readonly podId: string;
@@ -14,6 +15,7 @@ export interface TodoListCardDialogDescriptionProps {
   readonly description: string;
   readonly onSaved: (next: string) => Promise<void>;
   readonly onError: (message: string) => void;
+  readonly onDescriptionChange: (next: string) => void;
 }
 
 export default function TodoListCardDialogDescription({
@@ -22,13 +24,21 @@ export default function TodoListCardDialogDescription({
   description,
   onSaved,
   onError,
+  onDescriptionChange,
 }: TodoListCardDialogDescriptionProps) {
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const onDescriptionChangeRef = useRef(onDescriptionChange);
   const [editing, setEditing] = useState(false);
+  const [preview, setPreview] = useState(false);
   const [localBody, setLocalBody] = useState<string | undefined>(undefined);
   const [draft, setDraft] = useState(description);
   const [saving, setSaving] = useState(false);
   const body = localBody ?? description;
+  onDescriptionChangeRef.current = onDescriptionChange;
+
+  useEffect(() => {
+    onDescriptionChangeRef.current(body);
+  }, [body]);
 
   useEffect(() => {
     if (!editing) {
@@ -78,6 +88,7 @@ export default function TodoListCardDialogDescription({
       await onSaved(draft);
       setLocalBody(draft);
       setEditing(false);
+      setPreview(false);
     } finally {
       setSaving(false);
     }
@@ -85,26 +96,34 @@ export default function TodoListCardDialogDescription({
 
   if (!editing) {
     return (
-      <Box
-        w="full"
-        minH="4rem"
-        p={2}
-        borderWidth="1px"
-        borderColor="border.subtle"
-        borderRadius="md"
-        onDoubleClick={() => {
-          setDraft(body);
-          setEditing(true);
-        }}
-      >
-        {body.trim() === '' ? (
-          <Text fontSize="sm" color="fg.muted">
-            Double-click to edit description
-          </Text>
-        ) : (
-          <TodoMarkdownBody markdown={body} />
-        )}
-      </Box>
+      <Stack gap={2} w="full">
+        <Box
+          w="full"
+          minH="4rem"
+          p={2}
+          borderWidth="1px"
+          borderColor="border.subtle"
+          borderRadius="md"
+          onDoubleClick={() => {
+            setDraft(body);
+            setEditing(true);
+            setPreview(false);
+          }}
+        >
+          {body.trim() === '' ? (
+            <Text fontSize="sm" color="fg.muted">
+              Double-click to edit description
+            </Text>
+          ) : (
+            <TodoMarkdownBody markdown={body} />
+          )}
+        </Box>
+        <HStack className="no-print" justify="flex-start">
+          <Button size="sm" variant="outline" onClick={() => runTodoPrint('description')}>
+            Print description
+          </Button>
+        </HStack>
+      </Stack>
     );
   }
 
@@ -114,7 +133,10 @@ export default function TodoListCardDialogDescription({
         w="full"
         ref={taRef}
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          onDescriptionChange(e.target.value);
+        }}
         onPaste={(e) => {
           const hasImage = [...e.clipboardData.items].some((item) => item.type.startsWith('image/'));
           if (hasImage) {
@@ -124,36 +146,49 @@ export default function TodoListCardDialogDescription({
         }}
         rows={8}
       />
-      <HStack justify="flex-start" gap={2}>
-        <Button size="sm" colorPalette="brand" loading={saving} onClick={() => void save()}>
-          <SaveIcon size={14} />
-          Save
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={saving}
-          onClick={() => {
-            setDraft(body);
-            setEditing(false);
-          }}
-        >
-          <CancelIcon size={14} />
-          Cancel
-        </Button>
+      <HStack justify="space-between" flexWrap="wrap" gap={2}>
+        <HStack gap={2}>
+          <Button size="sm" colorPalette="brand" loading={saving} onClick={() => void save()}>
+            <SaveIcon size={14} />
+            Save
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={saving}
+            onClick={() => {
+              setDraft(body);
+              onDescriptionChange(body);
+              setEditing(false);
+              setPreview(false);
+            }}
+          >
+            <CancelIcon size={14} />
+            Cancel
+          </Button>
+          <Button size="sm" variant="outline" disabled={saving} onClick={() => runTodoPrint('description')}>
+            Print description
+          </Button>
+        </HStack>
+        <Switch.Root checked={preview} onCheckedChange={(e) => setPreview(e.checked)}>
+          <Switch.HiddenInput />
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+          <Switch.Label>Preview</Switch.Label>
+        </Switch.Root>
       </HStack>
-      <Text fontSize="xs" color="fg.muted">
-        Preview
-      </Text>
-      <Box w="full" p={2} borderWidth="1px" borderColor="border.subtle" borderRadius="md">
-        {draft.trim() === '' ? (
-          <Text fontSize="sm" color="fg.muted">
-            Nothing to preview
-          </Text>
-        ) : (
-          <TodoMarkdownBody markdown={draft} />
-        )}
-      </Box>
+      {preview ? (
+        <Box w="full" p={2} borderWidth="1px" borderColor="border.subtle" borderRadius="md">
+          {draft.trim() === '' ? (
+            <Text fontSize="sm" color="fg.muted">
+              Nothing to preview
+            </Text>
+          ) : (
+            <TodoMarkdownBody markdown={draft} />
+          )}
+        </Box>
+      ) : null}
     </Stack>
   );
 }

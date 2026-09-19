@@ -34,7 +34,9 @@ export default function PrivateRouteGuard({children}: PrivateRouteGuardProps) {
       <UsernameGate userId={user.id}>
         <Container css={styles.main}>
           <Stack gap={6}>
-            <AppBreadcrumbs />
+            <Box className="no-print">
+              <AppBreadcrumbs />
+            </Box>
             {children}
           </Stack>
         </Container>

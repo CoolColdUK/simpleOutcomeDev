@@ -53,6 +53,7 @@ export default function TodoListBoardCard({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      className="todo-print-card"
       style={{
         transform: isDragging ? undefined : CSS.Transform.toString(transform),
         transition: isDragging ? undefined : transition,
@@ -80,12 +81,14 @@ export default function TodoListBoardCard({
         '@media (hover: none)': {'& .todo-card-hover': {opacity: 1}},
       }}
     >
-      <TodoListBoardCardHoverActions
-        complete={complete}
-        onComplete={onComplete}
-        onArchive={onArchive}
-        onDelete={onDelete}
-      />
+      <Box className="no-print">
+        <TodoListBoardCardHoverActions
+          complete={complete}
+          onComplete={onComplete}
+          onArchive={onArchive}
+          onDelete={onDelete}
+        />
+      </Box>
       <HStack align="start" gap={2} mt={2}>
         <TodoCardIconThumb src={iconUrl} />
         <Stack gap={1} flex="1" minW={0}>
@@ -93,7 +96,7 @@ export default function TodoListBoardCard({
             <Text fontWeight="semibold" textDecoration={complete ? 'line-through' : undefined}>
               {card.title}
             </Text>
-            <Box color="fg.muted" aria-hidden>
+            <Box className="no-print" color="fg.muted" aria-hidden>
               <GripDotsIcon size={14} />
             </Box>
           </Box>

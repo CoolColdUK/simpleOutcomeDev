@@ -90,16 +90,16 @@ export default function PodWorkspace() {
         {pod.name ?? featureKindLabel(pod.feature)}
       </Heading>
       {pod.description !== undefined ? <Text>{pod.description}</Text> : null}
-      <Text color="fg.muted">
+      <Text className="no-print" color="fg.muted">
         {featureKindLabel(pod.feature)} · {pod.visibility} · {pod.status}
       </Text>
       {error !== '' ? (
-        <Alert.Root status="error">
+        <Alert.Root className="no-print" status="error">
           <Alert.Description>{error}</Alert.Description>
         </Alert.Root>
       ) : null}
       <Tabs.Root defaultValue="board" variant="line">
-        <Tabs.List>
+        <Tabs.List className="no-print">
           <Tabs.Trigger value="board">Board</Tabs.Trigger>
           <Tabs.Trigger value="members">Members</Tabs.Trigger>
           <Tabs.Trigger value="settings">Settings</Tabs.Trigger>
