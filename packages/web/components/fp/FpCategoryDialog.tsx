@@ -17,17 +17,18 @@ import {
   NativeSelect,
   Stack,
   Switch,
-  Textarea,
 } from '@chakra-ui/react';
 import {
   FpBudgetPeriod,
   FpCategoryDirection,
   fpCategoryDirectionLabel,
   parseFpName,
+  type FpCategoryFilter,
 } from '@so/model';
 import createDbFpCategory from '@/lib/api/db/createDbFpCategory';
 import updateDbFpCategory from '@/lib/api/db/updateDbFpCategory';
 import type {DbFpCategory} from '@/lib/api/db/mapDbFpCategory';
+import FpCategoryDialogAutoAssign from '@/components/fp/FpCategoryDialogAutoAssign';
 
 export interface FpCategoryDialogProps {
   readonly open: boolean;
@@ -36,14 +37,6 @@ export interface FpCategoryDialogProps {
   readonly categories: readonly DbFpCategory[];
   readonly onClose: () => void;
   readonly onSaved: () => void;
-}
-
-function filterText(category: DbFpCategory | undefined): string {
-  const first = category?.filters[0];
-  if (first === undefined) {
-    return '';
-  }
-  return (first.descriptionContains ?? []).join('\n');
 }
 
 export default function FpCategoryDialog(props: FpCategoryDialogProps) {
@@ -67,7 +60,7 @@ function FpCategoryDialogBody({
     category?.direction ?? FpCategoryDirection.EXPENSE,
   );
   const [parentId, setParentId] = useState(category?.parentId ?? '');
-  const [filter, setFilter] = useState(filterText(category));
+  const [filters, setFilters] = useState<readonly FpCategoryFilter[]>(category?.filters ?? []);
   const [budget, setBudget] = useState(category?.budgetAmount === undefined ? '' : String(category.budgetAmount));
   const [period, setPeriod] = useState<FpBudgetPeriod | ''>(category?.budgetPeriod ?? '');
   const [favourite, setFavourite] = useState(category?.favourite ?? false);
@@ -82,11 +75,6 @@ function FpCategoryDialogBody({
       const parsedName = parseFpName(name);
       const budgetAmount = budget.trim() === '' ? undefined : Number(budget);
       const budgetPeriod = period === '' ? undefined : period;
-      const patterns = filter.split(/\r?\n/).flatMap((line) => {
-        const trimmed = line.trim();
-        return trimmed === '' ? [] : [trimmed];
-      });
-      const filters = patterns.length === 0 ? [] : [{descriptionContains: patterns}];
       const resolvedParentId = isGroup || parentId === '' ? undefined : parentId;
       if (category === undefined) {
         await createDbFpCategory(podId, parsedName, direction, {
@@ -184,18 +172,7 @@ function FpCategoryDialogBody({
                       </NativeSelect.Field>
                     </NativeSelect.Root>
                   </Field.Root>
-                  <Field.Root>
-                    <Field.Label>Auto-assign contains</Field.Label>
-                    <Textarea
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                      placeholder={'NETFLIX\nSPOTIFY'}
-                      minH="6rem"
-                    />
-                    <Field.HelperText>
-                      One pattern per line. A transaction matches if its description contains any of them.
-                    </Field.HelperText>
-                  </Field.Root>
+                  <FpCategoryDialogAutoAssign filters={filters} onChange={setFilters} />
                   <Field.Root>
                     <Field.Label>Budget amount (optional)</Field.Label>
                     <Input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} />

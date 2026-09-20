@@ -1,8 +1,9 @@
-export interface FpCategoryFilter {
-  readonly descriptionContains?: readonly string[];
-  readonly recipientContains?: readonly string[];
-  readonly amount?: number;
-}
+import compareFpAmount from './compareFpAmount';
+import {FpAmountOperator} from './fpAmountOperator';
+import parseFpAutoAssignRule from './parseFpAutoAssignRule';
+
+/** Stored auto-assign rule string, e.g. `RECIPIENT=H,AMOUNT<50`. */
+export type FpCategoryFilter = string;
 
 export interface FpCategoryRule {
   readonly id: string;
@@ -16,29 +17,26 @@ export interface FpAutoAssignTarget {
   readonly amount: number;
 }
 
-function containsAny(haystack: string, needles: readonly string[]): boolean {
-  const lower = haystack.toLowerCase();
-  return needles.some((needle) => needle !== '' && lower.includes(needle.toLowerCase()));
+function containsPartial(haystack: string, needle: string): boolean {
+  return needle !== '' && haystack.toLowerCase().includes(needle.toLowerCase());
 }
 
 function filterMatches(tx: FpAutoAssignTarget, filter: FpCategoryFilter): boolean {
-  const descriptionContains = filter.descriptionContains ?? [];
-  const recipientContains = filter.recipientContains ?? [];
-  const amount = filter.amount;
-  const hasDescription = descriptionContains.length > 0;
-  const hasRecipient = recipientContains.length > 0;
-  const hasAmount = amount !== undefined;
-  if (!hasDescription && !hasRecipient && !hasAmount) {
+  const rule = parseFpAutoAssignRule(filter);
+  if (rule === undefined) {
     return false;
   }
-  if (hasDescription && !containsAny(tx.description, descriptionContains)) {
+  if (rule.description !== undefined && !containsPartial(tx.description, rule.description)) {
     return false;
   }
-  if (hasRecipient && !containsAny(tx.recipient, recipientContains)) {
+  if (rule.recipient !== undefined && !containsPartial(tx.recipient, rule.recipient)) {
     return false;
   }
-  if (hasAmount && amount !== undefined && Math.abs(tx.amount - amount) >= 0.01) {
-    return false;
+  if (rule.amount !== undefined) {
+    const operator = rule.amountOperator ?? FpAmountOperator.EQ;
+    if (!compareFpAmount(tx.amount, operator, rule.amount)) {
+      return false;
+    }
   }
   return true;
 }

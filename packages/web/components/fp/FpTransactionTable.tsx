@@ -44,6 +44,7 @@ export default function FpTransactionTable({
             <Table.ColumnHeader>Date</Table.ColumnHeader>
             <Table.ColumnHeader>Account</Table.ColumnHeader>
             <Table.ColumnHeader>Description</Table.ColumnHeader>
+            <Table.ColumnHeader>Recipient</Table.ColumnHeader>
             <Table.ColumnHeader>Amount</Table.ColumnHeader>
             <Table.ColumnHeader>Category</Table.ColumnHeader>
             <Table.ColumnHeader />
@@ -63,6 +64,7 @@ export default function FpTransactionTable({
                 {t.splitPortionCount !== undefined ? ' (parent)' : ''}
                 {!t.confirmed && t.categoryId !== undefined ? ' · review' : ''}
               </Table.Cell>
+              <Table.Cell>{t.recipient === '' ? '—' : t.recipient}</Table.Cell>
               <Table.Cell>{formatFpMoney(t.amount, currency)}</Table.Cell>
               <Table.Cell>{categoryName(t.categoryId)}</Table.Cell>
               <Table.Cell>
