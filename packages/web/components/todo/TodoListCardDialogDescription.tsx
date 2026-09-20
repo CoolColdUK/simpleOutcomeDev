@@ -34,7 +34,10 @@ export default function TodoListCardDialogDescription({
   const [draft, setDraft] = useState(description);
   const [saving, setSaving] = useState(false);
   const body = localBody ?? description;
-  onDescriptionChangeRef.current = onDescriptionChange;
+
+  useEffect(() => {
+    onDescriptionChangeRef.current = onDescriptionChange;
+  }, [onDescriptionChange]);
 
   useEffect(() => {
     onDescriptionChangeRef.current(body);
