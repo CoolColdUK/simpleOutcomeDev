@@ -20,7 +20,7 @@ Someone who exports statements (CSV) from one or more banks/cards, wants a runni
 
 - Accounts with an opening fund
 - Transactions (imported and manual), each on exactly one account; **archive** (excluded from calculations; find them on a separate page); **delete all** transactions (settings, confirmed)
-- Categories (one per transaction) including a virtual **Uncategorised** bucket; direction: transfer, income, expense, saving; optional **monthly or yearly budget** (visual / percentage); **favourite** and/or **sort order**
+- Categories (one per transaction) including a virtual **Uncategorised** bucket; direction: transfer, income, expense, saving; optional **monthly or yearly budget** (visual / percentage); **favourite** and/or **sort order**; optional **two-level groups** (group folder → leaf only; assign/budget/filters on leaves; ledger report shows collapsed parents expandable to children)
 - Named, reusable **parsers** for CSV, built in the UI from an example file (optional header identifier + column map with parse transforms). **No** shipped bank presets
 - Import: drag one or more files, auto-match parser (overridable), choose account, store an import report; file hash to detect re-upload; **undo import**
 - Filter report and list by **account** and **date range**
@@ -265,7 +265,7 @@ Do not use GoalJar’s `source` in the key.
 
 ### Categories and bulk assign
 
-- CRUD categories, including direction, optional budget, favourite and/or sort order.
+- CRUD categories, including direction, optional budget, favourite and/or sort order. Optional **group** categories (folder only) and leaf **parent group**; transactions assign to leaves only.
 - From the transaction list: multi-select → assign one category (**confirmed** immediately).
 - Assign one row at a time (inline or dialog) — also **confirmed**.
 - Filter the list by category, including Uncategorised, and by **account**.
@@ -321,6 +321,7 @@ Shared filters: **date range** and **account** (all or one).
 **Report**
 
 - Group by category (and direction) for the range; archived excluded.
+- Optional **category groups**: report shows collapsed parent rows (sum of leaves) expandable to child categories; ungrouped leaves stay top-level. Assign/budget only on leaves.
 - **Uncategorised** is one group.
 - Totals: income, expenses, saving; **transfer categories are not income or expense**; uncategorised amount.
 - Optional category **budget**: bar or percentage vs monthly budget (for this month / prorate) or yearly budget (for this year / selected range as appropriate). Categories without a budget just show spent.

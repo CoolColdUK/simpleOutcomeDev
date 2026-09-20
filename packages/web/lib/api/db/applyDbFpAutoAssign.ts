@@ -6,7 +6,7 @@ import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 
 export default async function applyDbFpAutoAssign(podId: string): Promise<number> {
   const [categories, transactions] = await Promise.all([listDbFpCategories(podId), listDbFpTransactions(podId)]);
-  const rules = categories.map((c) => ({id: c.id, filters: c.filters}));
+  const rules = categories.map((c) => ({id: c.id, filters: c.filters, isGroup: c.isGroup}));
   const supabase = getSupabaseBrowserClient();
   const targets = transactions.filter((t) => !t.archived && t.categoryId === undefined);
   const updates = targets.flatMap((t) => {

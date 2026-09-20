@@ -5,6 +5,8 @@ export interface FpReportCategoryRow {
   readonly name: string;
   readonly direction: FpCategoryDirection | undefined;
   readonly amount: number;
+  readonly isGroup?: boolean;
+  readonly children?: readonly FpReportCategoryRow[];
 }
 
 export interface FpReportTotals {
@@ -26,6 +28,22 @@ export interface FpReportCategory {
   readonly id: string;
   readonly name: string;
   readonly direction: FpCategoryDirection;
+  readonly isGroup?: boolean;
+  readonly parentId?: string;
+}
+
+function leafRow(
+  categoryId: string | undefined,
+  amount: number,
+  catById: Map<string, FpReportCategory>,
+): FpReportCategoryRow {
+  const cat = categoryId === undefined ? undefined : catById.get(categoryId);
+  return {
+    categoryId,
+    name: cat?.name ?? 'Uncategorised',
+    direction: cat?.direction,
+    amount,
+  };
 }
 
 export default function buildFpCategoryReport(
@@ -57,28 +75,51 @@ export default function buildFpCategoryReport(
     add(tx.categoryId, tx.amount);
   });
   const catById = new Map(categories.map((c) => [c.id, c]));
-  const rows: FpReportCategoryRow[] = [...byCategory.entries()].map(([categoryId, amount]) => {
-    const cat = categoryId === undefined ? undefined : catById.get(categoryId);
+  const leafAmounts = [...byCategory.entries()];
+  const groupChildren = new Map<string, FpReportCategoryRow[]>();
+  const topLevel: FpReportCategoryRow[] = [];
+  leafAmounts.forEach(([categoryId, amount]) => {
+    const row = leafRow(categoryId, amount, catById);
+    const parentId = categoryId === undefined ? undefined : catById.get(categoryId)?.parentId;
+    if (parentId === undefined) {
+      topLevel.push(row);
+      return;
+    }
+    const parent = catById.get(parentId);
+    if (parent === undefined || parent.isGroup !== true) {
+      topLevel.push(row);
+      return;
+    }
+    const existing = groupChildren.get(parentId) ?? [];
+    groupChildren.set(parentId, [...existing, row]);
+  });
+  const groupRows: FpReportCategoryRow[] = [...groupChildren.entries()].map(([groupId, children]) => {
+    const group = catById.get(groupId);
     return {
-      categoryId,
-      name: cat?.name ?? 'Uncategorised',
-      direction: cat?.direction,
-      amount,
+      categoryId: groupId,
+      name: group?.name ?? 'Group',
+      direction: undefined,
+      amount: children.reduce((sum, child) => sum + child.amount, 0),
+      isGroup: true,
+      children,
     };
   });
-  const totals = rows.reduce<FpReportTotals>(
-    (acc, row) => {
-      if (row.direction === FpCategoryDirection.INCOME) {
-        return {...acc, income: acc.income + row.amount};
+  const rows = [...groupRows, ...topLevel];
+  const totals = leafAmounts.reduce<FpReportTotals>(
+    (acc, [categoryId, amount]) => {
+      const cat = categoryId === undefined ? undefined : catById.get(categoryId);
+      const direction = cat?.direction;
+      if (direction === FpCategoryDirection.INCOME) {
+        return {...acc, income: acc.income + amount};
       }
-      if (row.direction === FpCategoryDirection.EXPENSE) {
-        return {...acc, expense: acc.expense + row.amount};
+      if (direction === FpCategoryDirection.EXPENSE) {
+        return {...acc, expense: acc.expense + amount};
       }
-      if (row.direction === FpCategoryDirection.SAVING) {
-        return {...acc, saving: acc.saving + row.amount};
+      if (direction === FpCategoryDirection.SAVING) {
+        return {...acc, saving: acc.saving + amount};
       }
-      if (row.direction === undefined) {
-        return row.amount < 0 ? {...acc, expense: acc.expense + row.amount} : {...acc, income: acc.income + row.amount};
+      if (direction === undefined) {
+        return amount < 0 ? {...acc, expense: acc.expense + amount} : {...acc, income: acc.income + amount};
       }
       return acc;
     },

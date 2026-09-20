@@ -9,6 +9,7 @@ export interface FpCategoryAssignSelectProps {
 }
 
 export default function FpCategoryAssignSelect({categories, onAssign}: FpCategoryAssignSelectProps) {
+  const leaves = categories.filter((c) => !c.isGroup);
   return (
     <NativeSelect.Root maxW="220px">
       <NativeSelect.Field
@@ -21,7 +22,7 @@ export default function FpCategoryAssignSelect({categories, onAssign}: FpCategor
         }}
       >
         <option value="">Assign category…</option>
-        {categories.map((c) => (
+        {leaves.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
           </option>

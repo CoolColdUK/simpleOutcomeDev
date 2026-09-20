@@ -11,8 +11,14 @@ export default async function createDbFpCategory(
     readonly budgetPeriod?: FpBudgetPeriod;
     readonly favourite?: boolean;
     readonly filters?: readonly FpCategoryFilter[];
+    readonly isGroup?: boolean;
+    readonly parentId?: string;
   },
 ): Promise<string> {
+  const isGroup = options?.isGroup === true;
+  if (isGroup && options?.parentId !== undefined) {
+    throw new Error('group categories cannot have a parent');
+  }
   const supabase = getSupabaseBrowserClient();
   const {data, error} = await supabase
     .from('fp_category')
@@ -20,10 +26,12 @@ export default async function createDbFpCategory(
       pod_id: podId,
       name: parseFpName(name),
       direction,
-      budget_amount: options?.budgetAmount,
-      budget_period: options?.budgetPeriod,
+      budget_amount: isGroup ? undefined : options?.budgetAmount,
+      budget_period: isGroup ? undefined : options?.budgetPeriod,
       favourite: options?.favourite ?? false,
-      filters: options?.filters ?? [],
+      filters: isGroup ? [] : (options?.filters ?? []),
+      is_group: isGroup,
+      parent_id: isGroup ? undefined : options?.parentId,
     })
     .select('id')
     .single();

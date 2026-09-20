@@ -33,6 +33,7 @@ export interface FpCategoryDialogProps {
   readonly open: boolean;
   readonly podId: string;
   readonly category?: DbFpCategory;
+  readonly categories: readonly DbFpCategory[];
   readonly onClose: () => void;
   readonly onSaved: () => void;
 }
@@ -52,17 +53,28 @@ export default function FpCategoryDialog(props: FpCategoryDialogProps) {
   return <FpCategoryDialogBody key={props.category?.id ?? 'new'} {...props} />;
 }
 
-function FpCategoryDialogBody({open, podId, category, onClose, onSaved}: FpCategoryDialogProps) {
+function FpCategoryDialogBody({
+  open,
+  podId,
+  category,
+  categories,
+  onClose,
+  onSaved,
+}: FpCategoryDialogProps) {
   const [name, setName] = useState(category?.name ?? '');
+  const [isGroup, setIsGroup] = useState(category?.isGroup ?? false);
   const [direction, setDirection] = useState<FpCategoryDirection>(
     category?.direction ?? FpCategoryDirection.EXPENSE,
   );
+  const [parentId, setParentId] = useState(category?.parentId ?? '');
   const [filter, setFilter] = useState(filterText(category));
   const [budget, setBudget] = useState(category?.budgetAmount === undefined ? '' : String(category.budgetAmount));
   const [period, setPeriod] = useState<FpBudgetPeriod | ''>(category?.budgetPeriod ?? '');
   const [favourite, setFavourite] = useState(category?.favourite ?? false);
   const [sortOrder, setSortOrder] = useState(String(category?.sortOrder ?? 0));
   const [saving, setSaving] = useState(false);
+
+  const groupOptions = categories.filter((c) => c.isGroup && c.id !== category?.id);
 
   const save = async (): Promise<void> => {
     setSaving(true);
@@ -75,23 +87,32 @@ function FpCategoryDialogBody({open, podId, category, onClose, onSaved}: FpCateg
         return trimmed === '' ? [] : [trimmed];
       });
       const filters = patterns.length === 0 ? [] : [{descriptionContains: patterns}];
+      const resolvedParentId = isGroup || parentId === '' ? undefined : parentId;
       if (category === undefined) {
         await createDbFpCategory(podId, parsedName, direction, {
-          filters,
-          budgetAmount,
-          budgetPeriod,
+          isGroup,
+          parentId: resolvedParentId,
+          filters: isGroup ? [] : filters,
+          budgetAmount: isGroup ? undefined : budgetAmount,
+          budgetPeriod: isGroup ? undefined : budgetPeriod,
           favourite,
         });
       } else {
         await updateDbFpCategory(category.id, {
           name: parsedName,
           direction,
-          filters,
           favourite,
           sortOrder: Number(sortOrder) || 0,
-          ...(budgetAmount === undefined || budgetPeriod === undefined
-            ? {clearBudget: true}
-            : {budgetAmount, budgetPeriod}),
+          isGroup,
+          ...(isGroup
+            ? {}
+            : {
+                filters,
+                ...(resolvedParentId === undefined ? {clearParent: true} : {parentId: resolvedParentId}),
+                ...(budgetAmount === undefined || budgetPeriod === undefined
+                  ? {clearBudget: true}
+                  : {budgetAmount, budgetPeriod}),
+              }),
         });
       }
       onSaved();
@@ -107,56 +128,93 @@ function FpCategoryDialogBody({open, podId, category, onClose, onSaved}: FpCateg
       <DialogPositioner>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{category === undefined ? 'Add category' : 'Edit category'}</DialogTitle>
+            <DialogTitle>
+              {category === undefined ? (isGroup ? 'Add group' : 'Add category') : isGroup ? 'Edit group' : 'Edit category'}
+            </DialogTitle>
             <DialogCloseTrigger />
           </DialogHeader>
           <DialogBody>
             <Stack gap={3}>
+              <Switch.Root
+                checked={isGroup}
+                onCheckedChange={(e) => {
+                  setIsGroup(e.checked);
+                  if (e.checked) {
+                    setParentId('');
+                  }
+                }}
+              >
+                <Switch.HiddenInput />
+                <Switch.Control>
+                  <Switch.Thumb />
+                </Switch.Control>
+                <Switch.Label>Group (folder only)</Switch.Label>
+              </Switch.Root>
               <Field.Root>
                 <Field.Label>Name</Field.Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
               </Field.Root>
-              <Field.Root>
-                <Field.Label>Direction</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field
-                    value={direction}
-                    onChange={(e) => setDirection(e.target.value as FpCategoryDirection)}
-                  >
-                    {Object.values(FpCategoryDirection).map((d) => (
-                      <option key={d} value={d}>
-                        {fpCategoryDirectionLabel(d)}
-                      </option>
-                    ))}
-                  </NativeSelect.Field>
-                </NativeSelect.Root>
-              </Field.Root>
-              <Field.Root>
-                <Field.Label>Auto-assign contains</Field.Label>
-                <Textarea
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  placeholder={'NETFLIX\nSPOTIFY'}
-                  minH="6rem"
-                />
-                <Field.HelperText>
-                  One pattern per line. A transaction matches if its description contains any of them.
-                </Field.HelperText>
-              </Field.Root>
-              <Field.Root>
-                <Field.Label>Budget amount (optional)</Field.Label>
-                <Input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} />
-              </Field.Root>
-              <Field.Root>
-                <Field.Label>Budget period</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field value={period} onChange={(e) => setPeriod(e.target.value as FpBudgetPeriod | '')}>
-                    <option value="">None</option>
-                    <option value={FpBudgetPeriod.MONTHLY}>Monthly</option>
-                    <option value={FpBudgetPeriod.YEARLY}>Yearly</option>
-                  </NativeSelect.Field>
-                </NativeSelect.Root>
-              </Field.Root>
+              {!isGroup ? (
+                <>
+                  <Field.Root>
+                    <Field.Label>Direction</Field.Label>
+                    <NativeSelect.Root>
+                      <NativeSelect.Field
+                        value={direction}
+                        onChange={(e) => setDirection(e.target.value as FpCategoryDirection)}
+                      >
+                        {Object.values(FpCategoryDirection).map((d) => (
+                          <option key={d} value={d}>
+                            {fpCategoryDirectionLabel(d)}
+                          </option>
+                        ))}
+                      </NativeSelect.Field>
+                    </NativeSelect.Root>
+                  </Field.Root>
+                  <Field.Root>
+                    <Field.Label>Parent group (optional)</Field.Label>
+                    <NativeSelect.Root>
+                      <NativeSelect.Field value={parentId} onChange={(e) => setParentId(e.target.value)}>
+                        <option value="">None</option>
+                        {groupOptions.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name}
+                          </option>
+                        ))}
+                      </NativeSelect.Field>
+                    </NativeSelect.Root>
+                  </Field.Root>
+                  <Field.Root>
+                    <Field.Label>Auto-assign contains</Field.Label>
+                    <Textarea
+                      value={filter}
+                      onChange={(e) => setFilter(e.target.value)}
+                      placeholder={'NETFLIX\nSPOTIFY'}
+                      minH="6rem"
+                    />
+                    <Field.HelperText>
+                      One pattern per line. A transaction matches if its description contains any of them.
+                    </Field.HelperText>
+                  </Field.Root>
+                  <Field.Root>
+                    <Field.Label>Budget amount (optional)</Field.Label>
+                    <Input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} />
+                  </Field.Root>
+                  <Field.Root>
+                    <Field.Label>Budget period</Field.Label>
+                    <NativeSelect.Root>
+                      <NativeSelect.Field
+                        value={period}
+                        onChange={(e) => setPeriod(e.target.value as FpBudgetPeriod | '')}
+                      >
+                        <option value="">None</option>
+                        <option value={FpBudgetPeriod.MONTHLY}>Monthly</option>
+                        <option value={FpBudgetPeriod.YEARLY}>Yearly</option>
+                      </NativeSelect.Field>
+                    </NativeSelect.Root>
+                  </Field.Root>
+                </>
+              ) : null}
               <Switch.Root checked={favourite} onCheckedChange={(e) => setFavourite(e.checked)}>
                 <Switch.HiddenInput />
                 <Switch.Control>

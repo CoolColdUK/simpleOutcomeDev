@@ -7,7 +7,7 @@ export default async function listDbFpCategories(podId: string): Promise<readonl
   const {data, error} = await supabase
     .from('fp_category')
     .select(
-      'id, pod_id, name, direction, budget_amount, budget_period, favourite, sort_order, colour, filters',
+      'id, pod_id, name, direction, budget_amount, budget_period, favourite, sort_order, colour, filters, is_group, parent_id',
     )
     .eq('pod_id', podId)
     .order('sort_order', {ascending: true})

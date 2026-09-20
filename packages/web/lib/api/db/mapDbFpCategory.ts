@@ -11,6 +11,8 @@ export interface DbFpCategory {
   readonly sortOrder: number;
   readonly colour?: string;
   readonly filters: readonly FpCategoryFilter[];
+  readonly isGroup: boolean;
+  readonly parentId?: string;
 }
 
 export function mapDbFpCategory(row: {
@@ -24,6 +26,8 @@ export function mapDbFpCategory(row: {
   readonly sort_order: number;
   readonly colour: string | null;
   readonly filters: unknown;
+  readonly is_group: boolean;
+  readonly parent_id: string | null;
 }): DbFpCategory {
   const filters = parseFpCategoryFilters(row.filters);
   return {
@@ -37,5 +41,7 @@ export function mapDbFpCategory(row: {
     sortOrder: row.sort_order,
     colour: row.colour ?? undefined,
     filters,
+    isGroup: row.is_group,
+    parentId: row.parent_id ?? undefined,
   };
 }

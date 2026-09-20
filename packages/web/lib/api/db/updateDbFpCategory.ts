@@ -11,6 +11,9 @@ export interface UpdateDbFpCategoryInput {
   readonly favourite?: boolean;
   readonly sortOrder?: number;
   readonly filters?: readonly FpCategoryFilter[];
+  readonly isGroup?: boolean;
+  readonly parentId?: string | undefined;
+  readonly clearParent?: boolean;
 }
 
 export default async function updateDbFpCategory(categoryId: string, input: UpdateDbFpCategoryInput): Promise<void> {
@@ -23,6 +26,8 @@ export default async function updateDbFpCategory(categoryId: string, input: Upda
     favourite?: boolean;
     sort_order?: number;
     filters?: FpCategoryFilter[];
+    is_group?: boolean;
+    parent_id?: string | null;
   } = {};
   if (input.name !== undefined) {
     patch.name = parseFpName(input.name);
@@ -30,15 +35,34 @@ export default async function updateDbFpCategory(categoryId: string, input: Upda
   if (input.direction !== undefined) {
     patch.direction = input.direction;
   }
-  if (input.clearBudget === true) {
+  if (input.isGroup === true) {
+    patch.is_group = true;
+    patch.parent_id = null;
     patch.budget_amount = null;
     patch.budget_period = null;
+    patch.filters = [];
   } else {
-    if (input.budgetAmount !== undefined) {
-      patch.budget_amount = input.budgetAmount;
+    if (input.isGroup === false) {
+      patch.is_group = false;
     }
-    if (input.budgetPeriod !== undefined) {
-      patch.budget_period = input.budgetPeriod;
+    if (input.clearBudget === true) {
+      patch.budget_amount = null;
+      patch.budget_period = null;
+    } else {
+      if (input.budgetAmount !== undefined) {
+        patch.budget_amount = input.budgetAmount;
+      }
+      if (input.budgetPeriod !== undefined) {
+        patch.budget_period = input.budgetPeriod;
+      }
+    }
+    if (input.filters !== undefined) {
+      patch.filters = [...input.filters];
+    }
+    if (input.clearParent === true) {
+      patch.parent_id = null;
+    } else if (input.parentId !== undefined) {
+      patch.parent_id = input.parentId;
     }
   }
   if (input.favourite !== undefined) {
@@ -46,9 +70,6 @@ export default async function updateDbFpCategory(categoryId: string, input: Upda
   }
   if (input.sortOrder !== undefined) {
     patch.sort_order = input.sortOrder;
-  }
-  if (input.filters !== undefined) {
-    patch.filters = [...input.filters];
   }
   const {error} = await supabase.from('fp_category').update(patch).eq('id', categoryId);
   throwIfSupabaseError(error);

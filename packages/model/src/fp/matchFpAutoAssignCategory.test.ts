@@ -35,4 +35,13 @@ describe('matchFpAutoAssignCategory', () => {
       matchFpAutoAssignCategory(tx, [{id: 'c1', filters: [{descriptionContains: ['netflix'], amount: -10}]}]),
     ).toBeUndefined();
   });
+
+  it('skips group categories even when filters would match', () => {
+    expect(
+      matchFpAutoAssignCategory(tx, [
+        {id: 'g1', isGroup: true, filters: [{descriptionContains: ['netflix']}]},
+        {id: 'c1', filters: [{descriptionContains: ['netflix']}]},
+      ]),
+    ).toBe('c1');
+  });
 });

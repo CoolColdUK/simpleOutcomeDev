@@ -317,6 +317,7 @@ export default function FinancialPlanningBoard({
         open={categoryOpen}
         podId={podId}
         category={editingCategory}
+        categories={sortedCategories}
         onClose={() => {
           setCategoryOpen(false);
           setEditingCategory(undefined);

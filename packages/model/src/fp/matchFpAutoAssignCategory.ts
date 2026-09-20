@@ -7,6 +7,7 @@ export interface FpCategoryFilter {
 export interface FpCategoryRule {
   readonly id: string;
   readonly filters: readonly FpCategoryFilter[];
+  readonly isGroup?: boolean;
 }
 
 export interface FpAutoAssignTarget {
@@ -46,7 +47,9 @@ export default function matchFpAutoAssignCategory(
   tx: FpAutoAssignTarget,
   categories: readonly FpCategoryRule[],
 ): string | undefined {
-  const matched = categories.filter((cat) => cat.filters.some((f) => filterMatches(tx, f)));
+  const matched = categories.filter(
+    (cat) => cat.isGroup !== true && cat.filters.some((f) => filterMatches(tx, f)),
+  );
   if (matched.length !== 1) {
     return undefined;
   }

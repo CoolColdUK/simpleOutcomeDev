@@ -101,11 +101,13 @@ export default function FpTransactionDialog({
                 <NativeSelect.Root>
                   <NativeSelect.Field value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
                     <option value="">Uncategorised</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
+                    {categories
+                      .filter((c) => !c.isGroup)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
                   </NativeSelect.Field>
                 </NativeSelect.Root>
               </Field.Root>

@@ -23,6 +23,7 @@ export default function FpCategoryPage({
   onEdit,
   onDelete,
 }: FpCategoryPageProps) {
+  const groupNameById = new Map(categories.filter((c) => c.isGroup).map((c) => [c.id, c.name]));
   return (
     <Stack gap={3}>
       <HStack justify="space-between">
@@ -37,6 +38,7 @@ export default function FpCategoryPage({
         <Table.Header>
           <Table.Row>
             <Table.ColumnHeader>Name</Table.ColumnHeader>
+            <Table.ColumnHeader>Group</Table.ColumnHeader>
             <Table.ColumnHeader>Direction</Table.ColumnHeader>
             <Table.ColumnHeader>Budget</Table.ColumnHeader>
             <Table.ColumnHeader />
@@ -47,11 +49,17 @@ export default function FpCategoryPage({
             <Table.Row key={category.id}>
               <Table.Cell>
                 {category.name}
+                {category.isGroup ? ' (group)' : ''}
                 {category.favourite ? ' ★' : ''}
               </Table.Cell>
-              <Table.Cell>{fpCategoryDirectionLabel(category.direction)}</Table.Cell>
               <Table.Cell>
-                {category.budgetAmount === undefined
+                {category.parentId === undefined ? '—' : (groupNameById.get(category.parentId) ?? '—')}
+              </Table.Cell>
+              <Table.Cell>
+                {category.isGroup ? '—' : fpCategoryDirectionLabel(category.direction)}
+              </Table.Cell>
+              <Table.Cell>
+                {category.isGroup || category.budgetAmount === undefined
                   ? '—'
                   : `${category.budgetAmount} ${category.budgetPeriod ?? ''}`}
               </Table.Cell>

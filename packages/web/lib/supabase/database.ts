@@ -268,6 +268,8 @@ export interface Database {
           sort_order: number;
           colour: string | null;
           filters: unknown;
+          is_group: boolean;
+          parent_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -282,6 +284,8 @@ export interface Database {
           sort_order?: number;
           colour?: string | null;
           filters?: unknown;
+          is_group?: boolean;
+          parent_id?: string | null;
         };
         Update: {
           name?: string;
@@ -292,6 +296,8 @@ export interface Database {
           sort_order?: number;
           colour?: string | null;
           filters?: unknown;
+          is_group?: boolean;
+          parent_id?: string | null;
         };
         Relationships: [];
       };
