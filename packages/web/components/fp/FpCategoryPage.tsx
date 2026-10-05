@@ -1,7 +1,8 @@
 'use client';
 
-import {Button, HStack, Stack, Table, Text} from '@chakra-ui/react';
-import {fpCategoryDirectionLabel} from '@so/model';
+import {useMemo} from 'react';
+import {Box, Button, HStack, Stack, Table, Text} from '@chakra-ui/react';
+import {buildFpCategoryDisplayRows, fpCategoryDirectionLabel} from '@so/model';
 import type {DbFpCategory} from '@/lib/api/db/mapDbFpCategory';
 
 export interface FpCategoryPageProps {
@@ -23,7 +24,8 @@ export default function FpCategoryPage({
   onEdit,
   onDelete,
 }: FpCategoryPageProps) {
-  const groupNameById = new Map(categories.filter((c) => c.isGroup).map((c) => [c.id, c.name]));
+  const rows = useMemo(() => buildFpCategoryDisplayRows(categories), [categories]);
+
   return (
     <Stack gap={3}>
       <HStack justify="space-between">
@@ -38,22 +40,20 @@ export default function FpCategoryPage({
         <Table.Header>
           <Table.Row>
             <Table.ColumnHeader>Name</Table.ColumnHeader>
-            <Table.ColumnHeader>Group</Table.ColumnHeader>
             <Table.ColumnHeader>Direction</Table.ColumnHeader>
             <Table.ColumnHeader>Budget</Table.ColumnHeader>
             <Table.ColumnHeader />
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {categories.map((category) => (
-            <Table.Row key={category.id}>
+          {rows.map(({category, isChild}) => (
+            <Table.Row key={category.id} bg={isChild ? 'bg.muted' : undefined}>
               <Table.Cell>
-                {category.name}
-                {category.isGroup ? ' (group)' : ''}
-                {category.favourite ? ' ★' : ''}
-              </Table.Cell>
-              <Table.Cell>
-                {category.parentId === undefined ? '—' : (groupNameById.get(category.parentId) ?? '—')}
+                <Box pl={isChild ? 6 : 0}>
+                  {category.name}
+                  {category.isGroup ? ' (group)' : ''}
+                  {category.favourite ? ' ★' : ''}
+                </Box>
               </Table.Cell>
               <Table.Cell>
                 {category.isGroup ? '—' : fpCategoryDirectionLabel(category.direction)}

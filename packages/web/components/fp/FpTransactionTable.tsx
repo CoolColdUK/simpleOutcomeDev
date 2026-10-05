@@ -1,10 +1,12 @@
 'use client';
 
+import {useState} from 'react';
 import {Button, HStack, Stack, Table, Text} from '@chakra-ui/react';
 import formatFpMoney from '@/lib/fp/formatFpMoney';
 import type {DbFpAccount} from '@/lib/api/db/mapDbFpAccount';
 import type {DbFpCategory} from '@/lib/api/db/mapDbFpCategory';
 import type {DbFpTransaction} from '@/lib/api/db/mapDbFpTransaction';
+import FpTransactionCategoryDialog from '@/components/fp/FpTransactionCategoryDialog';
 
 export interface FpTransactionTableProps {
   readonly transactions: readonly DbFpTransaction[];
@@ -15,6 +17,7 @@ export interface FpTransactionTableProps {
   readonly onToggle: (id: string) => void;
   readonly onArchive: (id: string) => void;
   readonly onSplit: (id: string, date: string) => void;
+  readonly onAssignCategory: (transactionId: string, categoryId: string | undefined) => Promise<void>;
   readonly canUpdate: boolean;
   readonly canSplit: boolean;
 }
@@ -28,9 +31,12 @@ export default function FpTransactionTable({
   onToggle,
   onArchive,
   onSplit,
+  onAssignCategory,
   canUpdate,
   canSplit,
 }: FpTransactionTableProps) {
+  const [categoryDialogTx, setCategoryDialogTx] = useState<DbFpTransaction | undefined>(undefined);
+
   const accountName = (id: string) => accounts.find((a) => a.id === id)?.name ?? id;
   const categoryName = (id: string | undefined) =>
     id === undefined ? 'Uncategorised' : (categories.find((c) => c.id === id)?.name ?? id);
@@ -66,7 +72,16 @@ export default function FpTransactionTable({
               </Table.Cell>
               <Table.Cell>{t.recipient === '' ? '—' : t.recipient}</Table.Cell>
               <Table.Cell>{formatFpMoney(t.amount, currency)}</Table.Cell>
-              <Table.Cell>{categoryName(t.categoryId)}</Table.Cell>
+              <Table.Cell>
+                <HStack gap={1}>
+                  <Text fontSize="sm">{categoryName(t.categoryId)}</Text>
+                  {canUpdate ? (
+                    <Button size="xs" variant="outline" onClick={() => setCategoryDialogTx(t)}>
+                      Category
+                    </Button>
+                  ) : null}
+                </HStack>
+              </Table.Cell>
               <Table.Cell>
                 <HStack gap={1}>
                   {canUpdate ? (
@@ -86,6 +101,14 @@ export default function FpTransactionTable({
         </Table.Body>
       </Table.Root>
       {transactions.length === 0 ? <Text color="fg.muted">No transactions in this range.</Text> : null}
+      <FpTransactionCategoryDialog
+        open={categoryDialogTx !== undefined}
+        transaction={categoryDialogTx}
+        categories={categories}
+        currency={currency}
+        onClose={() => setCategoryDialogTx(undefined)}
+        onSave={onAssignCategory}
+      />
     </Stack>
   );
 }

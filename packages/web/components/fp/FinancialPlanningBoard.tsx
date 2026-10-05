@@ -10,17 +10,17 @@ import {
   PodRole,
 } from '@so/model';
 import listDbFpAccounts from '@/lib/api/db/listDbFpAccounts';
-import listDbFpCategories from '@/lib/api/db/listDbFpCategories';
 import listDbFpTransactions from '@/lib/api/db/listDbFpTransactions';
 import listDbFpParsers from '@/lib/api/db/listDbFpParsers';
 import listDbFpImports from '@/lib/api/db/listDbFpImports';
 import listDbFpImportFiles from '@/lib/api/db/listDbFpImportFiles';
 import getDbFpSetting from '@/lib/api/db/getDbFpSetting';
 import sumDbFpAccountBalance from '@/lib/api/db/sumDbFpAccountBalance';
+import assignDbFpTransactionCategory from '@/lib/api/db/assignDbFpTransactionCategory';
 import bulkUpdateDbFpTransactionCategory from '@/lib/api/db/bulkUpdateDbFpTransactionCategory';
 import confirmDbFpTransactions from '@/lib/api/db/confirmDbFpTransactions';
 import updateDbFpTransaction from '@/lib/api/db/updateDbFpTransaction';
-import applyDbFpAutoAssign from '@/lib/api/db/applyDbFpAutoAssign';
+import listDbFpCategories from '@/lib/api/db/listDbFpCategories';
 import undoDbFpImport from '@/lib/api/db/undoDbFpImport';
 import deleteDbFpAccount from '@/lib/api/db/deleteDbFpAccount';
 import deleteDbFpCategory from '@/lib/api/db/deleteDbFpCategory';
@@ -45,6 +45,7 @@ import FpAccountPage from '@/components/fp/FpAccountPage';
 import FpCategoryPage from '@/components/fp/FpCategoryPage';
 import FpParserPage from '@/components/fp/FpParserPage';
 import FpImportPage from '@/components/fp/FpImportPage';
+import FpAutoAssignPreviewDialog from '@/components/fp/FpAutoAssignPreviewDialog';
 
 export interface FinancialPlanningBoardProps {
   readonly podId: string;
@@ -83,6 +84,8 @@ export default function FinancialPlanningBoard({
   const [importOpen, setImportOpen] = useState(false);
   const [splitId, setSplitId] = useState<string | undefined>(undefined);
   const [splitDate, setSplitDate] = useState<string | undefined>(undefined);
+  const [autoAssignOpen, setAutoAssignOpen] = useState(false);
+  const [refreshingCategories, setRefreshingCategories] = useState(false);
 
   const range = fpDateRangeFromPreset(preset, {});
   const permission = setting?.permission ?? fpDefaultPermission();
@@ -119,6 +122,16 @@ export default function FinancialPlanningBoard({
     );
     setBalances(next);
   }, [podId, range.start, range.end, accountFilter, showArchived]);
+
+  const refreshCategories = useCallback((): void => {
+    setRefreshingCategories(true);
+    void listDbFpCategories(podId)
+      .then(setCategories)
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => setRefreshingCategories(false));
+  }, [podId]);
 
   useEffect(() => {
     void Promise.resolve()
@@ -196,7 +209,9 @@ export default function FinancialPlanningBoard({
             onToggleArchived={() => setShowArchived(!showArchived)}
             onAddTransaction={() => setTxOpen(true)}
             onImport={() => setImportOpen(true)}
-            onRerunRules={() => runOrError(() => applyDbFpAutoAssign(podId).then(() => load()))}
+            onRerunRules={() => setAutoAssignOpen(true)}
+            onRefreshCategories={refreshCategories}
+            refreshingCategories={refreshingCategories}
             onToggleRow={toggle}
             onAssign={(id) =>
               runOrError(() =>
@@ -206,6 +221,15 @@ export default function FinancialPlanningBoard({
                 }),
               )
             }
+            onAssignTransactionCategory={async (transactionId, categoryId) => {
+              try {
+                await assignDbFpTransactionCategory(transactionId, categoryId);
+                await load();
+              } catch (e: unknown) {
+                setError(e instanceof Error ? e.message : String(e));
+                throw e;
+              }
+            }}
             onConfirm={() =>
               runOrError(() =>
                 confirmDbFpTransactions([...selected]).then(() => {
@@ -358,6 +382,17 @@ export default function FinancialPlanningBoard({
         userId={userId}
         onClose={() => setSplitId(undefined)}
         onSaved={() => void load()}
+      />
+      <FpAutoAssignPreviewDialog
+        open={autoAssignOpen}
+        podId={podId}
+        categories={sortedCategories}
+        currency={currency}
+        onClose={() => setAutoAssignOpen(false)}
+        onApplied={() => {
+          setAutoAssignOpen(false);
+          void load();
+        }}
       />
     </Stack>
   );

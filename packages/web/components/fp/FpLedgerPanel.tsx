@@ -1,14 +1,24 @@
 'use client';
 
-import {Button, HStack, NativeSelect, Stack, Tabs} from '@chakra-ui/react';
+import {useMemo, useState} from 'react';
+import {Button, HStack, NativeSelect, Stack, Tabs, Text} from '@chakra-ui/react';
+import {RefreshIcon} from '@so/component';
 import {FpAction, FpResource} from '@so/model';
 import type {DbFpAccount} from '@/lib/api/db/mapDbFpAccount';
 import type {DbFpCategory} from '@/lib/api/db/mapDbFpCategory';
 import type {DbFpTransaction} from '@/lib/api/db/mapDbFpTransaction';
 import type {FpDatePreset} from '@/lib/fp/fpDateRangeFromPreset';
+import downloadFpTransactionsCsv from '@/lib/fp/downloadFpTransactionsCsv';
+import {
+  FP_CATEGORY_FILTER_ALL,
+  FP_CATEGORY_FILTER_UNCATEGORISED,
+  transactionMatchesFpCategoryFilter,
+} from '@/lib/fp/fpCategoryFilter';
 import FpCategoryAssignSelect from '@/components/fp/FpCategoryAssignSelect';
 import FpReportPanel from '@/components/fp/FpReportPanel';
 import FpTransactionTable from '@/components/fp/FpTransactionTable';
+
+export type FpTransactionPageSize = 10 | 25 | 50 | 100 | 'all';
 
 export interface FpLedgerPanelProps {
   readonly accounts: readonly DbFpAccount[];
@@ -28,11 +38,35 @@ export interface FpLedgerPanelProps {
   readonly onAddTransaction: () => void;
   readonly onImport: () => void;
   readonly onRerunRules: () => void;
+  readonly onRefreshCategories: () => void;
+  readonly refreshingCategories: boolean;
   readonly onToggleRow: (id: string) => void;
   readonly onAssign: (categoryId: string) => void;
+  readonly onAssignTransactionCategory: (
+    transactionId: string,
+    categoryId: string | undefined,
+  ) => Promise<void>;
   readonly onConfirm: () => void;
   readonly onArchive: (id: string) => void;
   readonly onSplit: (id: string, date: string) => void;
+}
+
+function parsePageSize(value: string): FpTransactionPageSize {
+  if (value === 'all') {
+    return 'all';
+  }
+  const n = Number(value);
+  if (n === 25 || n === 50 || n === 100) {
+    return n;
+  }
+  return 10;
+}
+
+function pageCountBeforeClamp(total: number, pageSize: FpTransactionPageSize): number {
+  if (pageSize === 'all') {
+    return 1;
+  }
+  return Math.max(1, Math.ceil(total / pageSize));
 }
 
 export default function FpLedgerPanel({
@@ -53,12 +87,59 @@ export default function FpLedgerPanel({
   onAddTransaction,
   onImport,
   onRerunRules,
+  onRefreshCategories,
+  refreshingCategories,
   onToggleRow,
   onAssign,
+  onAssignTransactionCategory,
   onConfirm,
   onArchive,
   onSplit,
 }: FpLedgerPanelProps) {
+  const [categoryFilter, setCategoryFilter] = useState(FP_CATEGORY_FILTER_ALL);
+  const filteredByCategory = useMemo(
+    () => transactions.filter((t) => transactionMatchesFpCategoryFilter(t.categoryId, categoryFilter)),
+    [transactions, categoryFilter],
+  );
+  const listVersion = `${categoryFilter}|${accountFilter}|${preset}|${showArchived}|${transactions.length}`;
+  const [pagination, setPagination] = useState({
+    version: listVersion,
+    page: 1,
+    pageSize: 10 as FpTransactionPageSize,
+  });
+  const pageSize = pagination.pageSize;
+  const pageCount = pageCountBeforeClamp(filteredByCategory.length, pageSize);
+  const page =
+    pagination.version === listVersion ? Math.min(Math.max(1, pagination.page), pageCount) : 1;
+
+  const setPage = (next: number): void => {
+    setPagination((prev) => ({...prev, version: listVersion, page: next}));
+  };
+
+  const setPageSize = (next: FpTransactionPageSize): void => {
+    setPagination((prev) => ({...prev, version: listVersion, page: 1, pageSize: next}));
+  };
+
+  const pagedTransactions = useMemo(() => {
+    if (pageSize === 'all') {
+      return filteredByCategory;
+    }
+    const startIndex = (page - 1) * pageSize;
+    return filteredByCategory.slice(startIndex, startIndex + pageSize);
+  }, [filteredByCategory, page, pageSize]);
+
+  const downloadCsv = (): void => {
+    const stamp = start ?? 'export';
+    downloadFpTransactionsCsv(
+      filteredByCategory,
+      accounts,
+      categories,
+      `fp-transactions-${stamp}.csv`,
+    );
+  };
+
+  const leaves = categories.filter((c) => !c.isGroup);
+
   return (
     <Stack gap={3}>
       <HStack gap={2} flexWrap="wrap">
@@ -98,6 +179,23 @@ export default function FpLedgerPanel({
             ))}
           </NativeSelect.Field>
         </NativeSelect.Root>
+        <NativeSelect.Root maxW="200px">
+          <NativeSelect.Field
+            value={categoryFilter}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              setPagination((prev) => ({...prev, page: 1}));
+            }}
+          >
+            <option value={FP_CATEGORY_FILTER_ALL}>All categories</option>
+            <option value={FP_CATEGORY_FILTER_UNCATEGORISED}>Uncategorised</option>
+            {leaves.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </NativeSelect.Field>
+        </NativeSelect.Root>
         <Button size="sm" variant="outline" onClick={onToggleArchived}>
           {showArchived ? 'Hide archived' : 'Archived'}
         </Button>
@@ -119,25 +217,82 @@ export default function FpLedgerPanel({
         <Tabs.Content value="list">
           <Stack gap={3}>
             {selected.size > 0 ? (
-              <HStack>
-                <FpCategoryAssignSelect categories={categories} onAssign={onAssign} />
+              <HStack flexWrap="wrap">
+                <FpCategoryAssignSelect
+                  categories={categories}
+                  onAssign={onAssign}
+                  onRefresh={onRefreshCategories}
+                  refreshing={refreshingCategories}
+                />
                 <Button size="sm" onClick={onConfirm}>
                   Confirm
                 </Button>
               </HStack>
             ) : null}
+            <HStack gap={2} flexWrap="wrap" justify="space-between">
+              <HStack gap={2} flexWrap="wrap">
+                <NativeSelect.Root maxW="120px">
+                  <NativeSelect.Field
+                    value={pageSize === 'all' ? 'all' : String(pageSize)}
+                    onChange={(e) => setPageSize(parsePageSize(e.target.value))}
+                  >
+                    <option value="10">10 per page</option>
+                    <option value="25">25 per page</option>
+                    <option value="50">50 per page</option>
+                    <option value="100">100 per page</option>
+                    <option value="all">All</option>
+                  </NativeSelect.Field>
+                </NativeSelect.Root>
+                <Text fontSize="sm" color="fg.muted">
+                  {filteredByCategory.length} transaction(s)
+                </Text>
+              </HStack>
+              <HStack gap={2}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label="Refresh categories"
+                  onClick={onRefreshCategories}
+                  loading={refreshingCategories}
+                >
+                  <RefreshIcon size={16} />
+                </Button>
+                <Button size="sm" variant="outline" onClick={downloadCsv}>
+                  Download CSV
+                </Button>
+              </HStack>
+            </HStack>
             <FpTransactionTable
-              transactions={transactions}
+              transactions={pagedTransactions}
               accounts={accounts}
               categories={categories}
               currency={currency}
               selected={selected}
               onToggle={onToggleRow}
+              onAssignCategory={onAssignTransactionCategory}
               onArchive={onArchive}
               onSplit={onSplit}
               canUpdate={can(FpResource.TRANSACTION, FpAction.UPDATE)}
               canSplit={can(FpResource.BILL_SPLIT, FpAction.CREATE)}
             />
+            {pageSize !== 'all' && filteredByCategory.length > pageSize ? (
+              <HStack gap={2}>
+                <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                  Previous
+                </Button>
+                <Text fontSize="sm">
+                  Page {page} of {pageCount}
+                </Text>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= pageCount}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Next
+                </Button>
+              </HStack>
+            ) : null}
           </Stack>
         </Tabs.Content>
       </Tabs.Root>
