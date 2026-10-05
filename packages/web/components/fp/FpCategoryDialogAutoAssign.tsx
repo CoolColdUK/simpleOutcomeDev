@@ -20,6 +20,9 @@ export interface FpCategoryDialogAutoAssignProps {
 const AMOUNT_SIGN_TOOLTIP =
   'Use negative amounts for expenses (money out). Income and refunds are positive.';
 
+const AMOUNT_RANGE_TOOLTIP =
+  'Range uses inclusive bounds: amount must be greater than or equal to the minimum and less than or equal to the maximum (both endpoints count). You can set only a minimum or only a maximum.';
+
 function parseOptionalAmount(raw: string): number | undefined {
   const trimmed = raw.trim();
   if (trimmed === '') {
@@ -121,7 +124,7 @@ export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCatego
         )}
         <Field.HelperText>
           Each rule is one string. Fields in a rule are AND; multiple rules are OR. Description and
-          recipient are partial matches. Amount can be a single comparison or a min–max range.
+          recipient are partial matches. Amount can be a single comparison or an inclusive min–max range.
         </Field.HelperText>
       </Field.Root>
       {building ? (
@@ -174,26 +177,32 @@ export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCatego
             </HStack>
           ) : null}
           {amountMode === 'range' ? (
-            <HStack align="flex-end" gap={2}>
-              <Field.Root flex="1">
-                <Field.Label>Minimum (≥)</Field.Label>
-                <Input
-                  type="number"
-                  value={amountMin}
-                  onChange={(e) => setAmountMin(e.target.value)}
-                  placeholder="-200"
-                />
-              </Field.Root>
-              <Field.Root flex="1">
-                <Field.Label>Maximum (≤)</Field.Label>
-                <Input
-                  type="number"
-                  value={amountMax}
-                  onChange={(e) => setAmountMax(e.target.value)}
-                  placeholder="-5"
-                />
-              </Field.Root>
-            </HStack>
+            <Stack gap={2}>
+              <HStack gap={1}>
+                <Text fontSize="sm" fontWeight="medium">Range bounds</Text>
+                <AppInfoTooltip label={AMOUNT_RANGE_TOOLTIP} />
+              </HStack>
+              <HStack align="flex-end" gap={2}>
+                <Field.Root flex="1">
+                  <Field.Label>Minimum (inclusive ≥)</Field.Label>
+                  <Input
+                    type="number"
+                    value={amountMin}
+                    onChange={(e) => setAmountMin(e.target.value)}
+                    placeholder="-200"
+                  />
+                </Field.Root>
+                <Field.Root flex="1">
+                  <Field.Label>Maximum (inclusive ≤)</Field.Label>
+                  <Input
+                    type="number"
+                    value={amountMax}
+                    onChange={(e) => setAmountMax(e.target.value)}
+                    placeholder="-5"
+                  />
+                </Field.Root>
+              </HStack>
+            </Stack>
           ) : null}
           <HStack justify="flex-end" gap={2}>
             <Button size="sm" variant="outline" onClick={resetBuilder}>
