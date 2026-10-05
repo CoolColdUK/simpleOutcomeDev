@@ -1,5 +1,4 @@
-import compareFpAmount from './compareFpAmount';
-import {FpAmountOperator} from './fpAmountOperator';
+import matchesFpAutoAssignAmount from './matchesFpAutoAssignAmount';
 import parseFpAutoAssignRule from './parseFpAutoAssignRule';
 
 /** Stored auto-assign rule string, e.g. `RECIPIENT=H,AMOUNT<50`. */
@@ -32,9 +31,12 @@ function filterMatches(tx: FpAutoAssignTarget, filter: FpCategoryFilter): boolea
   if (rule.recipient !== undefined && !containsPartial(tx.recipient, rule.recipient)) {
     return false;
   }
-  if (rule.amount !== undefined) {
-    const operator = rule.amountOperator ?? FpAmountOperator.EQ;
-    if (!compareFpAmount(tx.amount, operator, rule.amount)) {
+  if (
+    rule.amount !== undefined ||
+    rule.amountMin !== undefined ||
+    rule.amountMax !== undefined
+  ) {
+    if (!matchesFpAutoAssignAmount(tx.amount, rule)) {
       return false;
     }
   }

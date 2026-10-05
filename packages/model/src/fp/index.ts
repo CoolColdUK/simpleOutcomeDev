@@ -44,6 +44,7 @@ export type {FpCategoryFilter, FpCategoryRule, FpAutoAssignTarget} from './match
 export {default as buildFpAutoAssignPreview} from './buildFpAutoAssignPreview';
 export type {FpAutoAssignPreviewInputTx, FpAutoAssignPreviewRow} from './buildFpAutoAssignPreview';
 export type {FpParsedAutoAssignRule} from './fpParsedAutoAssignRule';
+export {default as matchesFpAutoAssignAmount} from './matchesFpAutoAssignAmount';
 export {default as parseFpAutoAssignRule} from './parseFpAutoAssignRule';
 export {default as formatFpAutoAssignRule} from './formatFpAutoAssignRule';
 export {default as compareFpAmount} from './compareFpAmount';

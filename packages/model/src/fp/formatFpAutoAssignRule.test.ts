@@ -13,6 +13,15 @@ describe('formatFpAutoAssignRule', () => {
     ).toBe('DESCRIPTION=test,RECIPIENT=someone,AMOUNT<50');
   });
 
+  it('formats amount range bounds', () => {
+    expect(
+      formatFpAutoAssignRule({
+        amountMin: -200,
+        amountMax: -5,
+      }),
+    ).toBe('AMOUNT>=-200,AMOUNT<=-5');
+  });
+
   it('returns undefined when nothing is set', () => {
     expect(formatFpAutoAssignRule({})).toBeUndefined();
     expect(formatFpAutoAssignRule({description: '  '})).toBeUndefined();

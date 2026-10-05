@@ -45,6 +45,21 @@ describe('matchFpAutoAssignCategory', () => {
     ).toBeUndefined();
   });
 
+  it('matches amount within a range', () => {
+    expect(
+      matchFpAutoAssignCategory(
+        {description: 'SHOP', recipient: '', amount: -42},
+        [{id: 'c1', filters: ['AMOUNT>=-100,AMOUNT<=-10']}],
+      ),
+    ).toBe('c1');
+    expect(
+      matchFpAutoAssignCategory(
+        {description: 'SHOP', recipient: '', amount: -5},
+        [{id: 'c1', filters: ['AMOUNT>=-100,AMOUNT<=-10']}],
+      ),
+    ).toBeUndefined();
+  });
+
   it('matches amount with comparison operators', () => {
     expect(
       matchFpAutoAssignCategory(tx, [{id: 'c1', filters: ['AMOUNT<-10']}]),

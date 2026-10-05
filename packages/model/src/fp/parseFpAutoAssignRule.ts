@@ -4,6 +4,11 @@ import type {FpParsedAutoAssignRule} from './fpParsedAutoAssignRule';
 const CLAUSE =
   /^(DESCRIPTION|RECIPIENT|AMOUNT)\s*(<=|>=|<|>|==|=)\s*(.+)$/i;
 
+interface FpAmountClause {
+  readonly operator: FpAmountOperator;
+  readonly value: number;
+}
+
 function parseOperator(raw: string): FpAmountOperator | undefined {
   switch (raw) {
     case '=':
@@ -22,6 +27,48 @@ function parseOperator(raw: string): FpAmountOperator | undefined {
   }
 }
 
+function isMinOperator(operator: FpAmountOperator): boolean {
+  return operator === FpAmountOperator.GT || operator === FpAmountOperator.GTE;
+}
+
+function isMaxOperator(operator: FpAmountOperator): boolean {
+  return operator === FpAmountOperator.LT || operator === FpAmountOperator.LTE;
+}
+
+function resolveAmountClauses(clauses: readonly FpAmountClause[]): Pick<
+  FpParsedAutoAssignRule,
+  'amount' | 'amountOperator' | 'amountMin' | 'amountMinOperator' | 'amountMax' | 'amountMaxOperator'
+> | undefined {
+  if (clauses.length === 0) {
+    return {};
+  }
+  if (clauses.length === 1) {
+    const [only] = clauses;
+    if (only.operator === FpAmountOperator.EQ) {
+      return {amount: only.value, amountOperator: only.operator};
+    }
+    return {amount: only.value, amountOperator: only.operator};
+  }
+  if (clauses.length !== 2) {
+    return undefined;
+  }
+  const minClause = clauses.find((clause) => isMinOperator(clause.operator));
+  const maxClause = clauses.find((clause) => isMaxOperator(clause.operator));
+  if (minClause === undefined || maxClause === undefined) {
+    return undefined;
+  }
+  return {
+    amountMin: minClause.value,
+    amountMinOperator: minClause.operator,
+    amountMax: maxClause.value,
+    amountMaxOperator: maxClause.operator,
+  };
+}
+
+function hasAmountConstraint(rule: FpParsedAutoAssignRule): boolean {
+  return rule.amount !== undefined || rule.amountMin !== undefined || rule.amountMax !== undefined;
+}
+
 export default function parseFpAutoAssignRule(input: string): FpParsedAutoAssignRule | undefined {
   const trimmed = input.trim();
   if (trimmed === '') {
@@ -33,8 +80,7 @@ export default function parseFpAutoAssignRule(input: string): FpParsedAutoAssign
   }
   let description: string | undefined;
   let recipient: string | undefined;
-  let amount: number | undefined;
-  let amountOperator: FpAmountOperator | undefined;
+  const amountClauses: FpAmountClause[] = [];
   const ok = clauses.every((clause) => {
     const match = CLAUSE.exec(clause);
     if (match === null) {
@@ -67,22 +113,27 @@ export default function parseFpAutoAssignRule(input: string): FpParsedAutoAssign
       return true;
     }
     if (field === 'AMOUNT') {
-      if (amount !== undefined) {
-        return false;
-      }
       const operator = parseOperator(operatorRaw);
       const value = Number(valueRaw);
       if (operator === undefined || Number.isNaN(value)) {
         return false;
       }
-      amount = value;
-      amountOperator = operator;
+      amountClauses.push({operator, value});
       return true;
     }
     return false;
   });
-  if (!ok || (description === undefined && recipient === undefined && amount === undefined)) {
+  const amountFields = resolveAmountClauses(amountClauses);
+  if (!ok || amountFields === undefined) {
     return undefined;
   }
-  return {description, recipient, amount, amountOperator};
+  const rule: FpParsedAutoAssignRule = {
+    description,
+    recipient,
+    ...amountFields,
+  };
+  if (description === undefined && recipient === undefined && !hasAmountConstraint(rule)) {
+    return undefined;
+  }
+  return rule;
 }

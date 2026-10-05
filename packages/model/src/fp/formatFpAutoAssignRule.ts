@@ -12,6 +12,14 @@ export default function formatFpAutoAssignRule(rule: FpParsedAutoAssignRule): st
   if (recipient !== undefined && recipient !== '') {
     parts.push(`RECIPIENT=${recipient}`);
   }
+  if (rule.amountMin !== undefined && !Number.isNaN(rule.amountMin)) {
+    const operator = rule.amountMinOperator ?? FpAmountOperator.GTE;
+    parts.push(`AMOUNT${fpAmountOperatorSymbol(operator)}${rule.amountMin}`);
+  }
+  if (rule.amountMax !== undefined && !Number.isNaN(rule.amountMax)) {
+    const operator = rule.amountMaxOperator ?? FpAmountOperator.LTE;
+    parts.push(`AMOUNT${fpAmountOperatorSymbol(operator)}${rule.amountMax}`);
+  }
   if (rule.amount !== undefined && !Number.isNaN(rule.amount)) {
     const operator = rule.amountOperator ?? FpAmountOperator.EQ;
     parts.push(`AMOUNT${fpAmountOperatorSymbol(operator)}${rule.amount}`);

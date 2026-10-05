@@ -5,4 +5,8 @@ export interface FpParsedAutoAssignRule {
   readonly recipient?: string;
   readonly amount?: number;
   readonly amountOperator?: FpAmountOperator;
+  readonly amountMin?: number;
+  readonly amountMinOperator?: FpAmountOperator;
+  readonly amountMax?: number;
+  readonly amountMaxOperator?: FpAmountOperator;
 }
