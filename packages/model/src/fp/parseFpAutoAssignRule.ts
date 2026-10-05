@@ -43,9 +43,9 @@ function resolveAmountClauses(clauses: readonly FpAmountClause[]): Pick<
     return {};
   }
   if (clauses.length === 1) {
-    const [only] = clauses;
-    if (only.operator === FpAmountOperator.EQ) {
-      return {amount: only.value, amountOperator: only.operator};
+    const only = clauses[0];
+    if (only === undefined) {
+      return undefined;
     }
     return {amount: only.value, amountOperator: only.operator};
   }
