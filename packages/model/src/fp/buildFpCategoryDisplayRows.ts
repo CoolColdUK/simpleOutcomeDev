@@ -11,8 +11,8 @@ export interface FpCategoryDisplayInput {
   readonly parentId?: string;
 }
 
-export interface FpCategoryDisplayRow {
-  readonly category: FpCategoryDisplayInput;
+export interface FpCategoryDisplayRow<T extends FpCategoryDisplayInput = FpCategoryDisplayInput> {
+  readonly category: T;
   readonly isChild: boolean;
 }
 
@@ -33,11 +33,11 @@ function compareFpCategoryDisplay(a: FpCategoryDisplayInput, b: FpCategoryDispla
   return a.name.localeCompare(b.name);
 }
 
-export default function buildFpCategoryDisplayRows(
-  categories: readonly FpCategoryDisplayInput[],
-): readonly FpCategoryDisplayRow[] {
+export default function buildFpCategoryDisplayRows<T extends FpCategoryDisplayInput>(
+  categories: readonly T[],
+): readonly FpCategoryDisplayRow<T>[] {
   const byId = new Map(categories.map((c) => [c.id, c]));
-  const childrenByParent = new Map<string, FpCategoryDisplayInput[]>();
+  const childrenByParent = new Map<string, T[]>();
   categories.forEach((category) => {
     if (category.parentId === undefined) {
       return;
@@ -56,9 +56,9 @@ export default function buildFpCategoryDisplayRows(
   const sortedTop = [...topLevel].sort(compareFpCategoryDisplay);
 
   return sortedTop.flatMap((category) => {
-    const parentRow: FpCategoryDisplayRow = {category, isChild: false};
+    const parentRow: FpCategoryDisplayRow<T> = {category, isChild: false};
     const children = [...(childrenByParent.get(category.id) ?? [])].sort(compareFpCategoryDisplay);
-    const childRows: FpCategoryDisplayRow[] = children.map((child) => ({
+    const childRows: FpCategoryDisplayRow<T>[] = children.map((child) => ({
       category: child,
       isChild: true,
     }));
