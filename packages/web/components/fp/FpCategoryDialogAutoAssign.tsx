@@ -6,7 +6,9 @@ import {
   FpAmountOperator,
   formatFpAutoAssignRule,
   fpAmountOperatorLabel,
+  parseFpAutoAssignRule,
   type FpCategoryFilter,
+  type FpParsedAutoAssignRule,
 } from '@so/model';
 import AppInfoTooltip from '@/components/app/AppInfoTooltip';
 
@@ -35,8 +37,44 @@ function parseOptionalAmount(raw: string): number | undefined {
   return value;
 }
 
+function applyParsedRuleToBuilder(
+  parsed: FpParsedAutoAssignRule,
+  setDescription: (value: string) => void,
+  setRecipient: (value: string) => void,
+  setAmountMode: (value: FpAutoAssignAmountMode) => void,
+  setAmount: (value: string) => void,
+  setAmountOperator: (value: FpAmountOperator) => void,
+  setAmountMin: (value: string) => void,
+  setAmountMax: (value: string) => void,
+): void {
+  setDescription(parsed.description ?? '');
+  setRecipient(parsed.recipient ?? '');
+  if (parsed.amount !== undefined) {
+    setAmountMode('compare');
+    setAmount(String(parsed.amount));
+    setAmountOperator(parsed.amountOperator ?? FpAmountOperator.EQ);
+    setAmountMin('');
+    setAmountMax('');
+    return;
+  }
+  if (parsed.amountMin !== undefined || parsed.amountMax !== undefined) {
+    setAmountMode('range');
+    setAmount('');
+    setAmountOperator(FpAmountOperator.EQ);
+    setAmountMin(parsed.amountMin !== undefined ? String(parsed.amountMin) : '');
+    setAmountMax(parsed.amountMax !== undefined ? String(parsed.amountMax) : '');
+    return;
+  }
+  setAmountMode('none');
+  setAmount('');
+  setAmountOperator(FpAmountOperator.EQ);
+  setAmountMin('');
+  setAmountMax('');
+}
+
 export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCategoryDialogAutoAssignProps) {
   const [building, setBuilding] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | undefined>(undefined);
   const [description, setDescription] = useState('');
   const [recipient, setRecipient] = useState('');
   const [amountMode, setAmountMode] = useState<FpAutoAssignAmountMode>('none');
@@ -53,7 +91,39 @@ export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCatego
     setAmountOperator(FpAmountOperator.EQ);
     setAmountMin('');
     setAmountMax('');
+    setEditingIndex(undefined);
     setBuilding(false);
+  };
+
+  const startNewRule = (): void => {
+    setEditingIndex(undefined);
+    setDescription('');
+    setRecipient('');
+    setAmountMode('none');
+    setAmount('');
+    setAmountOperator(FpAmountOperator.EQ);
+    setAmountMin('');
+    setAmountMax('');
+    setBuilding(true);
+  };
+
+  const startEditRule = (index: number): void => {
+    const parsed = parseFpAutoAssignRule(filters[index] ?? '');
+    if (parsed === undefined) {
+      return;
+    }
+    applyParsedRuleToBuilder(
+      parsed,
+      setDescription,
+      setRecipient,
+      setAmountMode,
+      setAmount,
+      setAmountOperator,
+      setAmountMin,
+      setAmountMax,
+    );
+    setEditingIndex(index);
+    setBuilding(true);
   };
 
   const hasValidAmount = (): boolean => {
@@ -66,7 +136,7 @@ export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCatego
     return false;
   };
 
-  const addRule = (): void => {
+  const commitRule = (): void => {
     const amountValue = amountMode === 'compare' ? parseOptionalAmount(amount) : undefined;
     const minValue = amountMode === 'range' ? parseOptionalAmount(amountMin) : undefined;
     const maxValue = amountMode === 'range' ? parseOptionalAmount(amountMax) : undefined;
@@ -89,12 +159,19 @@ export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCatego
     if (formatted === undefined) {
       return;
     }
-    onChange([...filters, formatted]);
+    if (editingIndex !== undefined) {
+      onChange(filters.map((rule, index) => (index === editingIndex ? formatted : rule)));
+    } else {
+      onChange([...filters, formatted]);
+    }
     resetBuilder();
   };
 
-  const canAdd =
+  const canCommit =
     description.trim() !== '' || recipient.trim() !== '' || (amountMode !== 'none' && hasValidAmount());
+
+  const builderTitle = editingIndex !== undefined ? 'Edit rule' : 'New rule';
+  const commitLabel = editingIndex !== undefined ? 'Save rule' : 'Add rule';
 
   return (
     <Stack gap={2}>
@@ -106,20 +183,34 @@ export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCatego
           </Text>
         ) : (
           <Stack gap={1}>
-            {filters.map((rule, index) => (
-              <HStack key={`${rule}-${index}`} justify="space-between" gap={2}>
-                <Text fontSize="sm" fontFamily="mono" wordBreak="break-all">
-                  {rule}
-                </Text>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => onChange(filters.filter((_, i) => i !== index))}
-                >
-                  Remove
-                </Button>
-              </HStack>
-            ))}
+            {filters.map((rule, index) => {
+              const canEdit = parseFpAutoAssignRule(rule) !== undefined;
+              return (
+                <HStack key={`${rule}-${index}`} justify="space-between" gap={2} align="flex-start">
+                  <Text fontSize="sm" fontFamily="mono" wordBreak="break-all" flex="1">
+                    {rule}
+                  </Text>
+                  <HStack gap={1} flexShrink={0}>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      disabled={!canEdit || (building && editingIndex !== index)}
+                      onClick={() => startEditRule(index)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      disabled={building}
+                      onClick={() => onChange(filters.filter((_, i) => i !== index))}
+                    >
+                      Remove
+                    </Button>
+                  </HStack>
+                </HStack>
+              );
+            })}
           </Stack>
         )}
         <Field.HelperText>
@@ -129,6 +220,7 @@ export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCatego
       </Field.Root>
       {building ? (
         <Stack gap={2} p={3} borderWidth="1px" borderColor="border.subtle" borderRadius="md">
+          <Text fontSize="sm" fontWeight="medium">{builderTitle}</Text>
           <Field.Root>
             <Field.Label>Description contains (optional)</Field.Label>
             <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="netflix" />
@@ -208,13 +300,13 @@ export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCatego
             <Button size="sm" variant="outline" onClick={resetBuilder}>
               Cancel
             </Button>
-            <Button size="sm" colorPalette="brand" disabled={!canAdd} onClick={addRule}>
-              Add rule
+            <Button size="sm" colorPalette="brand" disabled={!canCommit} onClick={commitRule}>
+              {commitLabel}
             </Button>
           </HStack>
         </Stack>
       ) : (
-        <Button size="sm" variant="outline" alignSelf="flex-start" onClick={() => setBuilding(true)}>
+        <Button size="sm" variant="outline" alignSelf="flex-start" onClick={startNewRule}>
           Build rule
         </Button>
       )}
