@@ -33,7 +33,8 @@ import type {DbFpImport} from '@/lib/api/db/mapDbFpImport';
 import type {DbFpImportFile} from '@/lib/api/db/mapDbFpImportFile';
 import type {DbFpSetting} from '@/lib/api/db/mapDbFpSetting';
 import formatFpMoney from '@/lib/fp/formatFpMoney';
-import fpDateRangeFromPreset, {type FpDatePreset} from '@/lib/fp/fpDateRangeFromPreset';
+import dayjs from 'dayjs';
+import fpDateRangeFromPreset, {type FpDatePreset, type FpDateRange} from '@/lib/fp/fpDateRangeFromPreset';
 import FpAccountDialog from '@/components/fp/FpAccountDialog';
 import FpCategoryDialog from '@/components/fp/FpCategoryDialog';
 import FpTransactionDialog from '@/components/fp/FpTransactionDialog';
@@ -70,6 +71,14 @@ export default function FinancialPlanningBoard({
   const [setting, setSetting] = useState<DbFpSetting | undefined>(undefined);
   const [error, setError] = useState('');
   const [preset, setPreset] = useState<FpDatePreset>('this_month');
+  const [customRange, setCustomRange] = useState<FpDateRange>(() => {
+    const today = dayjs();
+    return {
+      month: today.format('YYYY-MM'),
+      start: today.startOf('month').format('YYYY-MM-DD'),
+      end: today.endOf('month').format('YYYY-MM-DD'),
+    };
+  });
   const [accountFilter, setAccountFilter] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
@@ -87,7 +96,24 @@ export default function FinancialPlanningBoard({
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
   const [refreshingCategories, setRefreshingCategories] = useState(false);
 
-  const range = fpDateRangeFromPreset(preset, {});
+  const range = fpDateRangeFromPreset(preset, customRange);
+
+  const handlePreset = (next: FpDatePreset): void => {
+    setPreset(next);
+    if (next === 'month') {
+      setCustomRange((prev) => ({
+        ...prev,
+        month: prev.month ?? dayjs().format('YYYY-MM'),
+      }));
+    }
+    if (next === 'custom') {
+      setCustomRange((prev) => ({
+        ...prev,
+        start: prev.start ?? dayjs().startOf('month').format('YYYY-MM-DD'),
+        end: prev.end ?? dayjs().endOf('month').format('YYYY-MM-DD'),
+      }));
+    }
+  };
   const permission = setting?.permission ?? fpDefaultPermission();
   const can = (resource: FpResource, action: FpAction) => fpCan(podRole, isSpaceOwner, permission, resource, action);
 
@@ -204,7 +230,9 @@ export default function FinancialPlanningBoard({
             start={range.start}
             end={range.end}
             can={can}
-            onPreset={setPreset}
+            customRange={customRange}
+            onPreset={handlePreset}
+            onCustomRange={setCustomRange}
             onAccountFilter={setAccountFilter}
             onToggleArchived={() => setShowArchived(!showArchived)}
             onAddTransaction={() => setTxOpen(true)}

@@ -1,13 +1,15 @@
 'use client';
 
 import {useMemo, useState} from 'react';
-import {Button, HStack, NativeSelect, Stack, Tabs, Text} from '@chakra-ui/react';
+import {Button, HStack, Input, NativeSelect, Stack, Tabs, Text} from '@chakra-ui/react';
 import {RefreshIcon} from '@so/component';
 import {FpAction, FpResource} from '@so/model';
 import type {DbFpAccount} from '@/lib/api/db/mapDbFpAccount';
 import type {DbFpCategory} from '@/lib/api/db/mapDbFpCategory';
 import type {DbFpTransaction} from '@/lib/api/db/mapDbFpTransaction';
-import type {FpDatePreset} from '@/lib/fp/fpDateRangeFromPreset';
+import type {FpDatePreset, FpDateRange} from '@/lib/fp/fpDateRangeFromPreset';
+import dayjs from 'dayjs';
+import fpMonthSelectOptions from '@/lib/fp/fpMonthSelectOptions';
 import downloadFpTransactionsCsv from '@/lib/fp/downloadFpTransactionsCsv';
 import {
   FP_CATEGORY_FILTER_ALL,
@@ -26,6 +28,7 @@ export interface FpLedgerPanelProps {
   readonly transactions: readonly DbFpTransaction[];
   readonly currency: string;
   readonly preset: FpDatePreset;
+  readonly customRange: FpDateRange;
   readonly accountFilter: string;
   readonly showArchived: boolean;
   readonly selected: ReadonlySet<string>;
@@ -33,6 +36,7 @@ export interface FpLedgerPanelProps {
   readonly end?: string;
   readonly can: (resource: FpResource, action: FpAction) => boolean;
   readonly onPreset: (preset: FpDatePreset) => void;
+  readonly onCustomRange: (range: FpDateRange) => void;
   readonly onAccountFilter: (accountId: string) => void;
   readonly onToggleArchived: () => void;
   readonly onAddTransaction: () => void;
@@ -75,6 +79,7 @@ export default function FpLedgerPanel({
   transactions,
   currency,
   preset,
+  customRange,
   accountFilter,
   showArchived,
   selected,
@@ -82,6 +87,7 @@ export default function FpLedgerPanel({
   end,
   can,
   onPreset,
+  onCustomRange,
   onAccountFilter,
   onToggleArchived,
   onAddTransaction,
@@ -101,7 +107,9 @@ export default function FpLedgerPanel({
     () => transactions.filter((t) => transactionMatchesFpCategoryFilter(t.categoryId, categoryFilter)),
     [transactions, categoryFilter],
   );
-  const listVersion = `${categoryFilter}|${accountFilter}|${preset}|${showArchived}|${transactions.length}`;
+  const monthOptions = useMemo(() => fpMonthSelectOptions(48, 3), []);
+  const selectedMonth = customRange.month ?? dayjs().format('YYYY-MM');
+  const listVersion = `${categoryFilter}|${accountFilter}|${preset}|${start ?? ''}|${end ?? ''}|${showArchived}|${transactions.length}`;
   const [pagination, setPagination] = useState({
     version: listVersion,
     page: 1,
@@ -160,15 +168,52 @@ export default function FpLedgerPanel({
         ) : null}
       </HStack>
       <HStack gap={2} flexWrap="wrap">
-        <NativeSelect.Root maxW="180px">
+        <NativeSelect.Root maxW="200px">
           <NativeSelect.Field value={preset} onChange={(e) => onPreset(e.target.value as FpDatePreset)}>
             <option value="this_month">This month</option>
             <option value="last_month">Last month</option>
+            <option value="month">Choose month</option>
             <option value="last_30">Last 30 days</option>
             <option value="this_year">This year</option>
+            <option value="custom">Custom range</option>
             <option value="all">All time</option>
           </NativeSelect.Field>
         </NativeSelect.Root>
+        {preset === 'month' ? (
+          <NativeSelect.Root maxW="220px">
+            <NativeSelect.Field
+              value={selectedMonth}
+              onChange={(e) => onCustomRange({...customRange, month: e.target.value})}
+            >
+              {monthOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </NativeSelect.Field>
+          </NativeSelect.Root>
+        ) : null}
+        {preset === 'custom' ? (
+          <HStack gap={2}>
+            <Input
+              type="date"
+              size="sm"
+              maxW="160px"
+              value={customRange.start ?? ''}
+              onChange={(e) => onCustomRange({...customRange, start: e.target.value})}
+              aria-label="Range start date"
+            />
+            <Text fontSize="sm" color="fg.muted">to</Text>
+            <Input
+              type="date"
+              size="sm"
+              maxW="160px"
+              value={customRange.end ?? ''}
+              onChange={(e) => onCustomRange({...customRange, end: e.target.value})}
+              aria-label="Range end date"
+            />
+          </HStack>
+        ) : null}
         <NativeSelect.Root maxW="180px">
           <NativeSelect.Field value={accountFilter} onChange={(e) => onAccountFilter(e.target.value)}>
             <option value="">All accounts</option>
