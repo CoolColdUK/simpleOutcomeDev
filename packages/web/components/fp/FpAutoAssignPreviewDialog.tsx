@@ -17,7 +17,7 @@ import {
   Text,
 } from '@chakra-ui/react';
 import type {FpAutoAssignPreviewRow} from '@so/model';
-import applyDbFpAutoAssign from '@/lib/api/db/applyDbFpAutoAssign';
+import applyDbFpAutoAssignUpdates from '@/lib/api/db/applyDbFpAutoAssignUpdates';
 import previewDbFpAutoAssign from '@/lib/api/db/previewDbFpAutoAssign';
 import formatFpMoney from '@/lib/fp/formatFpMoney';
 import type {DbFpAccount} from '@/lib/api/db/mapDbFpAccount';
@@ -49,6 +49,7 @@ function FpAutoAssignPreviewDialogBody({
   onApplied,
 }: FpAutoAssignPreviewDialogProps) {
   const [rows, setRows] = useState<readonly FpAutoAssignPreviewRow[]>([]);
+  const [included, setIncluded] = useState<ReadonlySet<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState('');
@@ -58,19 +59,38 @@ function FpAutoAssignPreviewDialogBody({
 
   useEffect(() => {
     void previewDbFpAutoAssign(podId)
-      .then(setRows)
+      .then((loaded) => {
+        setRows(loaded);
+        setIncluded(new Set(loaded.map((row) => row.transactionId)));
+      })
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : String(e));
         setRows([]);
+        setIncluded(new Set());
       })
       .finally(() => setLoading(false));
   }, [podId]);
+
+  const toggleIncluded = (transactionId: string): void => {
+    setIncluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(transactionId)) {
+        next.delete(transactionId);
+      } else {
+        next.add(transactionId);
+      }
+      return next;
+    });
+  };
 
   const apply = async (): Promise<void> => {
     setApplying(true);
     setError('');
     try {
-      await applyDbFpAutoAssign(podId);
+      const updates = rows
+        .filter((row) => included.has(row.transactionId))
+        .map((row) => ({transactionId: row.transactionId, categoryId: row.categoryId}));
+      await applyDbFpAutoAssignUpdates(updates);
       onApplied();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
@@ -100,10 +120,13 @@ function FpAutoAssignPreviewDialogBody({
               ) : null}
               {!loading && rows.length > 0 ? (
                 <Stack gap={2} maxH="360px" overflowY="auto">
-                  <Text fontSize="sm">{rows.length} transaction(s) would be categorised.</Text>
+                  <Text fontSize="sm">
+                    {included.size} of {rows.length} transaction(s) will be categorised. Uncheck any you want to skip.
+                  </Text>
                   <Table.Root size="sm">
                     <Table.Header>
                       <Table.Row>
+                        <Table.ColumnHeader aria-label="Include assignment" />
                         <Table.ColumnHeader>Date</Table.ColumnHeader>
                         <Table.ColumnHeader>Account</Table.ColumnHeader>
                         <Table.ColumnHeader>Description</Table.ColumnHeader>
@@ -115,6 +138,14 @@ function FpAutoAssignPreviewDialogBody({
                     <Table.Body>
                       {rows.map((row) => (
                         <Table.Row key={row.transactionId}>
+                          <Table.Cell>
+                            <input
+                              type="checkbox"
+                              checked={included.has(row.transactionId)}
+                              onChange={() => toggleIncluded(row.transactionId)}
+                              aria-label={`Assign ${row.description}`}
+                            />
+                          </Table.Cell>
                           <Table.Cell>{row.postedDate}</Table.Cell>
                           <Table.Cell>{accountName(row.accountId)}</Table.Cell>
                           <Table.Cell>{row.description}</Table.Cell>
@@ -136,7 +167,7 @@ function FpAutoAssignPreviewDialogBody({
             <Button
               colorPalette="brand"
               onClick={() => void apply()}
-              disabled={loading || applying || rows.length === 0}
+              disabled={loading || applying || rows.length === 0 || included.size === 0}
               loading={applying}
             >
               Apply

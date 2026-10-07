@@ -1,8 +1,7 @@
 import {buildFpAutoAssignPreview} from '@so/model';
 import listDbFpCategories from '@/lib/api/db/listDbFpCategories';
 import listDbFpTransactions from '@/lib/api/db/listDbFpTransactions';
-import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
-import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import applyDbFpAutoAssignUpdates from '@/lib/api/db/applyDbFpAutoAssignUpdates';
 
 export default async function applyDbFpAutoAssign(podId: string): Promise<number> {
   const [categories, transactions] = await Promise.all([listDbFpCategories(podId), listDbFpTransactions(podId)]);
@@ -20,16 +19,7 @@ export default async function applyDbFpAutoAssign(podId: string): Promise<number
     })),
     rules,
   );
-  const supabase = getSupabaseBrowserClient();
-  await Promise.all(
-    updates.map(async (u) => {
-      const {error} = await supabase
-        .from('fp_transaction')
-        .update({category_id: u.categoryId, confirmed: false})
-        .eq('id', u.transactionId)
-        .is('category_id', null);
-      throwIfSupabaseError(error);
-    }),
+  return applyDbFpAutoAssignUpdates(
+    updates.map((u) => ({transactionId: u.transactionId, categoryId: u.categoryId})),
   );
-  return updates.length;
 }
