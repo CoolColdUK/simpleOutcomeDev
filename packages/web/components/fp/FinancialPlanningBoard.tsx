@@ -414,6 +414,7 @@ export default function FinancialPlanningBoard({
       <FpAutoAssignPreviewDialog
         open={autoAssignOpen}
         podId={podId}
+        accounts={visibleAccounts}
         categories={sortedCategories}
         currency={currency}
         onClose={() => setAutoAssignOpen(false)}

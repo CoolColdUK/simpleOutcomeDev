@@ -5,6 +5,7 @@ import matchFpAutoAssignCategory, {
 
 export interface FpAutoAssignPreviewInputTx extends FpAutoAssignTarget {
   readonly id: string;
+  readonly accountId: string;
   readonly postedDate: string;
   readonly archived: boolean;
   readonly categoryId?: string;
@@ -12,6 +13,7 @@ export interface FpAutoAssignPreviewInputTx extends FpAutoAssignTarget {
 
 export interface FpAutoAssignPreviewRow {
   readonly transactionId: string;
+  readonly accountId: string;
   readonly postedDate: string;
   readonly description: string;
   readonly recipient: string;
@@ -37,6 +39,7 @@ export default function buildFpAutoAssignPreview(
       : [
           {
             transactionId: t.id,
+            accountId: t.accountId,
             postedDate: t.postedDate,
             description: t.description,
             recipient: t.recipient,

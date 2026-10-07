@@ -10,6 +10,7 @@ export default async function applyDbFpAutoAssign(podId: string): Promise<number
   const updates = buildFpAutoAssignPreview(
     transactions.map((t) => ({
       id: t.id,
+      accountId: t.accountId,
       postedDate: t.postedDate,
       description: t.description,
       recipient: t.recipient,

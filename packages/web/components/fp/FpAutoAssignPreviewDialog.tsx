@@ -20,11 +20,13 @@ import type {FpAutoAssignPreviewRow} from '@so/model';
 import applyDbFpAutoAssign from '@/lib/api/db/applyDbFpAutoAssign';
 import previewDbFpAutoAssign from '@/lib/api/db/previewDbFpAutoAssign';
 import formatFpMoney from '@/lib/fp/formatFpMoney';
+import type {DbFpAccount} from '@/lib/api/db/mapDbFpAccount';
 import type {DbFpCategory} from '@/lib/api/db/mapDbFpCategory';
 
 export interface FpAutoAssignPreviewDialogProps {
   readonly open: boolean;
   readonly podId: string;
+  readonly accounts: readonly DbFpAccount[];
   readonly categories: readonly DbFpCategory[];
   readonly currency: string;
   readonly onClose: () => void;
@@ -40,6 +42,7 @@ export default function FpAutoAssignPreviewDialog(props: FpAutoAssignPreviewDial
 
 function FpAutoAssignPreviewDialogBody({
   podId,
+  accounts,
   categories,
   currency,
   onClose,
@@ -50,6 +53,7 @@ function FpAutoAssignPreviewDialogBody({
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState('');
 
+  const accountName = (id: string) => accounts.find((a) => a.id === id)?.name ?? id;
   const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
 
   useEffect(() => {
@@ -79,7 +83,7 @@ function FpAutoAssignPreviewDialogBody({
     <DialogRoot open onOpenChange={(e) => !e.open && onClose()}>
       <DialogBackdrop />
       <DialogPositioner>
-        <DialogContent maxW="lg">
+        <DialogContent maxW="4xl">
           <DialogHeader>
             <DialogTitle>Re-run auto-assign rules</DialogTitle>
           </DialogHeader>
@@ -101,7 +105,9 @@ function FpAutoAssignPreviewDialogBody({
                     <Table.Header>
                       <Table.Row>
                         <Table.ColumnHeader>Date</Table.ColumnHeader>
+                        <Table.ColumnHeader>Account</Table.ColumnHeader>
                         <Table.ColumnHeader>Description</Table.ColumnHeader>
+                        <Table.ColumnHeader>Recipient</Table.ColumnHeader>
                         <Table.ColumnHeader>Amount</Table.ColumnHeader>
                         <Table.ColumnHeader>Category</Table.ColumnHeader>
                       </Table.Row>
@@ -110,7 +116,9 @@ function FpAutoAssignPreviewDialogBody({
                       {rows.map((row) => (
                         <Table.Row key={row.transactionId}>
                           <Table.Cell>{row.postedDate}</Table.Cell>
+                          <Table.Cell>{accountName(row.accountId)}</Table.Cell>
                           <Table.Cell>{row.description}</Table.Cell>
+                          <Table.Cell>{row.recipient === '' ? '—' : row.recipient}</Table.Cell>
                           <Table.Cell>{formatFpMoney(row.amount, currency)}</Table.Cell>
                           <Table.Cell>{categoryName(row.categoryId)}</Table.Cell>
                         </Table.Row>

@@ -6,14 +6,16 @@ describe('buildFpAutoAssignPreview', () => {
       [
         {
           id: 't1',
+          accountId: 'acc1',
           postedDate: '2026-01-01',
           description: 'NETFLIX',
-          recipient: '',
+          recipient: 'Netflix Inc',
           amount: -15.99,
           archived: false,
         },
         {
           id: 't2',
+          accountId: 'acc1',
           postedDate: '2026-01-02',
           description: 'SALARY',
           recipient: '',
@@ -23,6 +25,7 @@ describe('buildFpAutoAssignPreview', () => {
         },
         {
           id: 't3',
+          accountId: 'acc2',
           postedDate: '2026-01-03',
           description: 'UNKNOWN',
           recipient: '',
@@ -35,9 +38,10 @@ describe('buildFpAutoAssignPreview', () => {
     expect(rows).toEqual([
       {
         transactionId: 't1',
+        accountId: 'acc1',
         postedDate: '2026-01-01',
         description: 'NETFLIX',
-        recipient: '',
+        recipient: 'Netflix Inc',
         amount: -15.99,
         categoryId: 'c1',
       },
@@ -49,6 +53,7 @@ describe('buildFpAutoAssignPreview', () => {
       [
         {
           id: 't1',
+          accountId: 'acc1',
           postedDate: '2026-01-01',
           description: 'NETFLIX',
           recipient: '',

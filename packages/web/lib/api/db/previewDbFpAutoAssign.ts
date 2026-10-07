@@ -8,6 +8,7 @@ export default async function previewDbFpAutoAssign(podId: string): Promise<read
   return buildFpAutoAssignPreview(
     transactions.map((t) => ({
       id: t.id,
+      accountId: t.accountId,
       postedDate: t.postedDate,
       description: t.description,
       recipient: t.recipient,
