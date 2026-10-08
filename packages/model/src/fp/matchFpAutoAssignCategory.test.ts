@@ -21,6 +21,32 @@ describe('matchFpAutoAssignCategory', () => {
     ).toBe('c1');
   });
 
+  it('matches long description text copied from ledger description field', () => {
+    const description = 'SO Y K 40 POCKET MONEY SO';
+    expect(
+      matchFpAutoAssignCategory(
+        {description, recipient: '', amount: -40},
+        [{id: 'c1', filters: [`DESCRIPTION=${description}`]}],
+      ),
+    ).toBe('c1');
+    expect(
+      matchFpAutoAssignCategory(
+        {description, recipient: '', amount: -40},
+        [{id: 'c1', filters: ['DESCRIPTION=POCKET MONEY']}],
+      ),
+    ).toBe('c1');
+  });
+
+  it('does not match description rule against recipient field only', () => {
+    const text = 'SO Y K 40 POCKET MONEY SO';
+    expect(
+      matchFpAutoAssignCategory(
+        {description: '', recipient: text, amount: -40},
+        [{id: 'c1', filters: [`DESCRIPTION=${text}`]}],
+      ),
+    ).toBeUndefined();
+  });
+
   it('matches partial recipient', () => {
     expect(
       matchFpAutoAssignCategory(

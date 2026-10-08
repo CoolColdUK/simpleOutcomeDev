@@ -90,7 +90,7 @@ function FpAutoAssignPreviewDialogBody({
       const updates = rows
         .filter((row) => included.has(row.transactionId))
         .map((row) => ({transactionId: row.transactionId, categoryId: row.categoryId}));
-      await applyDbFpAutoAssignUpdates(updates);
+      await applyDbFpAutoAssignUpdates(updates, {confirmed: true});
       onApplied();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));

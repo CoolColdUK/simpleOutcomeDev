@@ -92,10 +92,18 @@ export default function FpTransactionTable({
               <Table.Cell whiteSpace="nowrap">{t.postedDate}</Table.Cell>
               <Table.Cell>{accountName(t.accountId)}</Table.Cell>
               <Table.Cell>
-                {t.description}
-                {t.parentId !== undefined ? ' (split)' : ''}
-                {t.splitPortionCount !== undefined ? ' (parent)' : ''}
-                {!t.confirmed && t.categoryId !== undefined ? ' · review' : ''}
+                <HStack gap={1} flexWrap="wrap" align="center">
+                  <Text as="span">{t.description}</Text>
+                  {t.parentId !== undefined ? (
+                    <Badge size="sm" variant="subtle" colorPalette="blue">Split</Badge>
+                  ) : null}
+                  {t.splitPortionCount !== undefined ? (
+                    <Badge size="sm" variant="subtle" colorPalette="purple">Parent</Badge>
+                  ) : null}
+                  {!t.confirmed && t.categoryId !== undefined ? (
+                    <Badge size="sm" variant="subtle" colorPalette="orange">Review</Badge>
+                  ) : null}
+                </HStack>
               </Table.Cell>
               <Table.Cell>{t.recipient === '' ? '—' : t.recipient}</Table.Cell>
               <Table.Cell textAlign="end" whiteSpace="nowrap">

@@ -214,8 +214,12 @@ export default function FpCategoryDialogAutoAssign({filters, onChange}: FpCatego
           </Stack>
         )}
         <Field.HelperText>
-          Each rule is one string. Fields in a rule are AND; multiple rules are OR. Description and
-          recipient are partial matches. Amount can be a single comparison or an inclusive min–max range.
+          Each rule is one string. Fields in a rule are AND; multiple rules are OR. Description rules
+          match the ledger Description column only; recipient rules match the Recipient column (not
+          the Split / Review tags shown beside description). Partial,
+          case-insensitive contains. Amount can be a single comparison or an inclusive min–max range.
+          Auto-assign skips rows that already have a category, and skips when more than one category
+          matches.
         </Field.HelperText>
       </Field.Root>
       {building ? (
