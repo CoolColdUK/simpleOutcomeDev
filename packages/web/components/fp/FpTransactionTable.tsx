@@ -1,7 +1,8 @@
 'use client';
 
-import {useState} from 'react';
-import {Badge, HStack, IconButton, Stack, Table, Text} from '@chakra-ui/react';
+import {useMemo, useState} from 'react';
+import {Badge, HStack, IconButton, NativeSelect, Stack, Table, Text} from '@chakra-ui/react';
+import {listFpAutoAssignCategoryMatches, type FpCategoryRule} from '@so/model';
 import {ArchiveIcon, RestoreIcon, SplitIcon, TagsIcon} from '@so/component';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import formatFpMoney from '@/lib/fp/formatFpMoney';
@@ -64,6 +65,29 @@ export default function FpTransactionTable({
 }: FpTransactionTableProps) {
   const [categoryDialogTx, setCategoryDialogTx] = useState<DbFpTransaction | undefined>(undefined);
 
+  const categoryRules = useMemo(
+    (): readonly FpCategoryRule[] =>
+      categories.map((c) => ({id: c.id, filters: c.filters, isGroup: c.isGroup})),
+    [categories],
+  );
+
+  const ambiguousMatchesByTxId = useMemo(() => {
+    const map: Record<string, readonly string[]> = {};
+    transactions.forEach((t) => {
+      if (t.categoryId !== undefined) {
+        return;
+      }
+      const matches = listFpAutoAssignCategoryMatches(
+        {description: t.description, recipient: t.recipient, amount: t.amount},
+        categoryRules,
+      );
+      if (matches.length > 1) {
+        map[t.id] = matches;
+      }
+    });
+    return map;
+  }, [transactions, categoryRules]);
+
   const accountName = (id: string) => accounts.find((a) => a.id === id)?.name ?? id;
   const categoryName = (id: string | undefined) =>
     id === undefined ? 'Uncategorised' : (categories.find((c) => c.id === id)?.name ?? id);
@@ -110,10 +134,31 @@ export default function FpTransactionTable({
                 <FpTransactionAmountCell amount={t.amount} currency={currency} />
               </Table.Cell>
               <Table.Cell>
-                <HStack gap={1} maxW="220px">
-                  <Text fontSize="sm" truncate flex="1" minW={0}>
-                    {categoryName(t.categoryId)}
-                  </Text>
+                <HStack gap={1} maxW="260px">
+                  {ambiguousMatchesByTxId[t.id] !== undefined ? (
+                    <NativeSelect.Root size="sm" flex="1" minW={0}>
+                      <NativeSelect.Field
+                        value=""
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value !== '') {
+                            void onAssignCategory(t.id, value);
+                          }
+                        }}
+                      >
+                        <option value="">Multiple matches — choose</option>
+                        {ambiguousMatchesByTxId[t.id].map((id) => (
+                          <option key={id} value={id}>
+                            {categoryName(id)}
+                          </option>
+                        ))}
+                      </NativeSelect.Field>
+                    </NativeSelect.Root>
+                  ) : (
+                    <Text fontSize="sm" truncate flex="1" minW={0}>
+                      {categoryName(t.categoryId)}
+                    </Text>
+                  )}
                   {canUpdate ? (
                     <AppIconTooltip label="Change category">
                       <IconButton

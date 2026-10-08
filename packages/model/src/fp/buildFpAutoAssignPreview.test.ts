@@ -37,6 +37,7 @@ describe('buildFpAutoAssignPreview', () => {
     );
     expect(rows).toEqual([
       {
+        kind: 'unique',
         transactionId: 't1',
         accountId: 'acc1',
         postedDate: '2026-01-01',
@@ -44,6 +45,38 @@ describe('buildFpAutoAssignPreview', () => {
         recipient: 'Netflix Inc',
         amount: -15.99,
         categoryId: 'c1',
+      },
+    ]);
+  });
+
+  it('returns ambiguous rows when multiple categories match', () => {
+    const rows = buildFpAutoAssignPreview(
+      [
+        {
+          id: 't1',
+          accountId: 'acc1',
+          postedDate: '2026-01-01',
+          description: 'NETFLIX SUB',
+          recipient: '',
+          amount: -15.99,
+          archived: false,
+        },
+      ],
+      [
+        {id: 'c1', filters: ['DESCRIPTION=net']},
+        {id: 'c2', filters: ['DESCRIPTION=flix']},
+      ],
+    );
+    expect(rows).toEqual([
+      {
+        kind: 'ambiguous',
+        transactionId: 't1',
+        accountId: 'acc1',
+        postedDate: '2026-01-01',
+        description: 'NETFLIX SUB',
+        recipient: '',
+        amount: -15.99,
+        categoryIds: ['c1', 'c2'],
       },
     ]);
   });

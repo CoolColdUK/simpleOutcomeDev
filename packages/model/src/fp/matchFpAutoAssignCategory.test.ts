@@ -1,4 +1,4 @@
-import matchFpAutoAssignCategory from './matchFpAutoAssignCategory';
+import matchFpAutoAssignCategory, {listFpAutoAssignCategoryMatches} from './matchFpAutoAssignCategory';
 
 const tx = {description: 'NETFLIX', recipient: '', amount: -15.99};
 
@@ -63,6 +63,12 @@ describe('matchFpAutoAssignCategory', () => {
         {id: 'c2', filters: ['DESCRIPTION=flix']},
       ]),
     ).toBeUndefined();
+    expect(
+      listFpAutoAssignCategoryMatches(tx, [
+        {id: 'c1', filters: ['DESCRIPTION=net']},
+        {id: 'c2', filters: ['DESCRIPTION=flix']},
+      ]),
+    ).toEqual(['c1', 'c2']);
   });
 
   it('requires amount condition when the rule has one', () => {

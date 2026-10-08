@@ -43,15 +43,22 @@ function filterMatches(tx: FpAutoAssignTarget, filter: FpCategoryFilter): boolea
   return true;
 }
 
+export function listFpAutoAssignCategoryMatches(
+  tx: FpAutoAssignTarget,
+  categories: readonly FpCategoryRule[],
+): readonly string[] {
+  return categories
+    .filter((cat) => cat.isGroup !== true && cat.filters.some((f) => filterMatches(tx, f)))
+    .map((cat) => cat.id);
+}
+
 export default function matchFpAutoAssignCategory(
   tx: FpAutoAssignTarget,
   categories: readonly FpCategoryRule[],
 ): string | undefined {
-  const matched = categories.filter(
-    (cat) => cat.isGroup !== true && cat.filters.some((f) => filterMatches(tx, f)),
-  );
+  const matched = listFpAutoAssignCategoryMatches(tx, categories);
   if (matched.length !== 1) {
     return undefined;
   }
-  return matched[0]?.id;
+  return matched[0];
 }

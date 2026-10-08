@@ -19,7 +19,8 @@ export default async function applyDbFpAutoAssign(podId: string): Promise<number
     })),
     rules,
   );
-  return applyDbFpAutoAssignUpdates(
-    updates.map((u) => ({transactionId: u.transactionId, categoryId: u.categoryId})),
-  );
+  const uniqueUpdates = updates
+    .filter((row) => row.kind === 'unique')
+    .map((row) => ({transactionId: row.transactionId, categoryId: row.categoryId}));
+  return applyDbFpAutoAssignUpdates(uniqueUpdates, {confirmed: false});
 }

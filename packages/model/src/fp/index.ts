@@ -39,10 +39,15 @@ export {default as matchFpParserIdentifier} from './matchFpParserIdentifier';
 export {default as fpDuplicateKey} from './fpDuplicateKey';
 export type {FpDuplicateFields} from './fpDuplicateKey';
 export {default as fpIsDuplicate} from './fpIsDuplicate';
-export {default as matchFpAutoAssignCategory} from './matchFpAutoAssignCategory';
+export {default as matchFpAutoAssignCategory, listFpAutoAssignCategoryMatches} from './matchFpAutoAssignCategory';
 export type {FpCategoryFilter, FpCategoryRule, FpAutoAssignTarget} from './matchFpAutoAssignCategory';
 export {default as buildFpAutoAssignPreview} from './buildFpAutoAssignPreview';
-export type {FpAutoAssignPreviewInputTx, FpAutoAssignPreviewRow} from './buildFpAutoAssignPreview';
+export type {
+  FpAutoAssignPreviewInputTx,
+  FpAutoAssignPreviewRow,
+  FpAutoAssignPreviewRowAmbiguous,
+  FpAutoAssignPreviewRowUnique,
+} from './buildFpAutoAssignPreview';
 export type {FpParsedAutoAssignRule} from './fpParsedAutoAssignRule';
 export {default as matchesFpAutoAssignAmount} from './matchesFpAutoAssignAmount';
 export {default as parseFpAutoAssignRule} from './parseFpAutoAssignRule';
