@@ -49,7 +49,7 @@ export default function buildFpAutoAssignPreview(
   categories: readonly FpCategoryRule[],
 ): readonly FpAutoAssignPreviewRow[] {
   const rules = categories.map((c) => ({id: c.id, filters: c.filters, isGroup: c.isGroup}));
-  return transactions.flatMap((t) => {
+  return transactions.flatMap((t): readonly FpAutoAssignPreviewRow[] => {
     if (t.archived || t.categoryId !== undefined) {
       return [];
     }
