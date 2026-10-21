@@ -62,13 +62,13 @@ function parsePodGrant(input: unknown): ApiKeyPodGrant | undefined {
   if (unknown !== undefined) {
     return undefined;
   }
-  const todo = input.todo === undefined ? undefined : parseActions(input.todo);
-  const shopping = input.shopping === undefined ? undefined : parseActions(input.shopping);
-  const fp = input.fp === undefined ? undefined : parseFpGrant(input.fp);
-  if ((input.todo !== undefined && todo === undefined) || (input.shopping !== undefined && shopping === undefined)) {
+  const todo = input['todo'] === undefined ? undefined : parseActions(input['todo']);
+  const shopping = input['shopping'] === undefined ? undefined : parseActions(input['shopping']);
+  const fp = input['fp'] === undefined ? undefined : parseFpGrant(input['fp']);
+  if ((input['todo'] !== undefined && todo === undefined) || (input['shopping'] !== undefined && shopping === undefined)) {
     return undefined;
   }
-  if (input.fp !== undefined && fp === undefined) {
+  if (input['fp'] !== undefined && fp === undefined) {
     return undefined;
   }
   return {
@@ -79,20 +79,20 @@ function parsePodGrant(input: unknown): ApiKeyPodGrant | undefined {
 }
 
 function spaceScoped(input: Record<string, unknown>): Pick<ApiKeyPermissions, 'space' | 'group' | 'contact' | 'profile'> | undefined {
-  const space = input.space === undefined ? undefined : parseActions(input.space);
-  const group = input.group === undefined ? undefined : parseActions(input.group);
-  const contact = input.contact === undefined ? undefined : parseActions(input.contact);
-  const profile = input.profile === undefined ? undefined : parseActions(input.profile);
-  if (input.space !== undefined && space === undefined) {
+  const space = input['space'] === undefined ? undefined : parseActions(input['space']);
+  const group = input['group'] === undefined ? undefined : parseActions(input['group']);
+  const contact = input['contact'] === undefined ? undefined : parseActions(input['contact']);
+  const profile = input['profile'] === undefined ? undefined : parseActions(input['profile']);
+  if (input['space'] !== undefined && space === undefined) {
     return undefined;
   }
-  if (input.group !== undefined && group === undefined) {
+  if (input['group'] !== undefined && group === undefined) {
     return undefined;
   }
-  if (input.contact !== undefined && contact === undefined) {
+  if (input['contact'] !== undefined && contact === undefined) {
     return undefined;
   }
-  if (input.profile !== undefined && profile === undefined) {
+  if (input['profile'] !== undefined && profile === undefined) {
     return undefined;
   }
   return {
@@ -119,16 +119,16 @@ export default function safeParseApiKeyPermissions(
     return {ok: false, message: 'Invalid permission actions'};
   }
   if (podIds.length === 0) {
-    if (input.pods !== undefined) {
+    if (input['pods'] !== undefined) {
       return {ok: false, message: 'Per-pod grants require a pod allowlist'};
     }
-    const todo = input.todo === undefined ? undefined : parseActions(input.todo);
-    const shopping = input.shopping === undefined ? undefined : parseActions(input.shopping);
-    const fp = input.fp === undefined ? undefined : parseFpGrant(input.fp);
-    if ((input.todo !== undefined && todo === undefined) || (input.shopping !== undefined && shopping === undefined)) {
+    const todo = input['todo'] === undefined ? undefined : parseActions(input['todo']);
+    const shopping = input['shopping'] === undefined ? undefined : parseActions(input['shopping']);
+    const fp = input['fp'] === undefined ? undefined : parseFpGrant(input['fp']);
+    if ((input['todo'] !== undefined && todo === undefined) || (input['shopping'] !== undefined && shopping === undefined)) {
       return {ok: false, message: 'Invalid permission actions'};
     }
-    if (input.fp !== undefined && fp === undefined) {
+    if (input['fp'] !== undefined && fp === undefined) {
       return {ok: false, message: 'Invalid financial planning permissions'};
     }
     return {
@@ -145,11 +145,12 @@ export default function safeParseApiKeyPermissions(
   if (stray !== undefined) {
     return {ok: false, message: 'Allowlisted keys keep feature actions on each pod'};
   }
-  if (!isRecord(input.pods)) {
+  const podGrants = input['pods'];
+  if (!isRecord(podGrants)) {
     return {ok: false, message: 'Per-pod grants are required when an allowlist is set'};
   }
-  const ids = Object.keys(input.pods);
-  const missing = podIds.find((podId) => input.pods !== undefined && !Object.prototype.hasOwnProperty.call(input.pods, podId));
+  const ids = Object.keys(podGrants);
+  const missing = podIds.find((podId) => !Object.prototype.hasOwnProperty.call(podGrants, podId));
   if (missing !== undefined || ids.length !== podIds.length) {
     return {ok: false, message: 'Each allowlisted pod needs its own grant'};
   }
@@ -158,7 +159,7 @@ export default function safeParseApiKeyPermissions(
     return {ok: false, message: 'Pod grant id is not a uuid'};
   }
   const grants = ids.map((podId) => {
-    const grant = parsePodGrant((input.pods as Record<string, unknown>)[podId]);
+    const grant = parsePodGrant(podGrants[podId]);
     return grant === undefined ? undefined : ([podId, grant] as const);
   });
   if (grants.some((grant) => grant === undefined)) {
