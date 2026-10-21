@@ -133,15 +133,7 @@ function actionsFromCells(cells: ApiKeyMatrixCells): readonly ApiKeyAction[] {
 }
 
 function fpGrant(actions: readonly ApiKeyAction[]): ApiKeyFpGrant {
-  return {
-    account: actions,
-    category: actions,
-    transaction: actions,
-    parser: actions,
-    import: actions,
-    bill_split: actions,
-    settings: actions,
-  };
+  return Object.fromEntries(FP_RESOURCES.map((resource) => [resource, actions]));
 }
 
 function podGrant(row: ApiKeyMatrixPodRow): ApiKeyPodGrant | undefined {
