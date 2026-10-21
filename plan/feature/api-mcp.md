@@ -20,7 +20,7 @@ This is a **plan / requirements** document. User-scoped keys are already impleme
 
 1. Users create and manage **API keys** (create / list / revoke; secret shown once) from **account settings**.
 2. **REST** `/api/...` and **MCP** tools call the **same** service functions, Valibot schemas, and authz.
-3. Space, group, and todo are already on REST and hosted MCP. The next implementation revises the key matrix (below) and adds **financial_planning** accounts, transactions, categories, parsers, and imports. **shopping_list** stays a grantable pod resource and gets no routes until that product exists. Contact and profile stay parked.
+3. Space, group, and todo are already on REST and hosted MCP. The next implementation revises the key matrix (below) and adds **financial_planning** accounts, transactions, categories, parsers, and imports. Contact and profile stay parked.
 4. MCP tools are organised by pod `FeatureKind`. **Permissions are per pod** the owner can access, including pods in more than one space. `space` and `group` are granted per space on the same key.
 
 ---
@@ -48,7 +48,6 @@ This is a **plan / requirements** document. User-scoped keys are already impleme
 - Streaming chat over MCP
 - Shipping bank parser presets or Open Banking
 - A second API-key editor on space settings
-- Inventing a shopping-list schema, services, or routes in the next implementation PR
 
 ---
 
@@ -61,7 +60,6 @@ Align API key **resources** with model packages and `FeatureKind`:
 | `space` | space route / space admin | Per space. The space **header row** in the pod table. Stored as `spaces[spaceId].space`. |
 | `group` | people / member and role admin for that space | Per space. The **Group** row under that space header. Invite, change roles, and remove members, **without** full space admin. Stored as `spaces[spaceId].group`. |
 | `todo` | `todo_list` | One grant on that pod (`pods[podId].todo`) |
-| `shopping` | `shopping_list` | One grant on that pod (`pods[podId].shopping`). No product tables or routes yet (see current state). |
 | `fp` | `financial_planning` | One matrix row per pod (`pods[podId].fp`). Stored as the existing nested fp grant. The row’s CRUD checkboxes write that action onto `account`, `category`, `transaction`, `parser`, `import`, `bill_split`, and `settings`. They do not write `delete_all`. Calls still need the nested grant **and** the owner-custom role matrix. |
 | `contact` | contact | Parked. Not a matrix row until a product need |
 | `profile` | profile | Parked. If added later, one account-level row, default off |
@@ -84,7 +82,6 @@ Align API key **resources** with model packages and `FeatureKind`:
   pods: {
     [podId]: {
       todo?: ApiKeyAction[]       // todo_list pods
-      shopping?: ApiKeyAction[]   // shopping_list pods
       fp?: ApiKeyFpGrant          // financial_planning pods
     }
   }
@@ -120,7 +117,7 @@ Stale pod or space ids (deleted space, lost membership, archived pod) stay in JS
 
 ### Introspection
 
-- `GET /api/api-keys/me` and MCP `get_api_key_permissions` → **effective** capabilities for this key across the pods and spaces it grants, after membership, `featureKind`, and role-matrix intersection. The payload is `{ principalUserId, spaces: [{ spaceId, space, group }], pods: [{ podId, spaceId, featureKind, todo?, shopping?, fp? }] }`. Empty effective sections are omitted.
+- `GET /api/api-keys/me` and MCP `get_api_key_permissions` → **effective** capabilities for this key across the pods and spaces it grants, after membership, `featureKind`, and role-matrix intersection. The payload is `{ principalUserId, spaces: [{ spaceId, space, group }], pods: [{ podId, spaceId, featureKind, todo?, fp? }] }`. Empty effective sections are omitted.
 
 ---
 
@@ -163,13 +160,11 @@ Thin Next.js routes under `/api/...` that:
    - accounts → transactions → categories
    - parsers and imports (they are already solid; see current state)
    - each call: nested `fp` grant ∩ role matrix
-7. **shopping_list** — no routes. Blocked until a shopping product exists.
 
 ### Later
 
-8. **contact** / **profile** if a product need appears.
-9. Remaining fp surfaces that already exist in the app and are **not** in the next PR: bill split, settings writes, delete-all, auto-assign, reports.
-10. Shopping routes, only after shopping tables and services exist.
+7. **contact** / **profile** if a product need appears.
+8. Remaining fp surfaces that already exist in the app and are **not** in the next PR: bill split, settings writes, delete-all, auto-assign, reports.
 
 Prefer list filters + pagination over bulk endpoints in v1.
 
@@ -241,7 +236,7 @@ There is no second table and no per-space section under the pod matrix. The head
 - Key with `fp.transaction.delete` still fails when the owner’s pod role cannot delete
 - A grant on pod A cannot touch pod B, including a pod in another space
 - Empty `pods` and `spaces` cannot call any pod, space, or group route
-- One key can grant a todo pod in one space and a shopping pod in another (the shopping grant is stored; no shopping route exists yet)
+- One key can grant a todo pod in one space and an fp pod in another
 - Todo MCP create and REST create produce identical DB rows and validation errors
 - `get_api_key_permissions` does not claim actions the role matrix denies
 - Create form opens all off
@@ -263,7 +258,7 @@ There is no second table and no per-space section under the pod matrix. The head
 1. **Same code** for REST and MCP.
 2. **Hosted MCP only** — no local `packages/mcp` / stdio package.
 3. **Call-time** deny; full tool catalog at register.
-4. Include **`shopping`** in the resource matrix (`pods[podId].shopping`). Add **`group`** next to `space`. `group` is people, member, and role admin for that space (invite, change roles, remove members) without full space admin, stored as `spaces[spaceId].group`. Shopping has no routes until a shopping product exists.
+4. Add **`group`** next to `space`. `group` is people, member, and role admin for that space (invite, change roles, remove members) without full space admin, stored as `spaces[spaceId].group`.
 5. Keys are **user-scoped** (`ownerUserId`). One key may grant pods in several spaces. Drop `space_id`.
 6. Pod access is a **per-pod grant** (`podId` → resource actions; fp nested). A missing grant allows nothing. Create UI defaults to **all off**. Drop the pod allowlist and the “empty allowlist means every pod” rule.
 7. `featureKind` gates which tools apply to a pod. The matrix still shows **one row per pod**; the stored resource follows that pod’s `featureKind`.
@@ -271,12 +266,12 @@ There is no second table and no per-space section under the pod matrix. The head
 9. Principal = **key owner user id**.
 10. Revoke checked **every call**.
 11. Introspection = **effective** rights.
-12. Keys UI stays on **`AccountSettingsPage`**. Space settings keeps the one-line pointer. The next implementation PR, after this plan is approved, ships the matrix UX in this revision and the financial-planning slice in “Current state”. It does not ship shopping routes.
+12. Keys UI stays on **`AccountSettingsPage`**. Space settings keeps the one-line pointer. The next implementation PR, after this plan is approved, ships the matrix UX in this revision and the financial-planning slice in “Current state”.
 13. Presets are only **All on**, **All off**, and **All read**. All read checks Read on every visible pod row and every space header and Group row, and turns Create, Update, and Delete off. Todo read/write, Todo read, FP read, Space read, and Group read are withdrawn.
 14. One pod table, pods **grouped by space**. A full-width **space header** (label = space name, different colour) writes `spaces[spaceId].space`. The **Group** row directly under it (same tint family, label Group) writes `spaces[spaceId].group`. Pod rows under that write `pods[podId]`. Column toggles apply to pod rows only. The space header and the Group row have their own row toggle and cells. No separate space-permission table.
 15. First-slice keys: **revoke active rows and recreate**. Do not translate empty allowlists into pod grants. Already migrated.
 16. Fp row CRUD still writes the nested resources listed in the domain table, including `bill_split` and `settings`, and still omits `delete_all`. The next PR exposes routes only for accounts, transactions, categories, parsers, and imports.
-17. Parked: Telegram, bulk import tools, billing, EndureTrade-style local stdio MCP, contact, profile, and a shopping product.
+17. Parked: Telegram, bulk import tools, billing, EndureTrade-style local stdio MCP, contact, and profile.
 
 ---
 
@@ -298,7 +293,6 @@ Checked against the repo. This is the slice the **next implementation PR** shoul
 
 - User-scoped keys and `AccountApiKeysPanel`. Presets in code today: All on, All off, Todo read and write, Todo read only, Financial planning read only, Space read only, Group read only. The pod grid is one table (`{spaceName} / {podName}`). Space and Group are **separate tables under that grid**, one section per space. This plan replaces that preset list and that second table.
 - Hosted `POST /api/mcp` and REST via the agent dispatcher. Catalog: `get_api_key_permissions`; space read/update; list pods; group members and invites (no remove member); todo columns, cards, comments. Tags are fields on the card. Card image upload is not an agent route. Server routes use `SUPABASE_SECRET_KEY`. There is no `packages/mcp` package.
-- **shopping_list:** `FeatureKind.SHOPPING_LIST` is in the catalog and `create_pod` accepts it. There is no shopping table in `supabase/migrations`, no shopping model package, and no shopping db service. `PodWorkspace` shows “coming soon” for that feature. **Blocked.** The next PR does not add shopping tables or routes. A shopping pod row may still store `pods[podId].shopping`.
 - **financial_planning:** the product exists. Migrations start at `20260905010000_financial_planning.sql` (plus import logs, same-file duplicates, and category groups). Tables include `fp_setting`, `fp_account`, `fp_category`, `fp_parser`, `fp_import`, `fp_import_file`, and `fp_transaction`. Bill split is a parent transaction plus children, not its own table. `@so/model` `src/fp` covers the permission matrix, CSV parse, import collect, and related helpers, with tests. `packages/web/lib/api/db` has list/create/update/delete for accounts, categories, transactions, and parsers, plus import create/list/undo and hash checks. `FinancialPlanningBoard` is the workspace. **No fp REST or MCP routes** are registered. Nested fp authz ∩ `fpCan` is already implemented and tested.
 - Parsers and imports are solid enough to expose: parser builder UI, CSV mapping in the model, import file hash, row logs, and undo. Bank presets and Open Banking stay out.
 
@@ -313,10 +307,15 @@ Checked against the repo. This is the slice the **next implementation PR** shoul
   - imports — list, create, undo
 - Same authz as today: the call’s `fp` resource and action must be on `pods[podId].fp`, and the owner’s role matrix must allow it. Fail closed.
 - Do not add routes for bill split, settings, delete-all, auto-assign, or reports in that PR.
-- Do not add shopping routes.
+
+---
+
+## Future note
+
+`FeatureKind.SHOPPING_LIST` is already a reserved pod type: the catalog includes it and `create_pod` accepts it. If a pod of that kind is visible, the matrix shows an ordinary pod row for it, and the existing `pods[podId].shopping` field on the grant type can store those cells.
 
 ---
 
 ## Success
 
-An agent can, with one user-scoped API key: connect **hosted** MCP only, CRUD todos on a granted `todo_list` pod (including pods in other spaces), manage a space’s members and invites when that space’s `group` row is granted, and read or write fp accounts, transactions, categories, parsers, and imports only where both the nested key grant and the owner’s role allow — with the same business logic behind REST and MCP. A shopping pod can be granted on the key and still has nothing to call until a shopping product exists.
+An agent can, with one user-scoped API key: connect **hosted** MCP only, CRUD todos on a granted `todo_list` pod (including pods in other spaces), manage a space’s members and invites when that space’s `group` row is granted, and read or write fp accounts, transactions, categories, parsers, and imports only where both the nested key grant and the owner’s role allow — with the same business logic behind REST and MCP.
