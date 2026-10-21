@@ -8,6 +8,7 @@ import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbSpace from '@/lib/api/db/getDbSpace';
 import getDbSpaceMemberRole from '@/lib/api/db/getDbSpaceMemberRole';
 import AppPageLoadingState from '@/components/app/AppPageLoadingState';
+import SpaceApiKeysPanel from '@/components/app/SpaceApiKeysPanel';
 import SpaceSettingsPanel from '@/components/app/SpaceSettingsPanel';
 import SpaceMembersPanel from '@/components/app/SpaceMembersPanel';
 
@@ -33,15 +34,11 @@ export default function SpaceSettingsPage() {
       setReady(true);
       return;
     }
+    setError('');
     setName(space.name);
     setDescription(space.description);
     setRole(memberRole);
-    if (!canManageSpace(memberRole)) {
-      setError('Admin or owner role is required');
-      setReady(true);
-      return;
-    }
-    setAllowed(true);
+    setAllowed(canManageSpace(memberRole));
     setReady(true);
   }, [spaceId, user]);
 
@@ -67,6 +64,9 @@ export default function SpaceSettingsPage() {
         <Alert.Root status="error">
           <Alert.Description>{error}</Alert.Description>
         </Alert.Root>
+      ) : null}
+      {spaceId !== undefined && user !== undefined && error === '' ? (
+        <SpaceApiKeysPanel spaceId={spaceId} userId={user.id} spaceRole={role} />
       ) : null}
       {allowed && spaceId !== undefined ? (
         <>
