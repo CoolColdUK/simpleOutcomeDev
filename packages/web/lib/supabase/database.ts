@@ -76,8 +76,17 @@ export interface Database {
           disabled_at: string | null;
           consumed_at: string | null;
         };
-        Insert: Record<string, never>;
-        Update: Record<string, never>;
+        Insert: {
+          space_id: string;
+          token_hash: string;
+          token_prefix: string;
+          max_uses: number;
+          expires_at?: string | null;
+          created_by: string;
+        };
+        Update: {
+          disabled_at?: string | null;
+        };
         Relationships: [];
       };
       space_invite_use: {
@@ -118,6 +127,43 @@ export interface Database {
         };
         Insert: Record<string, never>;
         Update: Record<string, never>;
+        Relationships: [];
+      };
+      api_key: {
+        Row: {
+          id: string;
+          space_id: string;
+          owner_user_id: string;
+          name: string;
+          key_prefix: string;
+          secret_hash: string;
+          pod_ids: string[];
+          permissions: Record<string, unknown>;
+          status: string;
+          expires_at: string | null;
+          last_used_at: string | null;
+          revoked_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          space_id: string;
+          owner_user_id: string;
+          name: string;
+          key_prefix: string;
+          secret_hash: string;
+          pod_ids?: string[];
+          permissions: Record<string, unknown>;
+          status?: string;
+          expires_at?: string | null;
+          last_used_at?: string | null;
+          revoked_at?: string | null;
+        };
+        Update: {
+          status?: string;
+          last_used_at?: string | null;
+          revoked_at?: string | null;
+        };
         Relationships: [];
       };
       todo_column: {
@@ -510,6 +556,27 @@ export interface Database {
       undo_fp_import: {Args: {p_import_id: string}; Returns: undefined};
       delete_all_fp_transactions: {Args: {p_pod_id: string}; Returns: undefined};
       sum_fp_account_balance: {Args: {p_account_id: string}; Returns: number};
+      create_api_key: {
+        Args: {
+          p_space_id: string;
+          p_name: string;
+          p_pod_ids: string[];
+          p_permissions: Record<string, unknown>;
+          p_expires_at?: string | null;
+        };
+        Returns: {id: string; secret: string; prefix: string};
+      };
+      revoke_api_key: {Args: {p_id: string}; Returns: undefined};
+      create_agent_space_invite: {
+        Args: {
+          p_space_id: string;
+          p_token: string;
+          p_max_uses: number;
+          p_expires_at: string;
+          p_created_by: string;
+        };
+        Returns: string;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

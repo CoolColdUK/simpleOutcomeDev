@@ -180,6 +180,14 @@ Prefer list filters + pagination over bulk endpoints in v1.
 
 ---
 
+## Implementation notes (this slice)
+
+- Agent REST and `POST /api/mcp` use a server-only `SUPABASE_SECRET_KEY` (see `packages/web/env.example`). The settings UI creates and revokes keys with the signed-in session. There is no `packages/mcp` stdio package.
+- The hosted tool catalog is the implemented surface: todo columns, cards, comments, and tags; space read/update; group members and invites; `get_api_key_permissions`. Shopping has no tables yet. Financial planning authz is nested and tested; fp routes wait on that product. Card image upload is not in this API.
+- Empty allowlist still means every pod the owner can access. Actions stay explicit. A set allowlist requires a grant object per pod.
+
+---
+
 ## Success
 
 An agent can, with one space-scoped API key: connect **hosted** MCP only, list only pods it may access, CRUD todos on a specific `todo_list` pod under that pod’s grants, manage space **group**/membership when `group` is granted, and later read/write fp data only where both the key and the owner’s role allow — without any business logic living only in MCP or only in REST.
