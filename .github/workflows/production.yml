@@ -83,6 +83,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Test
+        run: npm test
+
       - name: Bump version with Lerna
         run: |
           RELEASE_TYPE="${{ inputs.release_type || 'minor' }}"

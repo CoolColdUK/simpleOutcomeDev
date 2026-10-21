@@ -1,0 +1,54 @@
+# Pull request checks only. Does not bump versions, push migrations, or deploy.
+name: CI
+'on':
+  pull_request:
+
+jobs:
+  lint_and_test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      HUSKY: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://npm.pkg.github.com'
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: npm-release-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Configure npm for private packages
+        run: |
+          echo "@coolcolduk:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify TypeScript major version
+        run: |
+          TS_VERSION=$(node -p "require('typescript/package.json').version")
+          echo "TypeScript version: $TS_VERSION"
+          case "$TS_VERSION" in
+            6.*) ;;
+            *)
+              echo "Expected TypeScript 6.x in CI but found $TS_VERSION"
+              exit 1
+              ;;
+          esac
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
