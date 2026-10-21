@@ -114,8 +114,23 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
-        Insert: Record<string, never>;
-        Update: Record<string, never>;
+        Insert: {
+          id?: string;
+          space_id: string;
+          feature: string;
+          name?: string | null;
+          description?: string | null;
+          visibility: string;
+          status?: string;
+          created_by: string;
+        };
+        Update: {
+          name?: string | null;
+          description?: string | null;
+          visibility?: string;
+          status?: string;
+          updated_at?: string;
+        };
         Relationships: [];
       };
       pod_member: {
@@ -125,8 +140,14 @@ export interface Database {
           role: string;
           created_at: string;
         };
-        Insert: Record<string, never>;
-        Update: Record<string, never>;
+        Insert: {
+          pod_id: string;
+          user_id: string;
+          role: string;
+        };
+        Update: {
+          role?: string;
+        };
         Relationships: [];
       };
       api_key: {
@@ -480,8 +501,16 @@ export interface Database {
           created_at: string;
           resolved_at: string | null;
         };
-        Insert: Record<string, never>;
-        Update: Record<string, never>;
+        Insert: {
+          id?: string;
+          pod_id: string;
+          user_id: string;
+          status?: string;
+        };
+        Update: {
+          status?: string;
+          resolved_at?: string | null;
+        };
         Relationships: [];
       };
     };
@@ -571,6 +600,25 @@ export interface Database {
         };
         Returns: string;
       };
+      create_agent_space: {Args: {p_actor: string; p_name: string; p_description?: string}; Returns: string};
+      create_agent_pod: {
+        Args: {
+          p_actor: string;
+          p_space_id: string;
+          p_feature: string;
+          p_name: string;
+          p_visibility: string;
+          p_description?: string;
+        };
+        Returns: string;
+      };
+      join_agent_space_with_invite: {Args: {p_actor: string; p_token: string}; Returns: string};
+      create_agent_fp_import: {
+        Args: {p_actor: string; p_pod_id: string; p_parser_id: string | null; p_account_id: string; p_files: unknown};
+        Returns: string;
+      };
+      undo_agent_fp_import: {Args: {p_pod_id: string; p_import_id: string}; Returns: undefined};
+      delete_agent_all_fp_transactions: {Args: {p_pod_id: string}; Returns: undefined};
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

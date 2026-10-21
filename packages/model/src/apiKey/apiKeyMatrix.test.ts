@@ -8,6 +8,7 @@ import {
   apiKeyMatrixForPreset,
   createApiKeyMatrix,
   permissionsFromApiKeyMatrix,
+  toggleApiKeyMatrixDeleteAll,
   toggleApiKeyMatrixPodCell,
   toggleApiKeyMatrixPodColumn,
   toggleApiKeyMatrixPodRow,
@@ -36,7 +37,8 @@ describe('api key permission matrix', () => {
     const matrix = createApiKeyMatrix(pods, spaces);
     expect(matrix.pods.map((row) => `${row.spaceName} / ${row.podName}`)).toEqual(['Family / Groceries', 'Work / Errands']);
     expect(matrix.spaces.map((section) => section.spaceName)).toEqual(['Family', 'Work']);
-    expect(matrix.pods.every((row) => apiKeyMatrixCellsCheck(row.cells) === 'off')).toBe(true);
+    expect(matrix.pods.every((row) => apiKeyMatrixCellsCheck(row.cells) === 'off' && !row.deleteAll)).toBe(true);
+    expect(matrix.profile).toEqual({read: false, update: false});
     expect(matrix.spaces.every((section) => apiKeyMatrixCellsCheck(section.space) === 'off' && apiKeyMatrixCellsCheck(section.group) === 'off')).toBe(
       true,
     );
@@ -50,6 +52,20 @@ describe('api key permission matrix', () => {
     expect(permissions.pods?.[podB]).toEqual({shopping: crud});
     expect(permissions.spaces?.[space]).toEqual({space: crud, group: crud});
     expect(permissions.spaces?.[spaceB]).toEqual({space: crud, group: crud});
+    expect(permissions.profile).toEqual(crud.filter((action) => action === ApiKeyAction.READ || action === ApiKeyAction.UPDATE));
+  });
+
+  it('checks read on every row for all read and leaves delete-all off', () => {
+    const podFp = '77777777-7777-4777-8777-777777777777';
+    const fpPod = [{podId: podFp, spaceId: space, spaceName: 'Family', podName: 'Budget', feature: FeatureKind.FINANCIAL_PLANNING}];
+    const matrix = apiKeyMatrixForPreset(ApiKeyPresetId.ALL_READ, [...pods, ...fpPod], spaces);
+    const permissions = permissionsFromApiKeyMatrix(matrix);
+    expect(permissions.pods?.[podA]?.todo).toEqual(read);
+    expect(permissions.pods?.[podB]?.shopping).toEqual(read);
+    expect(permissions.spaces?.[space]).toEqual({space: read, group: read});
+    expect(permissions.profile).toEqual(read);
+    expect(permissions.pods?.[podFp]?.fp?.delete_all).toBeUndefined();
+    expect(matrix.pods.find((row) => row.feature === FeatureKind.FINANCIAL_PLANNING)?.deleteAll).toBe(false);
   });
 
   it('clears the grid for all off', () => {
@@ -66,6 +82,13 @@ describe('api key permission matrix', () => {
     expect(grant?.transaction).toEqual([ApiKeyAction.DELETE]);
     expect(grant?.account).toEqual([ApiKeyAction.DELETE]);
     expect(grant?.[FpResource.DELETE_ALL]).toBeUndefined();
+  });
+
+  it('writes delete_all only from the extra checkbox', () => {
+    const fpPod = [{podId: podA, spaceId: space, spaceName: 'Family', podName: 'Budget', feature: FeatureKind.FINANCIAL_PLANNING}];
+    const matrix = toggleApiKeyMatrixDeleteAll(createApiKeyMatrix(fpPod, []), podA);
+    expect(permissionsFromApiKeyMatrix(matrix).pods?.[podA]?.fp).toEqual({delete_all: [ApiKeyAction.CREATE]});
+    expect(matrix.pods[0]?.cells.delete).toBe(false);
   });
 
   it('turns a mixed pod row fully on, then fully off', () => {

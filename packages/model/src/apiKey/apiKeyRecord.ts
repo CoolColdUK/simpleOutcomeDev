@@ -33,7 +33,9 @@ export interface ApiKeyOwnerAccess {
 
 export type ApiKeyTodoTarget = 'card' | 'column' | 'comment';
 
-export type ApiKeyGroupTarget = 'member' | 'invite';
+export type ApiKeyGroupTarget = 'member' | 'invite' | 'podMember' | 'podJoin';
+
+export type ApiKeySpaceTarget = 'record' | 'pod' | 'find';
 
 export interface ApiKeyCall {
   readonly spaceId: string;
@@ -43,4 +45,5 @@ export interface ApiKeyCall {
   readonly fpResource?: FpResource;
   readonly todoTarget?: ApiKeyTodoTarget;
   readonly groupTarget?: ApiKeyGroupTarget;
+  readonly spaceTarget?: ApiKeySpaceTarget;
 }

@@ -23,6 +23,7 @@ export interface ApiKeySpaceGrant {
 }
 
 export interface ApiKeyPermissions {
+  readonly profile?: readonly ApiKeyAction[];
   readonly pods?: Readonly<Record<string, ApiKeyPodGrant>>;
   readonly spaces?: Readonly<Record<string, ApiKeySpaceGrant>>;
 }

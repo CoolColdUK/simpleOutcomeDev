@@ -32,6 +32,7 @@ export interface EffectiveApiKeySpace {
 
 export interface EffectiveApiKeyPermissions {
   readonly principalUserId: string;
+  readonly profile?: readonly ApiKeyAction[];
   readonly spaces: readonly EffectiveApiKeySpace[];
   readonly pods: readonly EffectiveApiKeyPod[];
 }
@@ -60,9 +61,7 @@ function allowed(
 }
 
 function fpGrant(key: ApiKeyRecord, spaceId: string, access: ApiKeyOwnerAccess, nowIso: string, podId: string): ApiKeyFpGrant | undefined {
-  const entries = Object.values(FpResource)
-    .filter((resource) => resource !== FpResource.DELETE_ALL)
-    .map((resource) => {
+  const entries = Object.values(FpResource).map((resource) => {
       const actions = allowed(key, spaceId, access, nowIso, ApiKeyResource.FP, {podId, fpResource: resource});
       if (actions.length === 0) {
         return undefined;
@@ -120,8 +119,10 @@ export default function effectiveApiKeyPermissions(
     }
     return [{spaceId: item.spaceId, space, group, pods}];
   });
+  const profile = (key.permissions.profile ?? []).filter((action) => action === ApiKeyAction.READ || action === ApiKeyAction.UPDATE);
   return {
     principalUserId: key.ownerUserId,
+    ...(profile.length === 0 ? {} : {profile}),
     spaces: sections.map((section) => ({spaceId: section.spaceId, space: section.space, group: section.group})),
     pods: sections.flatMap((section) => section.pods),
   };

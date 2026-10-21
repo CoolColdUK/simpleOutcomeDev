@@ -41,7 +41,30 @@ function todoRoleAllows(call: ApiKeyCall, access: ApiKeyOwnerAccess, pod: ApiKey
   return true;
 }
 
-function groupRoleAllows(call: ApiKeyCall, access: ApiKeyOwnerAccess): boolean {
+function canManagePodPeople(access: ApiKeyOwnerAccess, pod: ApiKeyPodAccess | undefined): boolean {
+  return isSpaceOwner(access.spaceRole) || pod?.role === PodRole.OWNER || pod?.role === PodRole.ADMIN;
+}
+
+function canOwnPod(access: ApiKeyOwnerAccess, pod: ApiKeyPodAccess | undefined): boolean {
+  return isSpaceOwner(access.spaceRole) || pod?.role === PodRole.OWNER;
+}
+
+function groupRoleAllows(call: ApiKeyCall, access: ApiKeyOwnerAccess, pod: ApiKeyPodAccess | undefined): boolean {
+  if (call.groupTarget === 'podMember' || call.groupTarget === 'podJoin') {
+    if (pod === undefined) {
+      return false;
+    }
+    if (call.groupTarget === 'podJoin' && call.action === ApiKeyAction.READ) {
+      return isSpaceOwner(access.spaceRole) || pod.role !== undefined;
+    }
+    if (call.action === ApiKeyAction.READ) {
+      return isSpaceOwner(access.spaceRole) || pod.role !== undefined;
+    }
+    if (call.groupTarget === 'podMember' && call.action === ApiKeyAction.UPDATE) {
+      return canOwnPod(access, pod);
+    }
+    return canManagePodPeople(access, pod);
+  }
   if (access.spaceRole === undefined) {
     return false;
   }
@@ -65,19 +88,22 @@ export default function roleAllowsApiCall(call: ApiKeyCall, access: ApiKeyOwnerA
     if (access.spaceRole === undefined) {
       return false;
     }
+    if (call.spaceTarget === 'pod') {
+      return (call.action === ApiKeyAction.UPDATE || call.action === ApiKeyAction.DELETE) && canOwnPod(access, pod);
+    }
     if (call.action === ApiKeyAction.READ) {
       return true;
     }
-    if (call.action === ApiKeyAction.UPDATE) {
+    if (call.action === ApiKeyAction.CREATE || call.action === ApiKeyAction.UPDATE) {
       return isSpaceAdmin(access.spaceRole);
     }
     return false;
   }
   if (call.resource === ApiKeyResource.GROUP) {
-    return groupRoleAllows(call, access);
+    return groupRoleAllows(call, access, pod);
   }
   if (call.resource === ApiKeyResource.PROFILE) {
-    return call.action === ApiKeyAction.READ && access.spaceRole !== undefined;
+    return call.action === ApiKeyAction.READ || call.action === ApiKeyAction.UPDATE;
   }
   if (call.resource === ApiKeyResource.CONTACT) {
     return false;

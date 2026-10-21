@@ -9,6 +9,7 @@ import {
 } from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent, type AgentContext} from '@/lib/api/agent/loadAgentContext';
+import {signTodoCardIcons} from '@/lib/api/agent/todoAgentIcons';
 import {mapDbTodoCard, type DbTodoCard} from '@/lib/api/db/mapDbTodoCard';
 
 function validation(message: string): AgentResult<never> {
@@ -44,7 +45,17 @@ export async function listAgentTodoCards(request: Request, input: unknown): Prom
   if (listedErr !== undefined) {
     return listedErr;
   }
-  return agentOk({cards: (listed.data ?? []).map(mapDbTodoCard)});
+  const cards = (listed.data ?? []).map(mapDbTodoCard);
+  const signed = await signTodoCardIcons(ctx.data, cards.map((card) => card.iconPath));
+  if (!signed.ok) {
+    return signed;
+  }
+  return agentOk({
+    cards: cards.map((card) => ({
+      ...card,
+      iconUrl: card.iconPath === undefined ? undefined : signed.data[card.iconPath],
+    })),
+  });
 }
 
 export async function createAgentTodoCard(request: Request, input: unknown): Promise<AgentResult<{readonly id: string}>> {
@@ -138,6 +149,21 @@ export async function updateAgentTodoCard(request: Request, input: unknown): Pro
   if (current.data === null) {
     return agentErr(404, 'not_found', 'Card not found');
   }
+  if (typeof parsed.value.assigneeUserId === 'string') {
+    const member = await ctx.data.supabase
+      .from('space_member')
+      .select('user_id')
+      .eq('space_id', ctx.data.spaceId)
+      .eq('user_id', parsed.value.assigneeUserId)
+      .maybeSingle();
+    const memberErr = dbErr(member.error);
+    if (memberErr !== undefined) {
+      return memberErr;
+    }
+    if (member.data === null) {
+      return agentErr(400, 'validation', 'Assignee is not in this space');
+    }
+  }
   if (parsed.value.columnId !== undefined && parsed.value.columnId !== null) {
     const column = await ctx.data.supabase
       .from('todo_column')
@@ -161,6 +187,7 @@ export async function updateAgentTodoCard(request: Request, input: unknown): Pro
     ...(parsed.value.sortOrder === undefined ? {} : {sort_order: parsed.value.sortOrder}),
     ...(parsed.value.completedAt === undefined ? {} : {completed_at: parsed.value.completedAt}),
     ...(parsed.value.columnId === undefined ? {} : {column_id: parsed.value.columnId}),
+    ...(parsed.value.assigneeUserId === undefined ? {} : {assignee_user_id: parsed.value.assigneeUserId}),
   };
   const updated = await ctx.data.supabase.from('todo_card').update(patch).eq('id', parsed.value.cardId).eq('pod_id', parsed.value.podId);
   const updatedErr = dbErr(updated.error);

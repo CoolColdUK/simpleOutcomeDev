@@ -49,11 +49,25 @@ export default function authorizeApiKeyCall(input: AuthorizeApiKeyCallInput): Ap
   if (status === ApiKeyStatus.EXPIRED) {
     return deny('expired', 'API key is expired');
   }
+  if (input.call.resource === ApiKeyResource.PROFILE) {
+    const profile = explicitApiKeyActions(input.key, input.call);
+    if (profile.actions === undefined || !profile.actions.includes(input.call.action)) {
+      return deny('forbidden', 'API key does not grant this action');
+    }
+    if (!roleAllowsApiCall(input.call, input.access, undefined)) {
+      return deny('forbidden', 'Role does not allow this action');
+    }
+    return {ok: true, principalUserId: input.key.ownerUserId};
+  }
+
   if (input.access.spaceRole === undefined) {
     return deny('forbidden', 'API key owner is not a member of this space');
   }
 
   const pod = podFromAccess(input.access, input.call.podId);
+  if ((input.call.groupTarget === 'podMember' || input.call.groupTarget === 'podJoin' || input.call.spaceTarget === 'pod') && pod === undefined) {
+    return deny('validation', 'Pod is required');
+  }
   if (apiKeyPodResource(input.call.resource)) {
     if (input.call.podId === undefined) {
       return deny('validation', 'Pod is required');

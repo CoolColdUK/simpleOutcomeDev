@@ -13,6 +13,7 @@ import {
 import {createAgentTodoCard, deleteAgentTodoCard, listAgentTodoCards, updateAgentTodoCard} from '@/lib/api/agent/todoAgentCards';
 import {createAgentTodoColumn, deleteAgentTodoColumn, listAgentTodoColumns, updateAgentTodoColumn} from '@/lib/api/agent/todoAgentColumns';
 import {createAgentTodoComment, deleteAgentTodoComment, listAgentTodoComments, updateAgentTodoComment} from '@/lib/api/agent/todoAgentComments';
+import dispatchAgentRestMore from '@/lib/api/agent/dispatchAgentRestMore';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -147,5 +148,5 @@ export default async function dispatchAgentRest(method: string, request: Request
     }
     return methodNotAllowed();
   }
-  return notFound();
+  return (await dispatchAgentRestMore(method, request, path)) ?? notFound();
 }
