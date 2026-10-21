@@ -191,7 +191,7 @@ export async function deleteAgentTodoComment(request: Request, input: unknown): 
       access: ctx.data.access,
       nowIso: ctx.data.nowIso,
       call: {
-        spaceId: ctx.data.record.spaceId,
+        spaceId: ctx.data.spaceId,
         podId: parsed.value.podId,
         resource: ApiKeyResource.TODO,
         action: ApiKeyAction.DELETE,

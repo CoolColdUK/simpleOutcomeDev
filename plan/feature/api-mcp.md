@@ -12,7 +12,7 @@ Checkbox grid and presets follow trading-journal:
 
 That grid has per-cell checkboxes and All on / All off. It has no row or column bulk toggles. SimpleOutcome adds those.
 
-This is a **plan / requirements** document. The first slice shipped space-scoped keys and `SpaceApiKeysPanel` on space settings. The decisions below replace that shape. Implementation of this revision lands in a later change.
+This is a **plan / requirements** document. The first slice shipped space-scoped keys and `SpaceApiKeysPanel` on space settings. The decisions below replace that shape. That replacement is implemented: user-scoped keys, `supabase/migrations/20261021180000_user_scoped_api_keys.sql`, and API key management on `AccountSettingsPage`.
 
 ---
 
@@ -119,7 +119,7 @@ Stale pod or space ids (deleted space, lost membership, archived pod) stay in JS
 
 ### Introspection
 
-- `GET /api/api-keys/me` and MCP `get_api_key_permissions` → **effective** capabilities for this key across the pods and spaces it grants, after membership, `featureKind`, and role-matrix intersection.
+- `GET /api/api-keys/me` and MCP `get_api_key_permissions` → **effective** capabilities for this key across the pods and spaces it grants, after membership, `featureKind`, and role-matrix intersection. The payload is `{ principalUserId, spaces: [{ spaceId, space, group }], pods: [{ podId, spaceId, featureKind, todo?, shopping?, fp? }] }`. Empty effective sections are omitted.
 
 ---
 
@@ -131,7 +131,7 @@ The first slice (`supabase/migrations/20261021120000_api_keys.sql`) created `pub
 
 Plaintext secrets are stored only as a sha256 hash, so rewriting a row still cannot keep an existing MCP client working. Expanding an empty allowlist into a pod snapshot would also grant pods the owner never ticked. Revoke avoids both.
 
-Next implementation slice (not this docs change):
+Implemented in `supabase/migrations/20261021180000_user_scoped_api_keys.sql`:
 
 1. Revoke every active row: `status = 'revoked'`, `revoked_at = now()` where `status = 'active'`. Leave revoked rows in place so the account list can show prefix, name, and last used.
 2. Drop `space_id` (FK, `api_key_owner_space_idx`, `api_key_space_id_idx`) and `pod_ids`. Index `owner_user_id`.
@@ -272,7 +272,7 @@ Stored as `spaces[spaceId]`. All on / All off include these sections. The narrow
 
 - Agent REST and `POST /api/mcp` use a server-only `SUPABASE_SECRET_KEY` (see `packages/web/env.example`). The settings UI creates and revokes keys with the signed-in session. There is no `packages/mcp` stdio package. That split stays.
 - The hosted tool catalog shipped so far: todo columns, cards, comments, and tags; space read/update; group members and invites; `get_api_key_permissions`. Shopping has no tables yet. Financial planning authz is nested and tested; fp routes wait on that product. Card image upload is not in this API.
-- Key storage and `SpaceApiKeysPanel` follow the first-slice space-scoped model. The auth, UI, and migration sections above replace that model. Until the migration ships, runtime behaviour is still the first slice.
+- Key storage is user-scoped. `AccountApiKeysPanel` on account settings is the editor. Space settings only points there. Active first-slice keys are revoked by `20261021180000_user_scoped_api_keys.sql` and are not backfilled.
 
 ---
 

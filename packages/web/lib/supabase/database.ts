@@ -132,12 +132,10 @@ export interface Database {
       api_key: {
         Row: {
           id: string;
-          space_id: string;
           owner_user_id: string;
           name: string;
           key_prefix: string;
           secret_hash: string;
-          pod_ids: string[];
           permissions: Record<string, unknown>;
           status: string;
           expires_at: string | null;
@@ -147,12 +145,10 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          space_id: string;
           owner_user_id: string;
           name: string;
           key_prefix: string;
           secret_hash: string;
-          pod_ids?: string[];
           permissions: Record<string, unknown>;
           status?: string;
           expires_at?: string | null;
@@ -558,9 +554,7 @@ export interface Database {
       sum_fp_account_balance: {Args: {p_account_id: string}; Returns: number};
       create_api_key: {
         Args: {
-          p_space_id: string;
           p_name: string;
-          p_pod_ids: string[];
           p_permissions: Record<string, unknown>;
           p_expires_at?: string | null;
         };

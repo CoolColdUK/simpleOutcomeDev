@@ -1,6 +1,7 @@
 import {ApiKeyAction} from './apiKeyAction';
 import {ApiKeyPresetId} from './apiKeyPreset';
-import permissionsForPreset from './apiKeyPreset';
+import {FeatureKind} from '../space/featureKind';
+import {permissionsForPreset} from './apiKeyMatrix';
 import buildApiKeyAiSetupPrompt from './buildApiKeyAiSetupPrompt';
 import {agentTodoCardCreateSchema} from './agentTodoSchema';
 import parseApiKeySecret from './parseApiKeySecret';
@@ -9,44 +10,57 @@ import safeParseSchema from './safeParseSchema';
 
 const podA = '33333333-3333-4333-8333-333333333333';
 const podId = '66666666-6666-4666-8666-666666666666';
+const space = '22222222-2222-4222-8222-222222222222';
 
 describe('safeParseApiKeyPermissions', () => {
-  it('accepts explicit space-level actions when the allowlist is empty', () => {
-    const result = safeParseApiKeyPermissions({todo: ['read']}, []);
-    expect(result).toEqual({ok: true, value: {todo: [ApiKeyAction.READ]}});
+  it('accepts an empty grant object', () => {
+    expect(safeParseApiKeyPermissions({})).toEqual({ok: true, value: {}});
   });
 
-  it('rejects per-pod grants without an allowlist', () => {
-    const result = safeParseApiKeyPermissions({pods: {[podA]: {todo: ['read']}}}, []);
+  it('accepts per-pod and per-space grants', () => {
+    const result = safeParseApiKeyPermissions({
+      pods: {[podA]: {todo: ['read']}},
+      spaces: {[space]: {space: ['read']}},
+    });
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        pods: {[podA]: {todo: [ApiKeyAction.READ]}},
+        spaces: {[space]: {space: [ApiKeyAction.READ]}},
+      },
+    });
+  });
+
+  it('rejects space-level feature actions from the first slice', () => {
+    const result = safeParseApiKeyPermissions({todo: ['read']});
     expect(result.ok).toBe(false);
   });
 
-  it('requires a grant for every allowlisted pod', () => {
-    const result = safeParseApiKeyPermissions({pods: {}}, [podA]);
+  it('rejects unknown actions', () => {
+    const result = safeParseApiKeyPermissions({pods: {[podA]: {todo: ['write']}}});
     expect(result.ok).toBe(false);
   });
 
-  it('rejects feature presets beside per-pod grants', () => {
-    const result = safeParseApiKeyPermissions({todo: ['read', 'create', 'update', 'delete'], pods: {[podA]: {todo: ['read']}}}, [podA]);
-    expect(result.ok).toBe(false);
-  });
-
-  it('rejects unknown actions instead of treating them as write-all', () => {
-    const result = safeParseApiKeyPermissions({todo: ['write']}, []);
+  it('rejects fp delete_all', () => {
+    const result = safeParseApiKeyPermissions({pods: {[podA]: {fp: {delete_all: ['delete']}}}});
     expect(result.ok).toBe(false);
   });
 });
 
 describe('permissionsForPreset', () => {
-  it('keeps feature actions at space scope when no pods are selected', () => {
-    expect(permissionsForPreset(ApiKeyPresetId.TODO_READ_WRITE, [])).toEqual({
-      todo: [ApiKeyAction.READ, ApiKeyAction.CREATE, ApiKeyAction.UPDATE, ApiKeyAction.DELETE],
-    });
+  const pods = [
+    {podId: podA, spaceId: space, spaceName: 'Family', podName: 'Tasks', feature: FeatureKind.TODO_LIST},
+    {podId, spaceId: space, spaceName: 'Family', podName: 'Budget', feature: FeatureKind.FINANCIAL_PLANNING},
+  ];
+  const spaces = [{spaceId: space, spaceName: 'Family'}];
+
+  it('starts from all off', () => {
+    expect(permissionsForPreset(ApiKeyPresetId.ALL_OFF, pods, spaces)).toEqual({});
   });
 
-  it('copies feature actions onto each allowlisted pod', () => {
-    expect(permissionsForPreset(ApiKeyPresetId.TODO_READ, [podA])).toEqual({
-      pods: {[podA]: {todo: [ApiKeyAction.READ]}},
+  it('limits todo read and write to todo pods', () => {
+    expect(permissionsForPreset(ApiKeyPresetId.TODO_READ_WRITE, pods, spaces)).toEqual({
+      pods: {[podA]: {todo: [ApiKeyAction.CREATE, ApiKeyAction.READ, ApiKeyAction.UPDATE, ApiKeyAction.DELETE]}},
     });
   });
 });

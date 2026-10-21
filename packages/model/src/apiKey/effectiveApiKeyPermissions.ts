@@ -10,24 +10,35 @@ import type {ApiKeyOwnerAccess, ApiKeyRecord} from './apiKeyRecord';
 
 const ACTIONS: readonly ApiKeyAction[] = [ApiKeyAction.READ, ApiKeyAction.CREATE, ApiKeyAction.UPDATE, ApiKeyAction.DELETE];
 
+export interface EffectiveApiKeySpaceAccess {
+  readonly spaceId: string;
+  readonly access: ApiKeyOwnerAccess;
+}
+
 export interface EffectiveApiKeyPod {
   readonly podId: string;
+  readonly spaceId: string;
   readonly featureKind: FeatureKind;
   readonly todo?: readonly ApiKeyAction[];
   readonly shopping?: readonly ApiKeyAction[];
   readonly fp?: ApiKeyFpGrant;
 }
 
-export interface EffectiveApiKeyPermissions {
-  readonly principalUserId: string;
+export interface EffectiveApiKeySpace {
   readonly spaceId: string;
   readonly space: readonly ApiKeyAction[];
   readonly group: readonly ApiKeyAction[];
+}
+
+export interface EffectiveApiKeyPermissions {
+  readonly principalUserId: string;
+  readonly spaces: readonly EffectiveApiKeySpace[];
   readonly pods: readonly EffectiveApiKeyPod[];
 }
 
 function allowed(
   key: ApiKeyRecord,
+  spaceId: string,
   access: ApiKeyOwnerAccess,
   nowIso: string,
   resource: ApiKeyResource,
@@ -43,15 +54,16 @@ function allowed(
       key,
       access,
       nowIso,
-      call: {spaceId: key.spaceId, resource, action, ...extra},
+      call: {spaceId, resource, action, ...extra},
     }).ok,
   );
 }
 
-function fpGrant(key: ApiKeyRecord, access: ApiKeyOwnerAccess, nowIso: string, podId: string): ApiKeyFpGrant | undefined {
+function fpGrant(key: ApiKeyRecord, spaceId: string, access: ApiKeyOwnerAccess, nowIso: string, podId: string): ApiKeyFpGrant | undefined {
   const entries = Object.values(FpResource)
+    .filter((resource) => resource !== FpResource.DELETE_ALL)
     .map((resource) => {
-      const actions = allowed(key, access, nowIso, ApiKeyResource.FP, {podId, fpResource: resource});
+      const actions = allowed(key, spaceId, access, nowIso, ApiKeyResource.FP, {podId, fpResource: resource});
       if (actions.length === 0) {
         return undefined;
       }
@@ -64,37 +76,53 @@ function fpGrant(key: ApiKeyRecord, access: ApiKeyOwnerAccess, nowIso: string, p
   return Object.fromEntries(entries);
 }
 
-export default function effectiveApiKeyPermissions(
-  key: ApiKeyRecord,
-  access: ApiKeyOwnerAccess,
-  nowIso: string,
-): EffectiveApiKeyPermissions {
-  const pods = access.pods
+function podsFor(key: ApiKeyRecord, spaceId: string, access: ApiKeyOwnerAccess, nowIso: string): readonly EffectiveApiKeyPod[] {
+  return access.pods
     .filter((pod) => ownerCanAccessPod(pod, access.spaceRole, key.ownerUserId))
-    .filter((pod) => key.podIds.length === 0 || key.podIds.includes(pod.id))
-    .map((pod) => {
+    .filter((pod) => key.permissions.pods?.[pod.id] !== undefined)
+    .flatMap((pod) => {
       const todo =
         pod.feature === featureKindForApiResource(ApiKeyResource.TODO)
-          ? allowed(key, access, nowIso, ApiKeyResource.TODO, {podId: pod.id, todoTarget: 'card'})
+          ? allowed(key, spaceId, access, nowIso, ApiKeyResource.TODO, {podId: pod.id, todoTarget: 'card'})
           : [];
       const shopping =
         pod.feature === featureKindForApiResource(ApiKeyResource.SHOPPING)
-          ? allowed(key, access, nowIso, ApiKeyResource.SHOPPING, {podId: pod.id})
+          ? allowed(key, spaceId, access, nowIso, ApiKeyResource.SHOPPING, {podId: pod.id})
           : [];
-      const fp = pod.feature === featureKindForApiResource(ApiKeyResource.FP) ? fpGrant(key, access, nowIso, pod.id) : undefined;
-      return {
-        podId: pod.id,
-        featureKind: pod.feature,
-        ...(todo.length === 0 ? {} : {todo}),
-        ...(shopping.length === 0 ? {} : {shopping}),
-        ...(fp === undefined ? {} : {fp}),
-      };
+      const fp = pod.feature === featureKindForApiResource(ApiKeyResource.FP) ? fpGrant(key, spaceId, access, nowIso, pod.id) : undefined;
+      if (todo.length === 0 && shopping.length === 0 && fp === undefined) {
+        return [];
+      }
+      return [
+        {
+          podId: pod.id,
+          spaceId,
+          featureKind: pod.feature,
+          ...(todo.length === 0 ? {} : {todo}),
+          ...(shopping.length === 0 ? {} : {shopping}),
+          ...(fp === undefined ? {} : {fp}),
+        },
+      ];
     });
+}
+
+export default function effectiveApiKeyPermissions(
+  key: ApiKeyRecord,
+  spaces: readonly EffectiveApiKeySpaceAccess[],
+  nowIso: string,
+): EffectiveApiKeyPermissions {
+  const sections = spaces.flatMap((item) => {
+    const pods = podsFor(key, item.spaceId, item.access, nowIso);
+    const space = allowed(key, item.spaceId, item.access, nowIso, ApiKeyResource.SPACE, {});
+    const group = allowed(key, item.spaceId, item.access, nowIso, ApiKeyResource.GROUP, {groupTarget: 'member'});
+    if (space.length === 0 && group.length === 0 && pods.length === 0) {
+      return [];
+    }
+    return [{spaceId: item.spaceId, space, group, pods}];
+  });
   return {
     principalUserId: key.ownerUserId,
-    spaceId: key.spaceId,
-    space: allowed(key, access, nowIso, ApiKeyResource.SPACE, {}),
-    group: allowed(key, access, nowIso, ApiKeyResource.GROUP, {groupTarget: 'member'}),
-    pods,
+    spaces: sections.map((section) => ({spaceId: section.spaceId, space: section.space, group: section.group})),
+    pods: sections.flatMap((section) => section.pods),
   };
 }

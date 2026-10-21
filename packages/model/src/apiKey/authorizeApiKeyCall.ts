@@ -49,9 +49,6 @@ export default function authorizeApiKeyCall(input: AuthorizeApiKeyCallInput): Ap
   if (status === ApiKeyStatus.EXPIRED) {
     return deny('expired', 'API key is expired');
   }
-  if (input.call.spaceId !== input.key.spaceId) {
-    return deny('forbidden', 'API key is for a different space');
-  }
   if (input.access.spaceRole === undefined) {
     return deny('forbidden', 'API key owner is not a member of this space');
   }
@@ -66,9 +63,6 @@ export default function authorizeApiKeyCall(input: AuthorizeApiKeyCallInput): Ap
     }
     if (!ownerCanAccessPod(pod, input.access.spaceRole, input.key.ownerUserId)) {
       return deny('forbidden', 'API key owner cannot access this pod');
-    }
-    if (input.key.podIds.length > 0 && !input.key.podIds.includes(pod.id)) {
-      return deny('forbidden', 'API key cannot access this pod');
     }
     const expected = featureKindForApiResource(input.call.resource);
     if (expected !== undefined && pod.feature !== expected) {

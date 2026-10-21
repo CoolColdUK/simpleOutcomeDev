@@ -1,12 +1,13 @@
 import {FpResource} from '../fp/fpResource';
 import {ApiKeyAction} from './apiKeyAction';
-import type {ApiKeyFpGrant, ApiKeyPermissions, ApiKeyPodGrant} from './apiKeyPermissions';
+import type {ApiKeyFpGrant, ApiKeyPermissions, ApiKeyPodGrant, ApiKeySpaceGrant} from './apiKeyPermissions';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const TOP_LEVEL = ['space', 'group', 'todo', 'shopping', 'contact', 'profile', 'fp', 'pods'] as const;
+const TOP_LEVEL = ['pods', 'spaces'] as const;
 const POD_GRANT_KEYS = ['todo', 'shopping', 'fp'] as const;
-const SPACE_FEATURE_KEYS = ['todo', 'shopping', 'fp'] as const;
+const SPACE_GRANT_KEYS = ['space', 'group'] as const;
+const FP_RESOURCES = Object.values(FpResource).filter((resource) => resource !== FpResource.DELETE_ALL);
 
 export interface SafeParseApiKeyPermissions {
   readonly ok: true;
@@ -37,17 +38,16 @@ function parseFpGrant(input: unknown): ApiKeyFpGrant | undefined {
   if (!isRecord(input)) {
     return undefined;
   }
-  const known = new Set<string>(Object.values(FpResource));
+  const known = new Set<string>(FP_RESOURCES);
   const unknown = Object.keys(input).find((key) => !known.has(key));
   if (unknown !== undefined) {
     return undefined;
   }
-  const resources = Object.values(FpResource);
-  const invalid = resources.some((resource) => input[resource] !== undefined && parseActions(input[resource]) === undefined);
+  const invalid = FP_RESOURCES.some((resource) => input[resource] !== undefined && parseActions(input[resource]) === undefined);
   if (invalid) {
     return undefined;
   }
-  const entries = resources.flatMap((resource) => {
+  const entries = FP_RESOURCES.flatMap((resource) => {
     const actions = input[resource] === undefined ? undefined : parseActions(input[resource]);
     return actions === undefined ? [] : [[resource, actions] as const];
   });
@@ -78,35 +78,45 @@ function parsePodGrant(input: unknown): ApiKeyPodGrant | undefined {
   };
 }
 
-function spaceScoped(input: Record<string, unknown>): Pick<ApiKeyPermissions, 'space' | 'group' | 'contact' | 'profile'> | undefined {
+function parseSpaceGrant(input: unknown): ApiKeySpaceGrant | undefined {
+  if (!isRecord(input)) {
+    return undefined;
+  }
+  const unknown = Object.keys(input).find((key) => !SPACE_GRANT_KEYS.includes(key as (typeof SPACE_GRANT_KEYS)[number]));
+  if (unknown !== undefined) {
+    return undefined;
+  }
   const space = input['space'] === undefined ? undefined : parseActions(input['space']);
   const group = input['group'] === undefined ? undefined : parseActions(input['group']);
-  const contact = input['contact'] === undefined ? undefined : parseActions(input['contact']);
-  const profile = input['profile'] === undefined ? undefined : parseActions(input['profile']);
-  if (input['space'] !== undefined && space === undefined) {
-    return undefined;
-  }
-  if (input['group'] !== undefined && group === undefined) {
-    return undefined;
-  }
-  if (input['contact'] !== undefined && contact === undefined) {
-    return undefined;
-  }
-  if (input['profile'] !== undefined && profile === undefined) {
+  if ((input['space'] !== undefined && space === undefined) || (input['group'] !== undefined && group === undefined)) {
     return undefined;
   }
   return {
     ...(space === undefined ? {} : {space}),
     ...(group === undefined ? {} : {group}),
-    ...(contact === undefined ? {} : {contact}),
-    ...(profile === undefined ? {} : {profile}),
   };
 }
 
-export default function safeParseApiKeyPermissions(
-  input: unknown,
-  podIds: readonly string[],
-): SafeParseApiKeyPermissions | SafeParseApiKeyPermissionsFailure {
+function parseIdMap<T>(input: unknown, parseGrant: (value: unknown) => T | undefined): Readonly<Record<string, T>> | undefined {
+  if (!isRecord(input)) {
+    return undefined;
+  }
+  const ids = Object.keys(input);
+  const invalidId = ids.find((id) => !UUID.test(id));
+  if (invalidId !== undefined) {
+    return undefined;
+  }
+  const grants = ids.map((id) => {
+    const grant = parseGrant(input[id]);
+    return grant === undefined ? undefined : ([id, grant] as const);
+  });
+  if (grants.some((grant) => grant === undefined)) {
+    return undefined;
+  }
+  return Object.fromEntries(grants.filter((grant) => grant !== undefined));
+}
+
+export default function safeParseApiKeyPermissions(input: unknown): SafeParseApiKeyPermissions | SafeParseApiKeyPermissionsFailure {
   if (!isRecord(input)) {
     return {ok: false, message: 'Permissions must be an object'};
   }
@@ -114,62 +124,19 @@ export default function safeParseApiKeyPermissions(
   if (unknown !== undefined) {
     return {ok: false, message: `Unknown permission key ${unknown}`};
   }
-  const scoped = spaceScoped(input);
-  if (scoped === undefined) {
-    return {ok: false, message: 'Invalid permission actions'};
-  }
-  if (podIds.length === 0) {
-    if (input['pods'] !== undefined) {
-      return {ok: false, message: 'Per-pod grants require a pod allowlist'};
-    }
-    const todo = input['todo'] === undefined ? undefined : parseActions(input['todo']);
-    const shopping = input['shopping'] === undefined ? undefined : parseActions(input['shopping']);
-    const fp = input['fp'] === undefined ? undefined : parseFpGrant(input['fp']);
-    if ((input['todo'] !== undefined && todo === undefined) || (input['shopping'] !== undefined && shopping === undefined)) {
-      return {ok: false, message: 'Invalid permission actions'};
-    }
-    if (input['fp'] !== undefined && fp === undefined) {
-      return {ok: false, message: 'Invalid financial planning permissions'};
-    }
-    return {
-      ok: true,
-      value: {
-        ...scoped,
-        ...(todo === undefined ? {} : {todo}),
-        ...(shopping === undefined ? {} : {shopping}),
-        ...(fp === undefined ? {} : {fp}),
-      },
-    };
-  }
-  const stray = SPACE_FEATURE_KEYS.find((key) => input[key] !== undefined);
-  if (stray !== undefined) {
-    return {ok: false, message: 'Allowlisted keys keep feature actions on each pod'};
-  }
-  const podGrants = input['pods'];
-  if (!isRecord(podGrants)) {
-    return {ok: false, message: 'Per-pod grants are required when an allowlist is set'};
-  }
-  const ids = Object.keys(podGrants);
-  const missing = podIds.find((podId) => !Object.prototype.hasOwnProperty.call(podGrants, podId));
-  if (missing !== undefined || ids.length !== podIds.length) {
-    return {ok: false, message: 'Each allowlisted pod needs its own grant'};
-  }
-  const invalidId = ids.find((podId) => !UUID.test(podId));
-  if (invalidId !== undefined) {
-    return {ok: false, message: 'Pod grant id is not a uuid'};
-  }
-  const grants = ids.map((podId) => {
-    const grant = parsePodGrant(podGrants[podId]);
-    return grant === undefined ? undefined : ([podId, grant] as const);
-  });
-  if (grants.some((grant) => grant === undefined)) {
+  const pods = input['pods'] === undefined ? undefined : parseIdMap(input['pods'], parsePodGrant);
+  if (input['pods'] !== undefined && pods === undefined) {
     return {ok: false, message: 'Invalid per-pod grant'};
+  }
+  const spaces = input['spaces'] === undefined ? undefined : parseIdMap(input['spaces'], parseSpaceGrant);
+  if (input['spaces'] !== undefined && spaces === undefined) {
+    return {ok: false, message: 'Invalid space grant'};
   }
   return {
     ok: true,
     value: {
-      ...scoped,
-      pods: Object.fromEntries(grants.filter((grant) => grant !== undefined)),
+      ...(pods === undefined ? {} : {pods}),
+      ...(spaces === undefined ? {} : {spaces}),
     },
   };
 }

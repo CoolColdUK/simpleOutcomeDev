@@ -7,6 +7,7 @@ import getDbProfile from '@/lib/api/db/getDbProfile';
 import AppPageLoadingState from '@/components/app/AppPageLoadingState';
 import AccountSettingsProfileCard from '@/components/app/AccountSettingsProfileCard';
 import AccountSettingsPasswordCard from '@/components/app/AccountSettingsPasswordCard';
+import AccountApiKeysPanel from '@/components/app/AccountApiKeysPanel';
 
 export default function AccountSettingsPage() {
   const {user} = useSupabaseAuthState();
@@ -73,6 +74,7 @@ export default function AccountSettingsPage() {
         onDisplayNameSaved={setDisplayName}
       />
       <AccountSettingsPasswordCard />
+      {user !== undefined ? <AccountApiKeysPanel userId={user.id} /> : null}
     </Stack>
   );
 }
