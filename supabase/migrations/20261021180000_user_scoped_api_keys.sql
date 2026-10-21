@@ -239,9 +239,9 @@ begin
     end if;
     if exists (
       select 1
-      from jsonb_each(p_permissions->'pods') as grant(pod_id, body)
-      join public.pod p on p.id = grant.pod_id::uuid
-      where not app_private.api_key_pod_grant_ok(p.feature, grant.body)
+      from jsonb_each(p_permissions->'pods') as pod_grant(pod_id, body)
+      join public.pod p on p.id = pod_grant.pod_id::uuid
+      where not app_private.api_key_pod_grant_ok(p.feature, pod_grant.body)
     ) then
       raise exception 'invalid per-pod grant';
     end if;
@@ -267,8 +267,8 @@ begin
     end if;
     if exists (
       select 1
-      from jsonb_each(p_permissions->'spaces') as grant(space_id, body)
-      where not app_private.api_key_space_grant_ok(grant.body)
+      from jsonb_each(p_permissions->'spaces') as space_grant(space_id, body)
+      where not app_private.api_key_space_grant_ok(space_grant.body)
     ) then
       raise exception 'invalid space grant';
     end if;
