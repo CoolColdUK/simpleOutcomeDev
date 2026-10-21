@@ -17,13 +17,12 @@ export interface ApiKeyPodGrant {
   readonly fp?: ApiKeyFpGrant;
 }
 
-export interface ApiKeyPermissions {
+export interface ApiKeySpaceGrant {
   readonly space?: readonly ApiKeyAction[];
   readonly group?: readonly ApiKeyAction[];
-  readonly todo?: readonly ApiKeyAction[];
-  readonly shopping?: readonly ApiKeyAction[];
-  readonly contact?: readonly ApiKeyAction[];
-  readonly profile?: readonly ApiKeyAction[];
-  readonly fp?: ApiKeyFpGrant;
+}
+
+export interface ApiKeyPermissions {
   readonly pods?: Readonly<Record<string, ApiKeyPodGrant>>;
+  readonly spaces?: Readonly<Record<string, ApiKeySpaceGrant>>;
 }

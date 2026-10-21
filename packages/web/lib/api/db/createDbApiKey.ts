@@ -8,17 +8,10 @@ export interface CreatedDbApiKey {
   readonly prefix: string;
 }
 
-export default async function createDbApiKey(
-  spaceId: string,
-  name: string,
-  podIds: readonly string[],
-  permissions: ApiKeyPermissions,
-): Promise<CreatedDbApiKey> {
+export default async function createDbApiKey(name: string, permissions: ApiKeyPermissions): Promise<CreatedDbApiKey> {
   const supabase = getSupabaseBrowserClient();
   const {data, error} = await supabase.rpc('create_api_key', {
-    p_space_id: spaceId,
     p_name: name,
-    p_pod_ids: [...podIds],
     p_permissions: JSON.parse(JSON.stringify(permissions)) as Record<string, unknown>,
     p_expires_at: null,
   });

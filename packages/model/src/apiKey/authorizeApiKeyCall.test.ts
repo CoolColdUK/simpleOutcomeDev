@@ -5,6 +5,7 @@ import {PodRole} from '../space/podRole';
 import {PodStatus} from '../space/podStatus';
 import {SpaceRole} from '../space/spaceRole';
 import {ApiKeyAction} from './apiKeyAction';
+import type {ApiKeyPermissions} from './apiKeyPermissions';
 import {ApiKeyResource} from './apiKeyResource';
 import type {ApiKeyOwnerAccess, ApiKeyPodAccess, ApiKeyRecord} from './apiKeyRecord';
 import authorizeApiKeyCall from './authorizeApiKeyCall';
@@ -12,9 +13,12 @@ import effectiveApiKeyPermissions from './effectiveApiKeyPermissions';
 
 const owner = '11111111-1111-4111-8111-111111111111';
 const space = '22222222-2222-4222-8222-222222222222';
+const spaceB = '88888888-8888-4888-8888-888888888888';
 const podA = '33333333-3333-4333-8333-333333333333';
 const podB = '44444444-4444-4444-8444-444444444444';
+const podShop = '99999999-9999-4999-8999-999999999999';
 const now = '2026-10-21T00:00:00.000Z';
+const crud = [ApiKeyAction.CREATE, ApiKeyAction.READ, ApiKeyAction.UPDATE, ApiKeyAction.DELETE];
 
 function pod(id: string, feature: FeatureKind, role: PodRole | undefined): ApiKeyPodAccess {
   return {
@@ -27,13 +31,13 @@ function pod(id: string, feature: FeatureKind, role: PodRole | undefined): ApiKe
   };
 }
 
-function key(partial: Partial<ApiKeyRecord> & Pick<ApiKeyRecord, 'permissions' | 'podIds'>): ApiKeyRecord {
+function key(permissions: ApiKeyPermissions, partial?: Partial<ApiKeyRecord>): ApiKeyRecord {
   return {
     id: '55555555-5555-4555-8555-555555555555',
-    spaceId: space,
     ownerUserId: owner,
     status: 'active',
     expiresAt: undefined,
+    permissions,
     ...partial,
   };
 }
@@ -43,7 +47,7 @@ function access(spaceRole: SpaceRole | undefined, pods: readonly ApiKeyPodAccess
 }
 
 describe('authorizeApiKeyCall', () => {
-  const todoKey = key({podIds: [], permissions: {todo: [ApiKeyAction.READ, ApiKeyAction.CREATE]}});
+  const todoKey = key({pods: {[podA]: {todo: [ApiKeyAction.READ, ApiKeyAction.CREATE]}}});
   const member = access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER), pod(podB, FeatureKind.TODO_LIST, undefined)]);
 
   it('allows a live key and returns the key owner as principal', () => {
@@ -83,26 +87,19 @@ describe('authorizeApiKeyCall', () => {
     expect(result).toEqual({ok: false, code: 'expired', message: 'API key is expired'});
   });
 
-  it('treats an empty allowlist as every pod the owner can access', () => {
-    const allowed = authorizeApiKeyCall({
-      key: key({podIds: [], permissions: {todo: [ApiKeyAction.READ]}}),
-      access: member,
-      nowIso: now,
-      call: {spaceId: space, podId: podA, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
-    });
-    const denied = authorizeApiKeyCall({
-      key: key({podIds: [], permissions: {todo: [ApiKeyAction.READ]}}),
-      access: member,
+  it('denies a pod that has no grant', () => {
+    const result = authorizeApiKeyCall({
+      key: key({pods: {[podA]: {todo: [ApiKeyAction.READ]}}}),
+      access: access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER), pod(podB, FeatureKind.TODO_LIST, PodRole.USER)]),
       nowIso: now,
       call: {spaceId: space, podId: podB, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
     });
-    expect(allowed.ok).toBe(true);
-    expect(denied).toEqual({ok: false, code: 'forbidden', message: 'API key owner cannot access this pod'});
+    expect(result).toEqual({ok: false, code: 'forbidden', message: 'API key has no grant for this pod'});
   });
 
-  it('does not imply write when the allowlist is empty', () => {
+  it('denies an action the pod grant does not include', () => {
     const result = authorizeApiKeyCall({
-      key: key({podIds: [], permissions: {todo: [ApiKeyAction.READ]}}),
+      key: key({pods: {[podA]: {todo: [ApiKeyAction.READ]}}}),
       access: member,
       nowIso: now,
       call: {spaceId: space, podId: podA, resource: ApiKeyResource.TODO, action: ApiKeyAction.CREATE, todoTarget: 'card'},
@@ -110,35 +107,84 @@ describe('authorizeApiKeyCall', () => {
     expect(result).toEqual({ok: false, code: 'forbidden', message: 'API key does not grant this action'});
   });
 
-  it('denies a pod that is outside the allowlist', () => {
-    const allowlisted = key({
-      podIds: [podA],
-      permissions: {pods: {[podA]: {todo: [ApiKeyAction.READ, ApiKeyAction.CREATE]}}},
-    });
-    const result = authorizeApiKeyCall({
-      key: allowlisted,
-      access: access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER), pod(podB, FeatureKind.TODO_LIST, PodRole.USER)]),
-      nowIso: now,
-      call: {spaceId: space, podId: podB, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
-    });
-    expect(result).toEqual({ok: false, code: 'forbidden', message: 'API key cannot access this pod'});
-  });
-
-  it('requires a per-pod grant when the allowlist is set', () => {
-    const result = authorizeApiKeyCall({
-      key: key({podIds: [podA], permissions: {pods: {[podA]: {}}}}),
-      access: member,
+  it('denies every pod, space, and group call when grants are empty', () => {
+    const empty = key({});
+    const pods = access(SpaceRole.OWNER, [pod(podA, FeatureKind.TODO_LIST, PodRole.OWNER)]);
+    const todo = authorizeApiKeyCall({
+      key: empty,
+      access: pods,
       nowIso: now,
       call: {spaceId: space, podId: podA, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
     });
-    expect(result).toEqual({ok: false, code: 'forbidden', message: 'API key does not grant this action'});
+    const spaceCall = authorizeApiKeyCall({
+      key: empty,
+      access: pods,
+      nowIso: now,
+      call: {spaceId: space, resource: ApiKeyResource.SPACE, action: ApiKeyAction.READ},
+    });
+    const groupCall = authorizeApiKeyCall({
+      key: empty,
+      access: pods,
+      nowIso: now,
+      call: {spaceId: space, resource: ApiKeyResource.GROUP, action: ApiKeyAction.READ, groupTarget: 'member'},
+    });
+    expect(todo.ok).toBe(false);
+    expect(spaceCall.ok).toBe(false);
+    expect(groupCall.ok).toBe(false);
+  });
+
+  it('allows one key to grant a todo pod and a shopping pod in another space', () => {
+    const shared = key({
+      pods: {
+        [podA]: {todo: [ApiKeyAction.READ]},
+        [podShop]: {shopping: [ApiKeyAction.CREATE]},
+      },
+    });
+    const todo = authorizeApiKeyCall({
+      key: shared,
+      access: access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER)]),
+      nowIso: now,
+      call: {spaceId: space, podId: podA, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
+    });
+    const shopping = authorizeApiKeyCall({
+      key: shared,
+      access: access(SpaceRole.USER, [pod(podShop, FeatureKind.SHOPPING_LIST, PodRole.USER)]),
+      nowIso: now,
+      call: {spaceId: spaceB, podId: podShop, resource: ApiKeyResource.SHOPPING, action: ApiKeyAction.CREATE},
+    });
+    const otherPod = authorizeApiKeyCall({
+      key: shared,
+      access: access(SpaceRole.USER, [pod(podB, FeatureKind.TODO_LIST, PodRole.USER)]),
+      nowIso: now,
+      call: {spaceId: spaceB, podId: podB, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
+    });
+    expect(todo.ok).toBe(true);
+    expect(shopping.ok).toBe(true);
+    expect(otherPod).toEqual({ok: false, code: 'forbidden', message: 'API key has no grant for this pod'});
+  });
+
+  it('keeps a space grant inside that space', () => {
+    const scoped = key({spaces: {[space]: {group: [ApiKeyAction.READ, ApiKeyAction.UPDATE]}}});
+    const allowed = authorizeApiKeyCall({
+      key: scoped,
+      access: access(SpaceRole.OWNER, []),
+      nowIso: now,
+      call: {spaceId: space, resource: ApiKeyResource.GROUP, action: ApiKeyAction.UPDATE, groupTarget: 'member'},
+    });
+    const denied = authorizeApiKeyCall({
+      key: scoped,
+      access: access(SpaceRole.OWNER, []),
+      nowIso: now,
+      call: {spaceId: spaceB, resource: ApiKeyResource.GROUP, action: ApiKeyAction.UPDATE, groupTarget: 'member'},
+    });
+    expect(allowed.ok).toBe(true);
+    expect(denied).toEqual({ok: false, code: 'forbidden', message: 'API key does not grant this action'});
   });
 
   it('denies fp transaction delete when the key grants it and the role does not', () => {
     const result = authorizeApiKeyCall({
       key: key({
-        podIds: [],
-        permissions: {fp: {transaction: [ApiKeyAction.READ, ApiKeyAction.CREATE, ApiKeyAction.UPDATE, ApiKeyAction.DELETE]}},
+        pods: {[podA]: {fp: {transaction: crud}}},
       }),
       access: access(SpaceRole.USER, [pod(podA, FeatureKind.FINANCIAL_PLANNING, PodRole.USER)]),
       nowIso: now,
@@ -155,7 +201,7 @@ describe('authorizeApiKeyCall', () => {
 
   it('denies delete when the role allows it and the key does not grant it', () => {
     const result = authorizeApiKeyCall({
-      key: key({podIds: [], permissions: {fp: {transaction: [ApiKeyAction.READ]}}}),
+      key: key({pods: {[podA]: {fp: {transaction: [ApiKeyAction.READ]}}}}),
       access: access(SpaceRole.OWNER, [pod(podA, FeatureKind.FINANCIAL_PLANNING, undefined)]),
       nowIso: now,
       call: {
@@ -171,7 +217,7 @@ describe('authorizeApiKeyCall', () => {
 
   it('denies a todo action on a shopping pod', () => {
     const result = authorizeApiKeyCall({
-      key: todoKey,
+      key: key({pods: {[podA]: {todo: [ApiKeyAction.READ]}}}),
       access: access(SpaceRole.USER, [pod(podA, FeatureKind.SHOPPING_LIST, PodRole.USER)]),
       nowIso: now,
       call: {spaceId: space, podId: podA, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
@@ -191,7 +237,7 @@ describe('authorizeApiKeyCall', () => {
 
   it('denies group role updates for a space admin', () => {
     const result = authorizeApiKeyCall({
-      key: key({podIds: [], permissions: {group: [ApiKeyAction.READ, ApiKeyAction.UPDATE]}}),
+      key: key({spaces: {[space]: {group: [ApiKeyAction.READ, ApiKeyAction.UPDATE]}}}),
       access: access(SpaceRole.ADMIN, []),
       nowIso: now,
       call: {spaceId: space, resource: ApiKeyResource.GROUP, action: ApiKeyAction.UPDATE, groupTarget: 'member'},
@@ -204,31 +250,52 @@ describe('effectiveApiKeyPermissions', () => {
   it('does not claim fp deletes the role matrix denies', () => {
     const result = effectiveApiKeyPermissions(
       key({
-        podIds: [],
-        permissions: {fp: {transaction: [ApiKeyAction.READ, ApiKeyAction.DELETE]}},
+        pods: {[podA]: {fp: {transaction: [ApiKeyAction.READ, ApiKeyAction.DELETE]}}},
       }),
-      access(SpaceRole.USER, [pod(podA, FeatureKind.FINANCIAL_PLANNING, PodRole.USER)]),
+      [{spaceId: space, access: access(SpaceRole.USER, [pod(podA, FeatureKind.FINANCIAL_PLANNING, PodRole.USER)])}],
       now,
     );
     expect(result.principalUserId).toBe(owner);
     expect(result.pods).toEqual([
       {
         podId: podA,
+        spaceId: space,
         featureKind: FeatureKind.FINANCIAL_PLANNING,
         fp: {transaction: [ApiKeyAction.READ]},
       },
     ]);
   });
 
-  it('omits a pod outside the allowlist', () => {
+  it('omits a pod that has no grant', () => {
     const result = effectiveApiKeyPermissions(
-      key({
-        podIds: [podA],
-        permissions: {pods: {[podA]: {todo: [ApiKeyAction.READ]}}},
-      }),
-      access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER), pod(podB, FeatureKind.TODO_LIST, PodRole.USER)]),
+      key({pods: {[podA]: {todo: [ApiKeyAction.READ]}}}),
+      [
+        {
+          spaceId: space,
+          access: access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER), pod(podB, FeatureKind.TODO_LIST, PodRole.USER)]),
+        },
+      ],
       now,
     );
     expect(result.pods.map((item) => item.podId)).toEqual([podA]);
+  });
+
+  it('reports grants from more than one space', () => {
+    const result = effectiveApiKeyPermissions(
+      key({
+        pods: {[podA]: {todo: [ApiKeyAction.READ]}, [podShop]: {shopping: [ApiKeyAction.READ]}},
+        spaces: {[space]: {space: [ApiKeyAction.READ]}, [spaceB]: {group: [ApiKeyAction.READ]}},
+      }),
+      [
+        {spaceId: space, access: access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER)])},
+        {spaceId: spaceB, access: access(SpaceRole.USER, [pod(podShop, FeatureKind.SHOPPING_LIST, PodRole.USER)])},
+      ],
+      now,
+    );
+    expect(result.spaces).toEqual([
+      {spaceId: space, space: [ApiKeyAction.READ], group: []},
+      {spaceId: spaceB, space: [], group: [ApiKeyAction.READ]},
+    ]);
+    expect(result.pods.map((item) => item.podId)).toEqual([podA, podShop]);
   });
 });

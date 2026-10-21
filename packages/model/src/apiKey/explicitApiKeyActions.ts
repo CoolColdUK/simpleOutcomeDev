@@ -1,6 +1,6 @@
 import type {ApiKeyAction} from './apiKeyAction';
 import {ApiKeyResource} from './apiKeyResource';
-import type {ApiKeyFpGrant, ApiKeyPermissions, ApiKeyPodGrant} from './apiKeyPermissions';
+import type {ApiKeyFpGrant, ApiKeyPodGrant} from './apiKeyPermissions';
 import apiKeyPodResource from './apiKeyPodResource';
 import type {ApiKeyCall, ApiKeyRecord} from './apiKeyRecord';
 
@@ -11,10 +11,7 @@ function fpActions(grant: ApiKeyFpGrant | undefined, call: ApiKeyCall): readonly
   return grant[call.fpResource];
 }
 
-function featureActions(grant: ApiKeyPermissions | ApiKeyPodGrant | undefined, call: ApiKeyCall): readonly ApiKeyAction[] | undefined {
-  if (grant === undefined) {
-    return undefined;
-  }
+function featureActions(grant: ApiKeyPodGrant, call: ApiKeyCall): readonly ApiKeyAction[] | undefined {
   if (call.resource === ApiKeyResource.TODO) {
     return grant.todo;
   }
@@ -33,20 +30,15 @@ export interface ExplicitApiKeyActions {
 }
 
 export default function explicitApiKeyActions(key: ApiKeyRecord, call: ApiKeyCall): ExplicitApiKeyActions {
-  if (!apiKeyPodResource(call.resource)) {
+  if (call.resource === ApiKeyResource.SPACE || call.resource === ApiKeyResource.GROUP) {
+    const grant = key.permissions.spaces?.[call.spaceId];
     if (call.resource === ApiKeyResource.SPACE) {
-      return {actions: key.permissions.space, missingPodGrant: false};
+      return {actions: grant?.space, missingPodGrant: false};
     }
-    if (call.resource === ApiKeyResource.GROUP) {
-      return {actions: key.permissions.group, missingPodGrant: false};
-    }
-    if (call.resource === ApiKeyResource.PROFILE) {
-      return {actions: key.permissions.profile, missingPodGrant: false};
-    }
-    return {actions: key.permissions.contact, missingPodGrant: false};
+    return {actions: grant?.group, missingPodGrant: false};
   }
-  if (key.podIds.length === 0) {
-    return {actions: featureActions(key.permissions, call), missingPodGrant: false};
+  if (!apiKeyPodResource(call.resource)) {
+    return {actions: undefined, missingPodGrant: false};
   }
   const podId = call.podId;
   if (podId === undefined) {

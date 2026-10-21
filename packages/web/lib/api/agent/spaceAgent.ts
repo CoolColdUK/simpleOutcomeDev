@@ -13,7 +13,7 @@ import {
   SpaceRole,
 } from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
-import loadAgentContext, {requireAgentCall, type AgentContext} from '@/lib/api/agent/loadAgentContext';
+import loadAgentContext, {loadGrantedSpaceAccess, requireAgentCall, type AgentContext} from '@/lib/api/agent/loadAgentContext';
 
 function validation(message: string): AgentResult<never> {
   return agentErr(400, 'validation', message);
@@ -34,11 +34,15 @@ export async function getAgentApiKeyPermissions(request: Request): Promise<Agent
   if (!ctx.ok) {
     return ctx;
   }
+  const spaces = await loadGrantedSpaceAccess(ctx.data.supabase, ctx.data.record.ownerUserId, ctx.data.record.permissions);
+  if (!spaces.ok) {
+    return spaces;
+  }
   return agentOk({
     id: ctx.data.record.id,
     name: ctx.data.keyName,
     prefix: ctx.data.keyPrefix,
-    ...effectiveApiKeyPermissions(ctx.data.record, ctx.data.access, ctx.data.nowIso),
+    ...effectiveApiKeyPermissions(ctx.data.record, spaces.data, ctx.data.nowIso),
   });
 }
 
@@ -94,7 +98,9 @@ export async function listAgentSpacePods(request: Request, spaceId: string): Pro
   if (!ctx.ok) {
     return ctx;
   }
-  const visible = new Set(effectiveApiKeyPermissions(ctx.data.record, ctx.data.access, ctx.data.nowIso).pods.map((pod) => pod.podId));
+  const visible = new Set(
+    effectiveApiKeyPermissions(ctx.data.record, [{spaceId, access: ctx.data.access}], ctx.data.nowIso).pods.map((pod) => pod.podId),
+  );
   const ids = [...visible];
   if (ids.length === 0) {
     return agentOk({pods: []});

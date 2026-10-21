@@ -2,13 +2,13 @@
 
 import {useCallback, useEffect, useState} from 'react';
 import {useParams} from 'next/navigation';
-import {Alert, Heading, Stack} from '@chakra-ui/react';
+import {Alert, Heading, Stack, Text} from '@chakra-ui/react';
+import Link from 'next/link';
 import {SpaceRole, canManageSpace} from '@so/model';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbSpace from '@/lib/api/db/getDbSpace';
 import getDbSpaceMemberRole from '@/lib/api/db/getDbSpaceMemberRole';
 import AppPageLoadingState from '@/components/app/AppPageLoadingState';
-import SpaceApiKeysPanel from '@/components/app/SpaceApiKeysPanel';
 import SpaceSettingsPanel from '@/components/app/SpaceSettingsPanel';
 import SpaceMembersPanel from '@/components/app/SpaceMembersPanel';
 
@@ -66,7 +66,9 @@ export default function SpaceSettingsPage() {
         </Alert.Root>
       ) : null}
       {spaceId !== undefined && user !== undefined && error === '' ? (
-        <SpaceApiKeysPanel spaceId={spaceId} userId={user.id} spaceRole={role} />
+        <Text>
+          API keys are managed in <Link href="/app/settings">Account settings</Link>.
+        </Text>
       ) : null}
       {allowed && spaceId !== undefined ? (
         <>

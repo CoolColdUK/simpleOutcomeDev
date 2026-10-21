@@ -1,5 +1,6 @@
 import {
   type ApiKeyOwnerAccess,
+  type ApiKeyPermissions,
   type ApiKeyPodAccess,
   type ApiKeyRecord,
   type ApiKeyStoredStatus,
@@ -27,13 +28,22 @@ import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentR
 import apiKeySecretHashMatches from '@/lib/api/agent/apiKeySecretHash';
 import readBearerToken from '@/lib/api/agent/readBearerToken';
 
-export interface AgentContext {
+export interface AgentKeyContext {
   readonly supabase: SupabaseClient<Database>;
   readonly record: ApiKeyRecord;
-  readonly access: ApiKeyOwnerAccess;
   readonly nowIso: string;
   readonly keyName: string;
   readonly keyPrefix: string;
+}
+
+export interface AgentContext extends AgentKeyContext {
+  readonly access: ApiKeyOwnerAccess;
+  readonly spaceId: string;
+}
+
+export interface GrantedSpaceAccess {
+  readonly spaceId: string;
+  readonly access: ApiKeyOwnerAccess;
 }
 
 function enumValue<T extends string>(values: readonly T[], input: string): T | undefined {
@@ -45,6 +55,10 @@ function storedStatus(input: string): ApiKeyStoredStatus | undefined {
     return input;
   }
   return undefined;
+}
+
+function unique(ids: readonly string[]): readonly string[] {
+  return [...new Set(ids)];
 }
 
 async function loadAccess(
@@ -107,7 +121,7 @@ async function loadAccess(
   });
 }
 
-export default async function loadAgentContext(request: Request): Promise<AgentResult<AgentContext>> {
+export default async function loadAgentContext(request: Request): Promise<AgentResult<AgentKeyContext>> {
   const token = readBearerToken(request);
   if (token === undefined) {
     return agentErr(401, 'unauthorized', 'API key is required');
@@ -122,7 +136,7 @@ export default async function loadAgentContext(request: Request): Promise<AgentR
   }
   const found = await supabase
     .from('api_key')
-    .select('id, space_id, owner_user_id, name, key_prefix, secret_hash, pod_ids, permissions, status, expires_at')
+    .select('id, owner_user_id, name, key_prefix, secret_hash, permissions, status, expires_at')
     .eq('key_prefix', parsedSecret.prefix)
     .maybeSingle();
   const foundErr = dbErr(found.error);
@@ -138,10 +152,6 @@ export default async function loadAgentContext(request: Request): Promise<AgentR
   if (status === undefined) {
     return agentErr(401, 'unauthorized', 'Invalid API key');
   }
-  const permissions = safeParseApiKeyPermissions(row.permissions, row.pod_ids ?? []);
-  if (!permissions.ok) {
-    return agentErr(403, 'forbidden', 'API key permissions are invalid');
-  }
   const nowIso = new Date().toISOString();
   const derived = deriveApiKeyStatus(status, row.expires_at ?? undefined, nowIso);
   if (derived === ApiKeyStatus.REVOKED) {
@@ -150,38 +160,72 @@ export default async function loadAgentContext(request: Request): Promise<AgentR
   if (derived === ApiKeyStatus.EXPIRED) {
     return agentErr(401, 'expired', 'API key is expired');
   }
+  const permissions = safeParseApiKeyPermissions(row.permissions);
+  if (!permissions.ok) {
+    return agentErr(403, 'forbidden', 'API key permissions are invalid');
+  }
   const touched = await supabase.from('api_key').update({last_used_at: nowIso}).eq('id', row.id);
   const touchedErr = dbErr(touched.error);
   if (touchedErr !== undefined) {
     return touchedErr;
   }
-  const access = await loadAccess(supabase, row.space_id, row.owner_user_id);
-  if (!access.ok) {
-    return access;
-  }
-  if (access.data.spaceRole === undefined) {
-    return agentErr(403, 'forbidden', 'API key owner is not a member of this space');
-  }
   const record: ApiKeyRecord = {
     id: row.id,
-    spaceId: row.space_id,
     ownerUserId: row.owner_user_id,
     status,
     expiresAt: row.expires_at ?? undefined,
-    podIds: row.pod_ids ?? [],
     permissions: permissions.value,
   };
   return agentOk({
     supabase,
     record,
-    access: access.data,
     nowIso,
     keyName: row.name,
     keyPrefix: row.key_prefix,
   });
 }
 
-function authorizeLoaded(ctx: AgentContext, call: ApiKeyCall): AgentResult<AgentContext> {
+async function podSpaceIds(supabase: SupabaseClient<Database>, podIds: readonly string[]): Promise<AgentResult<readonly string[]>> {
+  if (podIds.length === 0) {
+    return agentOk([]);
+  }
+  const pods = await supabase.from('pod').select('space_id').in('id', [...podIds]);
+  const podsErr = dbErr(pods.error);
+  if (podsErr !== undefined) {
+    return podsErr;
+  }
+  return agentOk((pods.data ?? []).map((pod) => pod.space_id));
+}
+
+export async function loadGrantedSpaceAccess(
+  supabase: SupabaseClient<Database>,
+  ownerUserId: string,
+  permissions: ApiKeyPermissions,
+): Promise<AgentResult<readonly GrantedSpaceAccess[]>> {
+  const podSpaces = await podSpaceIds(supabase, Object.keys(permissions.pods ?? {}));
+  if (!podSpaces.ok) {
+    return podSpaces;
+  }
+  const spaceIds = unique([...(permissions.spaces === undefined ? [] : Object.keys(permissions.spaces)), ...podSpaces.data]);
+  const loaded = await Promise.all(
+    spaceIds.map(async (spaceId) => {
+      const access = await loadAccess(supabase, spaceId, ownerUserId);
+      return {spaceId, access};
+    }),
+  );
+  const failed = loaded.find((item) => !item.access.ok);
+  if (failed !== undefined && !failed.access.ok) {
+    return failed.access;
+  }
+  return agentOk(loaded.flatMap((item) => (item.access.ok ? [{spaceId: item.spaceId, access: item.access.data}] : [])));
+}
+
+async function authorizeInSpace(key: AgentKeyContext, call: ApiKeyCall): Promise<AgentResult<AgentContext>> {
+  const access = await loadAccess(key.supabase, call.spaceId, key.record.ownerUserId);
+  if (!access.ok) {
+    return access;
+  }
+  const ctx: AgentContext = {...key, access: access.data, spaceId: call.spaceId};
   const auth = authorizeApiKeyCall({key: ctx.record, access: ctx.access, call, nowIso: ctx.nowIso});
   if (!auth.ok) {
     return agentErr(apiKeyAuthzHttpStatus(auth.code), auth.code, auth.message);
@@ -190,17 +234,28 @@ function authorizeLoaded(ctx: AgentContext, call: ApiKeyCall): AgentResult<Agent
 }
 
 export async function requireAgentCall(request: Request, call: ApiKeyCall): Promise<AgentResult<AgentContext>> {
-  const ctx = await loadAgentContext(request);
-  if (!ctx.ok) {
-    return ctx;
+  const key = await loadAgentContext(request);
+  if (!key.ok) {
+    return key;
   }
-  return authorizeLoaded(ctx.data, call);
+  return authorizeInSpace(key.data, call);
 }
 
 export async function requirePodAgent(request: Request, call: Omit<ApiKeyCall, 'spaceId'>): Promise<AgentResult<AgentContext>> {
-  const ctx = await loadAgentContext(request);
-  if (!ctx.ok) {
-    return ctx;
+  const key = await loadAgentContext(request);
+  if (!key.ok) {
+    return key;
   }
-  return authorizeLoaded(ctx.data, {...call, spaceId: ctx.data.record.spaceId});
+  if (call.podId === undefined) {
+    return agentErr(400, 'validation', 'Pod is required');
+  }
+  const pod = await key.data.supabase.from('pod').select('space_id').eq('id', call.podId).maybeSingle();
+  const podErr = dbErr(pod.error);
+  if (podErr !== undefined) {
+    return podErr;
+  }
+  if (pod.data === null) {
+    return agentErr(404, 'not_found', 'Pod not found');
+  }
+  return authorizeInSpace(key.data, {...call, spaceId: pod.data.space_id});
 }

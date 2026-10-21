@@ -39,7 +39,7 @@ function tool(
 
 export const MCP_TOOLS: readonly McpTool[] = [
   tool('get_api_key_permissions', 'Effective rights for this API key.', {}, [], (request) => getAgentApiKeyPermissions(request)),
-  tool('get_space', 'Read the key space.', {spaceId}, ['spaceId'], (request, args) => getAgentSpace(request, stringField(args, 'spaceId'))),
+  tool('get_space', 'Read a space.', {spaceId}, ['spaceId'], (request, args) => getAgentSpace(request, stringField(args, 'spaceId'))),
   tool('update_space', 'Update the space name and description.', {spaceId, name: title, description: {type: 'string'}}, ['spaceId', 'name'], (request, args) =>
     updateAgentSpace(request, args),
   ),

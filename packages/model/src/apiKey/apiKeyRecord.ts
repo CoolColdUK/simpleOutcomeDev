@@ -11,11 +11,9 @@ import type {ApiKeyStoredStatus} from './apiKeyStatus';
 
 export interface ApiKeyRecord {
   readonly id: string;
-  readonly spaceId: string;
   readonly ownerUserId: string;
   readonly status: ApiKeyStoredStatus;
   readonly expiresAt: string | undefined;
-  readonly podIds: readonly string[];
   readonly permissions: ApiKeyPermissions;
 }
 
