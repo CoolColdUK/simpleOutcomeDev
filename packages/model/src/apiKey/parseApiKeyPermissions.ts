@@ -4,7 +4,7 @@ import type {ApiKeyFpGrant, ApiKeyPermissions, ApiKeyPodGrant, ApiKeySpaceGrant}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const TOP_LEVEL = ['pods', 'spaces'] as const;
+const TOP_LEVEL = ['profile', 'pods', 'spaces'] as const;
 const POD_GRANT_KEYS = ['todo', 'shopping', 'fp'] as const;
 const SPACE_GRANT_KEYS = ['space', 'group'] as const;
 const FP_RESOURCES = Object.values(FpResource).filter((resource) => resource !== FpResource.DELETE_ALL);
@@ -34,11 +34,19 @@ function parseActions(input: unknown): readonly ApiKeyAction[] | undefined {
   return actions.filter((action, index) => actions.indexOf(action) === index);
 }
 
+function parseDeleteAll(input: unknown): readonly ApiKeyAction[] | undefined {
+  const actions = parseActions(input);
+  if (actions === undefined || actions.length === 0 || actions.some((action) => action !== ApiKeyAction.CREATE)) {
+    return undefined;
+  }
+  return actions;
+}
+
 function parseFpGrant(input: unknown): ApiKeyFpGrant | undefined {
   if (!isRecord(input)) {
     return undefined;
   }
-  const known = new Set<string>(FP_RESOURCES);
+  const known = new Set<string>([...FP_RESOURCES, FpResource.DELETE_ALL]);
   const unknown = Object.keys(input).find((key) => !known.has(key));
   if (unknown !== undefined) {
     return undefined;
@@ -47,11 +55,18 @@ function parseFpGrant(input: unknown): ApiKeyFpGrant | undefined {
   if (invalid) {
     return undefined;
   }
+  if (input[FpResource.DELETE_ALL] !== undefined && parseDeleteAll(input[FpResource.DELETE_ALL]) === undefined) {
+    return undefined;
+  }
   const entries = FP_RESOURCES.flatMap((resource) => {
     const actions = input[resource] === undefined ? undefined : parseActions(input[resource]);
     return actions === undefined ? [] : [[resource, actions] as const];
   });
-  return Object.fromEntries(entries);
+  const deleteAll = input[FpResource.DELETE_ALL] === undefined ? undefined : parseDeleteAll(input[FpResource.DELETE_ALL]);
+  return {
+    ...Object.fromEntries(entries),
+    ...(deleteAll === undefined ? {} : {[FpResource.DELETE_ALL]: deleteAll}),
+  };
 }
 
 function parsePodGrant(input: unknown): ApiKeyPodGrant | undefined {
@@ -124,6 +139,10 @@ export default function safeParseApiKeyPermissions(input: unknown): SafeParseApi
   if (unknown !== undefined) {
     return {ok: false, message: `Unknown permission key ${unknown}`};
   }
+  const profile = input['profile'] === undefined ? undefined : parseActions(input['profile']);
+  if (input['profile'] !== undefined && (profile === undefined || profile.some((action) => action !== ApiKeyAction.READ && action !== ApiKeyAction.UPDATE))) {
+    return {ok: false, message: 'Invalid profile grant'};
+  }
   const pods = input['pods'] === undefined ? undefined : parseIdMap(input['pods'], parsePodGrant);
   if (input['pods'] !== undefined && pods === undefined) {
     return {ok: false, message: 'Invalid per-pod grant'};
@@ -135,6 +154,7 @@ export default function safeParseApiKeyPermissions(input: unknown): SafeParseApi
   return {
     ok: true,
     value: {
+      ...(profile === undefined || profile.length === 0 ? {} : {profile}),
       ...(pods === undefined ? {} : {pods}),
       ...(spaces === undefined ? {} : {spaces}),
     },

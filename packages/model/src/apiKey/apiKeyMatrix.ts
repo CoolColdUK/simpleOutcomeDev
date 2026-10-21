@@ -45,6 +45,12 @@ export interface ApiKeyMatrixPodRow {
   readonly podName: string;
   readonly feature: FeatureKind;
   readonly cells: ApiKeyMatrixCells;
+  readonly deleteAll: boolean;
+}
+
+export interface ApiKeyProfileCells {
+  readonly read: boolean;
+  readonly update: boolean;
 }
 
 export interface ApiKeyMatrixSpaceSection {
@@ -57,6 +63,7 @@ export interface ApiKeyMatrixSpaceSection {
 export interface ApiKeyPermissionMatrix {
   readonly pods: readonly ApiKeyMatrixPodRow[];
   readonly spaces: readonly ApiKeyMatrixSpaceSection[];
+  readonly profile: ApiKeyProfileCells;
 }
 
 export type ApiKeySpaceResource = 'space' | 'group';
@@ -64,6 +71,9 @@ export type ApiKeySpaceResource = 'space' | 'group';
 const OFF: ApiKeyMatrixCells = {create: false, read: false, update: false, delete: false};
 const ON: ApiKeyMatrixCells = {create: true, read: true, update: true, delete: true};
 const READ: ApiKeyMatrixCells = {create: false, read: true, update: false, delete: false};
+const PROFILE_OFF: ApiKeyProfileCells = {read: false, update: false};
+const PROFILE_READ: ApiKeyProfileCells = {read: true, update: false};
+const PROFILE_ON: ApiKeyProfileCells = {read: true, update: true};
 
 function cellValue(cells: ApiKeyMatrixCells, action: ApiKeyAction): boolean {
   if (action === ApiKeyAction.CREATE) {
@@ -99,46 +109,56 @@ function compareName(left: string, right: string): number {
   return left.localeCompare(right);
 }
 
-function podCells(preset: ApiKeyPresetId, feature: FeatureKind): ApiKeyMatrixCells {
+function podCells(preset: ApiKeyPresetId): ApiKeyMatrixCells {
   if (preset === ApiKeyPresetId.ALL_ON) {
     return ON;
   }
-  if (preset === ApiKeyPresetId.TODO_READ_WRITE && feature === FeatureKind.TODO_LIST) {
-    return ON;
-  }
-  if (preset === ApiKeyPresetId.TODO_READ && feature === FeatureKind.TODO_LIST) {
-    return READ;
-  }
-  if (preset === ApiKeyPresetId.FP_READ && feature === FeatureKind.FINANCIAL_PLANNING) {
+  if (preset === ApiKeyPresetId.ALL_READ) {
     return READ;
   }
   return OFF;
 }
 
-function spaceCells(preset: ApiKeyPresetId, resource: ApiKeySpaceResource): ApiKeyMatrixCells {
+function spaceCells(preset: ApiKeyPresetId): ApiKeyMatrixCells {
   if (preset === ApiKeyPresetId.ALL_ON) {
     return ON;
   }
-  if (preset === ApiKeyPresetId.SPACE_READ && resource === 'space') {
-    return READ;
-  }
-  if (preset === ApiKeyPresetId.GROUP_READ && resource === 'group') {
+  if (preset === ApiKeyPresetId.ALL_READ) {
     return READ;
   }
   return OFF;
+}
+
+function profileCells(preset: ApiKeyPresetId): ApiKeyProfileCells {
+  if (preset === ApiKeyPresetId.ALL_ON) {
+    return PROFILE_ON;
+  }
+  if (preset === ApiKeyPresetId.ALL_READ) {
+    return PROFILE_READ;
+  }
+  return PROFILE_OFF;
+}
+
+function deleteAllFor(preset: ApiKeyPresetId, feature: FeatureKind): boolean {
+  return preset === ApiKeyPresetId.ALL_ON && feature === FeatureKind.FINANCIAL_PLANNING;
 }
 
 function actionsFromCells(cells: ApiKeyMatrixCells): readonly ApiKeyAction[] {
   return ACTIONS.filter((action) => cellValue(cells, action));
 }
 
-function fpGrant(actions: readonly ApiKeyAction[]): ApiKeyFpGrant {
-  return Object.fromEntries(FP_RESOURCES.map((resource) => [resource, actions]));
+function fpGrant(actions: readonly ApiKeyAction[], deleteAll: boolean): ApiKeyFpGrant {
+  const grant: ApiKeyFpGrant = actions.length === 0 ? {} : Object.fromEntries(FP_RESOURCES.map((resource) => [resource, actions]));
+  if (!deleteAll) {
+    return grant;
+  }
+  return {...grant, delete_all: [ApiKeyAction.CREATE]};
 }
 
 function podGrant(row: ApiKeyMatrixPodRow): ApiKeyPodGrant | undefined {
   const actions = actionsFromCells(row.cells);
-  if (actions.length === 0) {
+  const deleteAll = row.feature === FeatureKind.FINANCIAL_PLANNING && row.deleteAll;
+  if (actions.length === 0 && !deleteAll) {
     return undefined;
   }
   if (row.feature === FeatureKind.TODO_LIST) {
@@ -147,7 +167,11 @@ function podGrant(row: ApiKeyMatrixPodRow): ApiKeyPodGrant | undefined {
   if (row.feature === FeatureKind.SHOPPING_LIST) {
     return {shopping: actions};
   }
-  return {fp: fpGrant(actions)};
+  return {fp: fpGrant(actions, deleteAll)};
+}
+
+function profileActions(cells: ApiKeyProfileCells): readonly ApiKeyAction[] {
+  return [...(cells.read ? [ApiKeyAction.READ] : []), ...(cells.update ? [ApiKeyAction.UPDATE] : [])];
 }
 
 function spaceGrant(section: ApiKeyMatrixSpaceSection): ApiKeySpaceGrant | undefined {
@@ -198,16 +222,16 @@ export function apiKeyMatrixForPreset(
 ): ApiKeyPermissionMatrix {
   const podRows = [...pods]
     .sort((left, right) => compareName(left.spaceName, right.spaceName) || compareName(left.podName, right.podName))
-    .map((pod) => ({...pod, cells: podCells(preset, pod.feature)}));
+    .map((pod) => ({...pod, cells: podCells(preset), deleteAll: deleteAllFor(preset, pod.feature)}));
   const spaceRows = [...spaces]
     .sort((left, right) => compareName(left.spaceName, right.spaceName))
     .map((space) => ({
       spaceId: space.spaceId,
       spaceName: space.spaceName,
-      space: spaceCells(preset, 'space'),
-      group: spaceCells(preset, 'group'),
+      space: spaceCells(preset),
+      group: spaceCells(preset),
     }));
-  return {pods: podRows, spaces: spaceRows};
+  return {pods: podRows, spaces: spaceRows, profile: profileCells(preset)};
 }
 
 export function permissionsForPreset(
@@ -231,10 +255,28 @@ export function permissionsFromApiKeyMatrix(matrix: ApiKeyPermissionMatrix): Api
       return grant === undefined ? [] : [[section.spaceId, grant] as const];
     }),
   );
+  const profile = profileActions(matrix.profile);
   return {
+    ...(profile.length === 0 ? {} : {profile}),
     ...(Object.keys(pods).length === 0 ? {} : {pods}),
     ...(Object.keys(spaces).length === 0 ? {} : {spaces}),
   };
+}
+
+export function toggleApiKeyMatrixDeleteAll(matrix: ApiKeyPermissionMatrix, podId: string): ApiKeyPermissionMatrix {
+  return {
+    ...matrix,
+    pods: matrix.pods.map((row) => (row.podId === podId && row.feature === FeatureKind.FINANCIAL_PLANNING ? {...row, deleteAll: !row.deleteAll} : row)),
+  };
+}
+
+export function toggleApiKeyMatrixProfile(matrix: ApiKeyPermissionMatrix, field: 'read' | 'update'): ApiKeyPermissionMatrix {
+  return {...matrix, profile: {...matrix.profile, [field]: !matrix.profile[field]}};
+}
+
+export function toggleApiKeyMatrixProfileRow(matrix: ApiKeyPermissionMatrix): ApiKeyPermissionMatrix {
+  const on = !(matrix.profile.read && matrix.profile.update);
+  return {...matrix, profile: {read: on, update: on}};
 }
 
 export function toggleApiKeyMatrixPodCell(matrix: ApiKeyPermissionMatrix, podId: string, action: ApiKeyAction): ApiKeyPermissionMatrix {

@@ -11,9 +11,12 @@ export {
   createApiKeyMatrix,
   permissionsForPreset,
   permissionsFromApiKeyMatrix,
+  toggleApiKeyMatrixDeleteAll,
   toggleApiKeyMatrixPodCell,
   toggleApiKeyMatrixPodColumn,
   toggleApiKeyMatrixPodRow,
+  toggleApiKeyMatrixProfile,
+  toggleApiKeyMatrixProfileRow,
   toggleApiKeyMatrixSpaceCell,
   toggleApiKeyMatrixSpaceColumn,
   toggleApiKeyMatrixSpaceRow,
@@ -24,6 +27,7 @@ export type {
   ApiKeyMatrixPodInput,
   ApiKeyMatrixSpaceInput,
   ApiKeyPermissionMatrix,
+  ApiKeyProfileCells,
   ApiKeySpaceResource,
 } from './apiKeyMatrix';
 export {default as deriveApiKeyStatus} from './deriveApiKeyStatus';
@@ -31,7 +35,15 @@ export {default as parseApiKeySecret, API_KEY_PREFIX_LENGTH} from './parseApiKey
 export {default as featureKindForApiResource} from './featureKindForApiResource';
 export {default as apiKeyPodResource} from './apiKeyPodResource';
 export {default as safeParseApiKeyPermissions} from './parseApiKeyPermissions';
-export type {ApiKeyRecord, ApiKeyPodAccess, ApiKeyOwnerAccess, ApiKeyCall, ApiKeyTodoTarget, ApiKeyGroupTarget} from './apiKeyRecord';
+export type {
+  ApiKeyRecord,
+  ApiKeyPodAccess,
+  ApiKeyOwnerAccess,
+  ApiKeyCall,
+  ApiKeyTodoTarget,
+  ApiKeyGroupTarget,
+  ApiKeySpaceTarget,
+} from './apiKeyRecord';
 export {default as authorizeApiKeyCall, apiKeyAuthzHttpStatus} from './authorizeApiKeyCall';
 export type {ApiKeyAuthzCode, ApiKeyAuthzResult, AuthorizeApiKeyCallInput} from './authorizeApiKeyCall';
 export {default as effectiveApiKeyPermissions} from './effectiveApiKeyPermissions';
@@ -48,4 +60,36 @@ export {
   agentTodoIdSchema,
 } from './agentTodoSchema';
 export {agentSpaceUpdateSchema, agentSpaceInviteCreateSchema, agentSpaceMemberRoleSchema, agentSpaceInviteDeleteSchema} from './agentSpaceSchema';
+export {
+  agentSpaceCreateSchema,
+  agentSpaceJoinSchema,
+  agentPodCreateSchema,
+  agentPodUpdateSchema,
+  agentPodStatusSchema,
+  agentPodSearchSchema,
+  agentPodIdSchema,
+  agentSpaceInviteDisableSchema,
+  agentPodMemberAddSchema,
+  agentPodMemberRoleSchema,
+  agentPodJoinRequestSchema,
+  agentProfileDisplayNameSchema,
+  agentProfileUsernameSchema,
+  agentTodoReorderColumnsSchema,
+  agentTodoReorderCardsSchema,
+  agentTodoColumnArchiveSchema,
+  agentTodoCardIconSchema,
+  agentFpColumnMapSchema,
+  agentFpAccountCreateSchema,
+  agentFpAccountUpdateSchema,
+  agentFpCategoryWriteSchema,
+  agentFpTransactionWriteSchema,
+  agentFpAssignSchema,
+  agentFpBulkAssignSchema,
+  agentFpConfirmSchema,
+  agentFpParserWriteSchema,
+  agentFpImportCreateSchema,
+  agentFpImportIdSchema,
+  agentFpBillSplitSchema,
+  agentFpSettingSchema,
+} from './agentSurfaceSchema';
 export {default as parseApiPage} from './parseApiPage';

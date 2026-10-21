@@ -19,6 +19,7 @@ import {
   safeParseApiKeyPermissions,
   type ApiKeyCall,
   ApiKeyStatus,
+  ApiKeyResource,
   parseFpPermissionMatrix,
 } from '@so/model';
 import type {SupabaseClient} from '@supabase/supabase-js';
@@ -239,6 +240,25 @@ export async function requireAgentCall(request: Request, call: ApiKeyCall): Prom
     return key;
   }
   return authorizeInSpace(key.data, call);
+}
+
+const PROFILE_CALL_SPACE = '00000000-0000-4000-8000-000000000000';
+
+export async function requireProfileAgent(request: Request, action: ApiKeyCall['action']): Promise<AgentResult<AgentKeyContext>> {
+  const key = await loadAgentContext(request);
+  if (!key.ok) {
+    return key;
+  }
+  const auth = authorizeApiKeyCall({
+    key: key.data.record,
+    access: {spaceRole: undefined, pods: []},
+    call: {spaceId: PROFILE_CALL_SPACE, resource: ApiKeyResource.PROFILE, action},
+    nowIso: key.data.nowIso,
+  });
+  if (!auth.ok) {
+    return agentErr(apiKeyAuthzHttpStatus(auth.code), auth.code, auth.message);
+  }
+  return agentOk(key.data);
 }
 
 export async function requirePodAgent(request: Request, call: Omit<ApiKeyCall, 'spaceId'>): Promise<AgentResult<AgentContext>> {

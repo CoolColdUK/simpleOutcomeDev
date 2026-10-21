@@ -13,6 +13,7 @@ import {createAgentTodoCard, deleteAgentTodoCard, listAgentTodoCards, updateAgen
 import {createAgentTodoColumn, deleteAgentTodoColumn, listAgentTodoColumns, updateAgentTodoColumn} from '@/lib/api/agent/todoAgentColumns';
 import {createAgentTodoComment, deleteAgentTodoComment, listAgentTodoComments, updateAgentTodoComment} from '@/lib/api/agent/todoAgentComments';
 import type {AgentResult} from '@/lib/api/agent/agentResult';
+import {MCP_EXTRA_TOOLS} from '@/lib/api/mcp/mcpCatalogExtra';
 
 export interface McpTool {
   readonly name: string;
@@ -104,6 +105,7 @@ export const MCP_TOOLS: readonly McpTool[] = [
       dueAt: {type: 'string'},
       sortOrder: {type: 'number'},
       completedAt: {type: 'string'},
+      assigneeUserId: {type: 'string'},
     },
     ['podId', 'cardId'],
     (request, args) => updateAgentTodoCard(request, args),
@@ -129,6 +131,7 @@ export const MCP_TOOLS: readonly McpTool[] = [
     ['podId', 'cardId', 'commentId'],
     (request, args) => deleteAgentTodoComment(request, args),
   ),
+  ...MCP_EXTRA_TOOLS,
 ];
 
 function stringField(args: unknown, key: string): string {

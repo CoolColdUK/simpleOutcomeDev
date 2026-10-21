@@ -30,6 +30,9 @@ export interface ExplicitApiKeyActions {
 }
 
 export default function explicitApiKeyActions(key: ApiKeyRecord, call: ApiKeyCall): ExplicitApiKeyActions {
+  if (call.resource === ApiKeyResource.PROFILE) {
+    return {actions: key.permissions.profile, missingPodGrant: false};
+  }
   if (call.resource === ApiKeyResource.SPACE || call.resource === ApiKeyResource.GROUP) {
     const grant = key.permissions.spaces?.[call.spaceId];
     if (call.resource === ApiKeyResource.SPACE) {

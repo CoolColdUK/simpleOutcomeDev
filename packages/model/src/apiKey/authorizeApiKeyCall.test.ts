@@ -235,6 +235,83 @@ describe('authorizeApiKeyCall', () => {
     expect(result).toEqual({ok: false, code: 'forbidden', message: 'API key owner is not a member of this space'});
   });
 
+  it('allows profile read without a space membership', () => {
+    const result = authorizeApiKeyCall({
+      key: key({profile: [ApiKeyAction.READ]}),
+      access: access(undefined, []),
+      nowIso: now,
+      call: {spaceId: space, resource: ApiKeyResource.PROFILE, action: ApiKeyAction.READ},
+    });
+    expect(result).toEqual({ok: true, principalUserId: owner});
+  });
+
+  it('denies profile update when the key only grants read', () => {
+    const result = authorizeApiKeyCall({
+      key: key({profile: [ApiKeyAction.READ]}),
+      access: access(undefined, []),
+      nowIso: now,
+      call: {spaceId: space, resource: ApiKeyResource.PROFILE, action: ApiKeyAction.UPDATE},
+    });
+    expect(result).toEqual({ok: false, code: 'forbidden', message: 'API key does not grant this action'});
+  });
+
+  it('allows space create for a space admin and denies it for a member', () => {
+    const scoped = key({spaces: {[space]: {space: [ApiKeyAction.CREATE, ApiKeyAction.READ]}}});
+    const allowed = authorizeApiKeyCall({
+      key: scoped,
+      access: access(SpaceRole.ADMIN, []),
+      nowIso: now,
+      call: {spaceId: space, resource: ApiKeyResource.SPACE, action: ApiKeyAction.CREATE},
+    });
+    const denied = authorizeApiKeyCall({
+      key: scoped,
+      access: access(SpaceRole.USER, []),
+      nowIso: now,
+      call: {spaceId: space, resource: ApiKeyResource.SPACE, action: ApiKeyAction.CREATE},
+    });
+    expect(allowed.ok).toBe(true);
+    expect(denied).toEqual({ok: false, code: 'forbidden', message: 'Role does not allow this action'});
+  });
+
+  it('allows pod delete for the pod owner when the key grants space delete', () => {
+    const result = authorizeApiKeyCall({
+      key: key({spaces: {[space]: {space: [ApiKeyAction.DELETE]}}}),
+      access: access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.OWNER)]),
+      nowIso: now,
+      call: {spaceId: space, podId: podA, resource: ApiKeyResource.SPACE, action: ApiKeyAction.DELETE, spaceTarget: 'pod'},
+    });
+    expect(result).toEqual({ok: true, principalUserId: owner});
+  });
+
+  it('allows delete-all only from the delete_all create grant', () => {
+    const granted = authorizeApiKeyCall({
+      key: key({pods: {[podA]: {fp: {delete_all: [ApiKeyAction.CREATE]}}}}),
+      access: access(SpaceRole.USER, [pod(podA, FeatureKind.FINANCIAL_PLANNING, PodRole.OWNER)]),
+      nowIso: now,
+      call: {
+        spaceId: space,
+        podId: podA,
+        resource: ApiKeyResource.FP,
+        action: ApiKeyAction.CREATE,
+        fpResource: FpResource.DELETE_ALL,
+      },
+    });
+    const missing = authorizeApiKeyCall({
+      key: key({pods: {[podA]: {fp: {transaction: crud}}}}),
+      access: access(SpaceRole.USER, [pod(podA, FeatureKind.FINANCIAL_PLANNING, PodRole.OWNER)]),
+      nowIso: now,
+      call: {
+        spaceId: space,
+        podId: podA,
+        resource: ApiKeyResource.FP,
+        action: ApiKeyAction.CREATE,
+        fpResource: FpResource.DELETE_ALL,
+      },
+    });
+    expect(granted.ok).toBe(true);
+    expect(missing).toEqual({ok: false, code: 'forbidden', message: 'API key does not grant this action'});
+  });
+
   it('denies group role updates for a space admin', () => {
     const result = authorizeApiKeyCall({
       key: key({spaces: {[space]: {group: [ApiKeyAction.READ, ApiKeyAction.UPDATE]}}}),

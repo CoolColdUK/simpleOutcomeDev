@@ -41,9 +41,17 @@ describe('safeParseApiKeyPermissions', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('rejects fp delete_all', () => {
+  it('rejects fp delete_all delete', () => {
     const result = safeParseApiKeyPermissions({pods: {[podA]: {fp: {delete_all: ['delete']}}}});
     expect(result.ok).toBe(false);
+  });
+
+  it('accepts fp delete_all create and profile read', () => {
+    const result = safeParseApiKeyPermissions({
+      profile: ['read'],
+      pods: {[podA]: {fp: {delete_all: ['create']}}},
+    });
+    expect(result.ok).toBe(true);
   });
 });
 
@@ -58,9 +66,22 @@ describe('permissionsForPreset', () => {
     expect(permissionsForPreset(ApiKeyPresetId.ALL_OFF, pods, spaces)).toEqual({});
   });
 
-  it('limits todo read and write to todo pods', () => {
-    expect(permissionsForPreset(ApiKeyPresetId.TODO_READ_WRITE, pods, spaces)).toEqual({
-      pods: {[podA]: {todo: [ApiKeyAction.CREATE, ApiKeyAction.READ, ApiKeyAction.UPDATE, ApiKeyAction.DELETE]}},
+  it('limits all read to read on every visible row', () => {
+    expect(permissionsForPreset(ApiKeyPresetId.ALL_READ, pods, spaces)).toEqual({
+      profile: [ApiKeyAction.READ],
+      pods: {
+        [podA]: {todo: [ApiKeyAction.READ]},
+        [podId]: {fp: {
+          account: [ApiKeyAction.READ],
+          category: [ApiKeyAction.READ],
+          transaction: [ApiKeyAction.READ],
+          parser: [ApiKeyAction.READ],
+          import: [ApiKeyAction.READ],
+          bill_split: [ApiKeyAction.READ],
+          settings: [ApiKeyAction.READ],
+        }},
+      },
+      spaces: {[space]: {space: [ApiKeyAction.READ], group: [ApiKeyAction.READ]}},
     });
   });
 });

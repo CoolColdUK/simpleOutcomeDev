@@ -40,6 +40,7 @@ export const agentTodoCardUpdateSchema = v.object({
   dueAt: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(40)))),
   sortOrder: v.optional(sortOrder),
   completedAt: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(40)))),
+  assigneeUserId: v.optional(v.nullable(uuid())),
 });
 
 export const agentTodoCommentCreateSchema = v.object({
