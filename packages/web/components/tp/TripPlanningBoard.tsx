@@ -408,10 +408,9 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
               />
               <Field.Root>
                 <Field.Label>Primary destination (override)</Field.Label>
-                <NativeSelect.Root>
+                <NativeSelect.Root disabled={!canWrite}>
                   <NativeSelect.Field
                     value={selectedDay.primaryDestinationId ?? ''}
-                    disabled={!canWrite}
                     onChange={(e) => {
                       const value = e.target.value;
                       setData((prev) =>

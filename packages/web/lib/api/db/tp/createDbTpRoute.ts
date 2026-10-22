@@ -9,5 +9,8 @@ export default async function createDbTpRoute(actionId: string, name: string, so
     .select('id')
     .single();
   throwIfSupabaseError(error);
+  if (data === undefined || data === null) {
+    throw new Error('create route returned no id');
+  }
   return data.id;
 }

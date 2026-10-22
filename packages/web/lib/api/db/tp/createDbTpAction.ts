@@ -24,5 +24,8 @@ export default async function createDbTpAction(input: CreateDbTpActionInput): Pr
     .select('id')
     .single();
   throwIfSupabaseError(error);
+  if (data === undefined || data === null) {
+    throw new Error('create action returned no id');
+  }
   return data.id;
 }
