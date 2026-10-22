@@ -6,7 +6,69 @@ Expose the **trip planning** feature (merged from PR #9, tables `tp_*` / helpers
 **Reference:** [`api-mcp.md`](./api-mcp.md), [`financial planning-implementation.md`](./financial%20planning-implementation.md)  
 **Related:** [trip-planning.md](./trip-planning.md) (product requirements), PR #9 (merged trip planning implementation), migration `supabase/migrations/20261022150000_pod_viewer_trip_planning.sql`
 
-**Status:** PLAN ONLY — approved by Matthew
+**Status:** ✅ IMPLEMENTED — PR #15 (draft against `develop`)
+
+---
+
+## Implementation summary
+
+**Shipped in PR #15:**
+
+1. **Timezone conversion utilities** (`packages/model/src/tp/timezoneHelpers.ts`):
+   - `localTimeToUtc(localTime, ianaZone)` → UTC instant
+   - `utcToLocalTime(utcInstant, ianaZone)` → local wall time
+   - `formatTpInstant(utcInstant, ianaZone)` → display format with timezone abbreviation
+   - Unit tests covering DST transitions, >24h travel spans, round-trip conversions
+
+2. **Service layer** (`packages/web/lib/api/db/tp/`):
+   - `updateDbTpTrip`: update trip metadata + settings (defaultCurrency)
+   - `createDbTpDestination`, `updateDbTpDestination`, `deleteDbTpDestination`
+   - `updateDbTpDay` (manual anchor day override)
+   - `createDbTpAction`, `updateDbTpAction`, `deleteDbTpAction` (with timezone conversion for check-in/check-out)
+   - `createDbTpRoute`, `updateDbTpRoute`, `deleteDbTpRoute`, `selectDbTpRoute`
+   - `createDbTpTransport`, `updateDbTpTransport`, `deleteDbTpTransport` (with timezone conversion for depart/arrive)
+   - `listDbTpAttachments`, `uploadDbTpAttachment` (base64 decode, 5MB limit, JPEG/PNG/PDF, storage upload), `deleteDbTpAttachment`
+   - All `.single()` calls null-check `data` for strict TypeScript compliance
+
+3. **Agent adapters** (`packages/web/lib/api/agent/`):
+   - `tpAgentWorkspace.ts`: real `updateAgentTpTrip`, `getAgentTpBudgetRollup` (computes action + transport costs)
+   - `tpAgentDestinations.ts`, `tpAgentDays.ts`, `tpAgentActions.ts`, `tpAgentRoutes.ts`, `tpAgentTransports.ts`, `tpAgentAttachments.ts`
+   - All operations verify pod ownership via `ownedTpRow` before mutation
+   - Timezone conversion integrated into create/update operations
+
+4. **Valibot schemas** (`packages/model/src/tp/tpAgentSchemas.ts`):
+   - Complete validation schemas for all 20 trip operations
+   - Exported from `@so/model`
+
+5. **MCP tools** (`packages/web/lib/api/mcp/mcpCatalogByFeature.ts`):
+   - All 20 trip tools defined with proper input schemas and descriptions
+   - Per-feature endpoint routing: `/api/mcp/trip` returns TRIP_MCP_TOOLS only
+
+6. **REST routes** (`packages/web/lib/api/agent/dispatchAgentRestMore.ts`):
+   - `GET /api/pods/{podId}/trip/workspace` (full workspace)
+   - `PATCH /api/pods/{podId}/trip` (update trip)
+   - `GET /api/pods/{podId}/trip/budget` (budget rollup)
+   - `POST /api/pods/{podId}/trip/destinations`, `PATCH/DELETE /api/pods/{podId}/trip/destinations/{id}`
+   - `PATCH /api/pods/{podId}/trip/days/{id}`
+   - `POST /api/pods/{podId}/trip/actions`, `PATCH/DELETE /api/pods/{podId}/trip/actions/{id}`
+   - `POST /api/pods/{podId}/trip/routes`, `PATCH/DELETE /api/pods/{podId}/trip/routes/{id}`, `POST /api/pods/{podId}/trip/routes/{id}/select`
+   - `POST /api/pods/{podId}/trip/transports`, `PATCH/DELETE /api/pods/{podId}/trip/transports/{id}`
+   - `GET/POST /api/pods/{podId}/trip/attachments`, `DELETE /api/pods/{podId}/trip/attachments/{id}`
+
+7. **API key authorization**:
+   - `ApiKeyResource.TRIP` added to model enums
+   - Mapped to `FeatureKind.TRIP_PLANNING` in `featureKindForApiResource`
+   - Enabled in `apiKeyPodResource` for pod-scoped permissions
+   - UI matrix (`AccountApiKeysPanelMatrix.tsx`) displays trip pods with CRUD permissions automatically
+
+8. **Tests**:
+   - Unit tests for timezone helpers (`timezoneHelpers.test.ts`)
+   - Service layer follows existing patterns (strict null checks on `.single()`)
+
+**Not included (acceptable per requirements):**
+- Day create/delete (auto-synced from trip dates via `syncTpDaysForTrip` - future enhancement)
+- Realtime subscriptions (not requested)
+- Advanced attachment features (thumbnails, OCR) - base64 upload with signed URLs sufficient
 
 ---
 
