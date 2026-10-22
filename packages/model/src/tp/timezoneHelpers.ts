@@ -29,20 +29,20 @@ function parseLocalWallTime(localTime: string): WallTimeParts {
     throw new Error(`Invalid local time format: ${localTime}`);
   }
 
-  const year = match[1];
-  const month = match[2];
-  const day = match[3];
-  const hour = match[4];
-  const minute = match[5];
+  const year = match[1]!;
+  const month = match[2]!;
+  const day = match[3]!;
+  const hour = match[4]!;
+  const minute = match[5]!;
   const second = match[6] ?? '00';
 
   return {
-    year: parseInt(year, 10),
-    month: parseInt(month, 10),
-    day: parseInt(day, 10),
-    hour: parseInt(hour, 10),
-    minute: parseInt(minute, 10),
-    second: parseInt(second, 10),
+    year: Number.parseInt(year, 10),
+    month: Number.parseInt(month, 10),
+    day: Number.parseInt(day, 10),
+    hour: Number.parseInt(hour, 10),
+    minute: Number.parseInt(minute, 10),
+    second: Number.parseInt(second, 10),
   };
 }
 
@@ -65,20 +65,20 @@ function parseUsLocaleDateTime(formatted: string): WallTimeParts {
     throw new Error(`Failed to parse formatted date: ${formatted}`);
   }
 
-  const month = tzMatch[1];
-  const day = tzMatch[2];
-  const year = tzMatch[3];
-  const hour = tzMatch[4];
-  const minute = tzMatch[5];
-  const second = tzMatch[6];
+  const month = tzMatch[1]!;
+  const day = tzMatch[2]!;
+  const year = tzMatch[3]!;
+  const hour = tzMatch[4]!;
+  const minute = tzMatch[5]!;
+  const second = tzMatch[6]!;
 
   return {
-    year: parseInt(year, 10),
-    month: parseInt(month, 10),
-    day: parseInt(day, 10),
-    hour: parseInt(hour, 10),
-    minute: parseInt(minute, 10),
-    second: parseInt(second, 10),
+    year: Number.parseInt(year, 10),
+    month: Number.parseInt(month, 10),
+    day: Number.parseInt(day, 10),
+    hour: Number.parseInt(hour, 10),
+    minute: Number.parseInt(minute, 10),
+    second: Number.parseInt(second, 10),
   };
 }
 
