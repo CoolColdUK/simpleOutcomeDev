@@ -1,13 +1,25 @@
-import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
-import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import type {SupabaseClient} from '@supabase/supabase-js';
+import type {Database} from '@/lib/supabase/database';
 
-export default async function createDbTpRoute(actionId: string, name: string, sortOrder: number): Promise<string> {
-  const supabase = getSupabaseBrowserClient();
-  const {data, error} = await supabase
+export interface CreateTpRouteInput {
+  readonly actionId: string;
+  readonly name: string;
+  readonly notes?: string;
+  readonly sortOrder: number;
+}
+
+export async function createDbTpRoute(
+  supabase: SupabaseClient<Database>,
+  input: CreateTpRouteInput,
+) {
+  return supabase
     .from('tp_route')
-    .insert({action_id: actionId, name, is_selected: false, sort_order: sortOrder})
-    .select('id')
+    .insert({
+      action_id: input.actionId,
+      name: input.name,
+      notes: input.notes ?? null,
+      sort_order: input.sortOrder,
+    })
+    .select('*')
     .single();
-  throwIfSupabaseError(error);
-  return data.id;
 }

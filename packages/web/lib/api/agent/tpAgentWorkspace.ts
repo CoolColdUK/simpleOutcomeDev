@@ -50,10 +50,34 @@ export async function updateAgentTpTrip(request: Request, input: unknown): Promi
     return ctx;
   }
   
-  // TODO: Implement trip update with syncTpDaysForTrip on date change
-  // This is a placeholder showing the pattern
+  const updates: Record<string, unknown> = {podId};
   
-  return agentOk({message: 'Trip update not yet implemented', podId});
+  if ('title' in args && typeof args.title === 'string') updates.title = args.title;
+  if ('timezone' in args && typeof args.timezone === 'string') updates.timezone = args.timezone;
+  if ('startDate' in args && typeof args.startDate === 'string') updates.startDate = args.startDate;
+  if ('endDate' in args && typeof args.endDate === 'string') updates.endDate = args.endDate;
+  if ('status' in args && typeof args.status === 'string') updates.status = args.status;
+  if ('budgetAmount' in args && typeof args.budgetAmount === 'number') updates.budgetAmount = args.budgetAmount;
+  if ('budgetCurrency' in args && typeof args.budgetCurrency === 'string') updates.budgetCurrency = args.budgetCurrency;
+  if ('defaultCurrency' in args && typeof args.defaultCurrency === 'string') updates.defaultCurrency = args.defaultCurrency;
+  if ('mapsUrl' in args) updates.mapsUrl = args.mapsUrl;
+  if ('notes' in args) updates.notes = args.notes;
+  
+  const {default: updateDbTpTrip} = await import('@/lib/api/db/tp/updateDbTpTrip');
+  const result = await updateDbTpTrip(ctx.data.supabase, updates as any);
+  
+  const resultErr = dbErr(result.error);
+  if (resultErr !== undefined) {
+    return resultErr;
+  }
+  
+  if (result.data === null) {
+    return {ok: false, status: 404, code: 'not_found', message: 'Trip not found'};
+  }
+  
+  // TODO: If dates changed, sync tp_day rows (syncTpDaysForTrip)
+  
+  return agentOk(result.data);
 }
 
 /**
@@ -72,8 +96,55 @@ export async function getAgentTpBudgetRollup(request: Request, input: unknown): 
     return ctx;
   }
   
-  // TODO: Implement budget rollup using tpBudgetRollup helper
-  // This is a placeholder showing the pattern
+  // Load workspace to compute budget
+  const workspace = await loadDbTpWorkspace(ctx.data.supabase, podId);
+  const workspaceErr = dbErr(workspace.error);
+  if (workspaceErr !== undefined) {
+    return workspaceErr;
+  }
   
-  return agentOk({totalCost: 0, budgetAmount: 0, breakdown: []});
+  if (workspace.data === null) {
+    return {ok: false, status: 404, code: 'not_found', message: 'Trip not found'};
+  }
+  
+  // Compute total costs
+  let totalCost = 0;
+  
+  // Actions (stay/activity/note): count cost once per action
+  const actions = workspace.data.actions ?? [];
+  actions.forEach((action: any) => {
+    if (action.cost_amount && typeof action.cost_amount === 'number') {
+      totalCost += action.cost_amount;
+    }
+  });
+  
+  // Transports: sum costs of transports on selected routes
+  const routes = workspace.data.routes ?? [];
+  const transports = workspace.data.transports ?? [];
+  
+  actions.forEach((action: any) => {
+    if (action.kind === 'travel' && action.selected_route_id) {
+      const selectedRoute = routes.find((r: any) => r.id === action.selected_route_id);
+      if (selectedRoute) {
+        const routeTransports = transports.filter((t: any) => t.route_id === selectedRoute.id);
+        routeTransports.forEach((t: any) => {
+          if (t.cost_amount && typeof t.cost_amount === 'number') {
+            totalCost += t.cost_amount;
+          }
+        });
+      }
+    }
+  });
+  
+  const trip = workspace.data.trip;
+  const budgetAmount = trip?.budget_amount ?? 0;
+  
+  return agentOk({
+    totalCost,
+    budgetAmount,
+    breakdown: {
+      actionCosts: actions.filter((a: any) => a.cost_amount).length,
+      transportCosts: transports.filter((t: any) => t.cost_amount).length,
+    },
+  });
 }
