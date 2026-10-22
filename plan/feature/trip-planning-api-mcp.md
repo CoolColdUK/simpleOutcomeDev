@@ -6,7 +6,7 @@ Expose the **trip planning** feature (merged from PR #9, tables `tp_*` / helpers
 **Reference:** [`api-mcp.md`](./api-mcp.md), [`financial planning-implementation.md`](./financial%20planning-implementation.md)  
 **Related:** [trip-planning.md](./trip-planning.md) (product requirements), PR #9 (merged trip planning implementation), migration `supabase/migrations/20261022150000_pod_viewer_trip_planning.sql`
 
-**Status:** PLAN ONLY — no implementation code yet
+**Status:** PLAN ONLY — approved by Matthew
 
 ---
 
@@ -16,7 +16,8 @@ Expose the **trip planning** feature (merged from PR #9, tables `tp_*` / helpers
 2. Expose trip planning operations via **REST** (`/api/pods/{podId}/trip/...`) and **hosted MCP** tools.
 3. REST and MCP call the **same** service layer (existing `lib/api/db/tp/*` helpers).
 4. Mirror the authz pattern: key grant ∧ pod membership ∧ featureKind match ∧ pod role (viewer/user/admin/owner).
-5. Cover the full trip model: trips, destinations, days, actions (stay/travel/activity/note), routes, transports, attachments, settings.
+5. Cover the full trip model: trips, destinations, days, actions (stay/travel/activity/note), routes, transports, attachments.
+6. Support **per-feature MCP endpoints** alongside the unified `/api/mcp`.
 
 ---
 
@@ -30,7 +31,8 @@ Expose the **trip planning** feature (merged from PR #9, tables `tp_*` / helpers
 | Role-aware | Respect `pod_viewer` (read-only), `pod_user`/`pod_admin` (write), `pod_owner` (all). |
 | Fail closed | Missing grant, revoked key, or insufficient role → deny. |
 | Attachment safety | Base64 upload (like `replace_todo_card_icon`); 5MB limit; JPEG/PNG/PDF only. |
-| Timezone explicit | Instants as ISO 8601 (UTC); timezone as IANA string; formatted display client-side. |
+| Local time + timezone | Inputs take wall time + IANA zone per endpoint; server converts and stores UTC instants. Outputs return both. |
+| Separate create/update | Map to distinct API key rights; no upserts. |
 
 ---
 
@@ -62,7 +64,7 @@ The **pod permission table** in `AccountApiKeysPanel` already groups pods by spa
 | **All off** | All cells unchecked |
 | **All read** | Read checked; Create, Update, Delete off |
 
-No extra "Delete all" checkbox (unlike fp). Trip deletion uses the standard `delete` action.
+No extra "Delete all" checkbox (unlike fp). Trip deletion via `delete_pod` (space/pod admin).
 
 ### Sub-resources
 
@@ -72,126 +74,94 @@ Trip planning has nested entities (destination, day, action, route, transport, a
 
 | Sub-resource | Create | Read | Update | Delete |
 | --- | --- | --- | --- | --- |
-| **trip** (metadata) | Pod creation wizard | Read trip | Update trip fields | Delete trip (pod delete path) |
-| **destination** | Add destination | List/get destinations | Update destination | Remove destination |
-| **day** | Auto-synced from trip dates | Read day timeline | Update day notes/title | Auto-pruned |
-| **action** | Add action | List/get actions | Update action, reorder | Delete action |
-| **route** | Add route to travel action | List/get routes | Update route, select route | Delete route |
-| **transport** | Add transport to route | List/get transports | Update transport | Delete transport |
-| **attachment** | Upload attachment | Download signed URL | Replace attachment | Delete attachment |
-| **setting** | Auto-created on pod | Read settings | Update currency | (pod delete) |
+| **trip** (metadata) | Pod creation wizard | Workspace load | Update trip fields, settings | (via delete_pod) |
+| **destination** | Add destination | (workspace) | Update, reorder via sortOrder | Remove destination |
+| **day** | Auto-synced from trip dates | (workspace) | Update day notes/title | Auto-pruned |
+| **action** | Add action | (workspace) | Update, reorder via sortOrder, manual anchor day | Delete action |
+| **route** | Add route to travel action | (workspace) | Update, reorder via sortOrder, select | Delete route |
+| **transport** | Add transport to route | (workspace) | Update, reorder via sortOrder | Delete transport |
+| **attachment** | Upload (base64) | (workspace + signed URLs) | (re-upload = delete + create) | Delete attachment |
 
 **Enforcement:**
 
-- **Create:** includes trip init, add destination/day/action/route/transport/attachment, upload attachment.
-- **Read:** includes workspace load, list operations, signed URLs.
-- **Update:** includes trip/destination/day/action/route/transport updates, reorder actions, select route, anchor day sync.
+- **Create:** includes trip init, add destination/action/route/transport, upload attachment.
+- **Read:** includes workspace load (full trip data), signed URLs.
+- **Update:** includes trip/destination/day/action/route/transport updates, reorder via `sortOrder`, select route, manual anchor day override, settings (currency).
 - **Delete:** includes remove destination/action/route/transport/attachment.
 
 `pod_viewer` gets **read only** (no create/update/delete). This is enforced by RLS (`can_write_tp_pod`) and mirrored in the agent layer.
 
 ---
 
-## MCP tools
+## MCP tools (final set: 20 tools)
 
 Tool names follow existing conventions (`{verb}_{feature}_{resource}`). Descriptions are short (like `list_fp_accounts`, `create_todo_card`).
 
-All tools require `podId` (uuid). Input schemas use valibot (mirror `agentFpTransactionWriteSchema` style). Output schemas mirror UI types.
+All tools require `podId` (uuid). Input schemas use valibot. Separate create and update tools (they map to separate API key rights).
 
-### Trip and settings
+**Optimization:** Individual list/get operations are **replaced by** `get_tp_workspace` (full trip load). Reorder operations are **folded into** update tools via `sortOrder` field. Trip settings (currency) are **part of** trip get/update.
 
-| Tool | Description | Input | Output | Action | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `get_trip` | Read trip metadata. | `{podId}` | Trip object | `read` | Returns trip fields: title, timezone, start/end dates, status, budget, maps_url, notes. Fails if no trip row (should exist after pod create). |
-| `update_trip` | Update trip fields. | `{podId, title?, timezone?, startDate?, endDate?, status?, budgetAmount?, budgetCurrency?, mapsUrl?, notes?}` | Updated trip | `update` | On date change, syncs `tp_day` rows (via `syncTpDaysForTrip`). |
-| `get_tp_setting` | Read trip settings. | `{podId}` | Setting object | `read` | Returns `{defaultCurrency}`. |
-| `update_tp_setting` | Update default currency. | `{podId, defaultCurrency}` | Updated setting | `update` | 3-char currency code. |
+### Core: Trip workspace
+
+| Tool | Input Schema | Output | Action | Description |
+| --- | --- | --- | --- | --- |
+| `get_tp_workspace` | `{podId: string}` | Full trip object | `read` | Load complete trip: metadata (title, timezone, dates, status, budget, defaultCurrency), destinations, days, actions, routes, transports, attachments with signed URLs. Uses `loadDbTpWorkspace`. |
+
+### Trip
+
+| Tool | Input Schema | Output | Action | Description |
+| --- | --- | --- | --- | --- |
+| `update_trip` | `{podId: string, title?: string, timezone?: string, startDate?: string, endDate?: string, status?: 'draft' \| 'active' \| 'done' \| 'archived', budgetAmount?: number, budgetCurrency?: string, defaultCurrency?: string, mapsUrl?: string, notes?: string}` | Updated trip | `update` | Update trip fields. On date change, syncs `tp_day` rows. `defaultCurrency` updates `tp_setting`. |
+| `get_tp_budget_rollup` | `{podId: string}` | `{totalCost: number, budgetAmount: number, breakdown: {...}}` | `read` | Compute total costs from actions/transports vs budget. Uses `tpBudgetRollup` helper. |
 
 ### Destinations
 
-| Tool | Description | Input | Output | Action | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `list_tp_destinations` | List destinations for trip. | `{podId}` | `{destinations: [...]}` | `read` | Ordered by `sort_order`. |
-| `create_tp_destination` | Create destination. | `{podId, name, sortOrder?, mapsUrl?, timezoneHint?, importantInfo?, activeStartDate?, activeEndDate?, notes?}` | New destination | `create` | Name required. |
-| `update_tp_destination` | Update destination. | `{podId, destinationId, name?, sortOrder?, mapsUrl?, timezoneHint?, importantInfo?, activeStartDate?, activeEndDate?, notes?}` | Updated destination | `update` | |
-| `delete_tp_destination` | Delete destination. | `{podId, destinationId}` | `{ok: true}` | `delete` | Cascade nullifies FKs on actions/transports. |
-| `reorder_tp_destinations` | Reorder destinations. | `{podId, orderedIds: string[]}` | `{ok: true}` | `update` | Array of destination IDs in new order. |
+| Tool | Input Schema | Output | Action | Description |
+| --- | --- | --- | --- | --- |
+| `create_tp_destination` | `{podId: string, name: string, sortOrder?: number, mapsUrl?: string, timezoneHint?: string, importantInfo?: string, activeStartDate?: string, activeEndDate?: string, notes?: string}` | New destination | `create` | Create destination. |
+| `update_tp_destination` | `{podId: string, destinationId: string, name?: string, sortOrder?: number, mapsUrl?: string, timezoneHint?: string, importantInfo?: string, activeStartDate?: string, activeEndDate?: string, notes?: string}` | Updated destination | `update` | Update destination. **Reorder via `sortOrder`** (no separate reorder tool). |
+| `delete_tp_destination` | `{podId: string, destinationId: string}` | `{ok: true}` | `delete` | Delete destination. Cascade nullifies FKs. |
 
 ### Days
 
-| Tool | Description | Input | Output | Action | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `list_tp_days` | List days for trip. | `{podId}` | `{days: [...]}` | `read` | Ordered by `day_index`. Includes day fields: day_index, calendar_date, day_title, day_notes, primary_destination_id. |
-| `update_tp_day` | Update day header. | `{podId, dayId, dayTitle?, dayNotes?, primaryDestinationId?}` | Updated day | `update` | Day header fields only (not actions). |
-
-**Note:** Days are auto-synced when trip dates change (`update_trip` calls `syncTpDaysForTrip`). No separate create/delete day tools.
+| Tool | Input Schema | Output | Action | Description |
+| --- | --- | --- | --- | --- |
+| `update_tp_day` | `{podId: string, dayId: string, dayTitle?: string, dayNotes?: string, primaryDestinationId?: string}` | Updated day | `update` | Update day header notes and override destination. Days auto-sync from trip dates (no create/delete tools). |
 
 ### Actions
 
-Actions cover **travel**, **stay**, **activity**, **note** kinds.
-
-| Tool | Description | Input | Output | Action | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `list_tp_actions` | List actions for trip. | `{podId, anchorDayId?}` | `{actions: [...]}` | `read` | Optional filter by anchor day. Returns all action kinds. |
-| `get_tp_action` | Get one action. | `{podId, actionId}` | Action object | `read` | Includes routes/transports for travel actions. |
-| `create_tp_action` | Create action. | `{podId, kind, title, anchorDayId?, destinationId?, placeText?, mapsUrl?, fromPlace?, toPlace?, fromDestinationId?, toDestinationId?, fromMapsUrl?, toMapsUrl?, checkInAt?, checkOutAt?, checkInTimezone?, checkOutTimezone?, startTime?, endTime?, costAmount?, costCurrency?, bookingRef?, url?, notes?, sortOrder?}` | New action | `create` | Kind required: `travel`, `stay`, `activity`, `note`. Field requirements vary by kind (e.g. stay needs check-in/out; travel needs from/to). |
-| `update_tp_action` | Update action. | `{podId, actionId, title?, anchorDayId?, destinationId?, placeText?, mapsUrl?, fromPlace?, toPlace?, fromDestinationId?, toDestinationId?, fromMapsUrl?, toMapsUrl?, checkInAt?, checkOutAt?, checkInTimezone?, checkOutTimezone?, startTime?, endTime?, costAmount?, costCurrency?, bookingRef?, url?, notes?, selectedRouteId?}` | Updated action | `update` | Kind cannot change. Anchor day change recalcs mirrors. |
-| `delete_tp_action` | Delete action. | `{podId, actionId}` | `{ok: true}` | `delete` | Cascade deletes routes/transports. |
-| `reorder_tp_actions` | Reorder actions on day. | `{podId, anchorDayId, orderedIds: string[]}` | `{ok: true}` | `update` | Array of action IDs in new sort order for that anchor day. |
-
-**Travel action anchor day logic:**  
-Anchor day = trip day matching `localDate(first_transport.depart_at, depart_timezone)` on selected route. Handled server-side when route/transport times change.
+| Tool | Input Schema | Output | Action | Description |
+| --- | --- | --- | --- | --- |
+| `create_tp_action` | `{podId: string, kind: 'travel' \| 'stay' \| 'activity' \| 'note', title: string, anchorDayId?: string, destinationId?: string, placeText?: string, mapsUrl?: string, fromPlace?: string, toPlace?: string, fromDestinationId?: string, toDestinationId?: string, fromMapsUrl?: string, toMapsUrl?: string, checkInLocalTime?: string, checkOutLocalTime?: string, checkInTimezone?: string, checkOutTimezone?: string, startTime?: string, endTime?: string, costAmount?: number, costCurrency?: string, bookingRef?: string, url?: string, notes?: string, sortOrder?: number}` | New action | `create` | Create action. Check-in/out: **local wall time** (e.g. `2026-11-03T14:05`) + IANA timezone. Server converts to UTC instant. |
+| `update_tp_action` | `{podId: string, actionId: string, title?: string, anchorDayId?: string, destinationId?: string, placeText?: string, mapsUrl?: string, fromPlace?: string, toPlace?: string, fromDestinationId?: string, toDestinationId?: string, fromMapsUrl?: string, toMapsUrl?: string, checkInLocalTime?: string, checkOutLocalTime?: string, checkInTimezone?: string, checkOutTimezone?: string, startTime?: string, endTime?: string, costAmount?: number, costCurrency?: string, bookingRef?: string, url?: string, notes?: string, selectedRouteId?: string, sortOrder?: number}` | Updated action | `update` | Update action. **Manual anchor day override allowed.** **Reorder via `sortOrder`** (no separate reorder tool). Kind cannot change. |
+| `delete_tp_action` | `{podId: string, actionId: string}` | `{ok: true}` | `delete` | Delete action. Cascade deletes routes/transports. |
 
 ### Routes
 
-Routes are alternatives under a **travel** action.
-
-| Tool | Description | Input | Output | Action | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `list_tp_routes` | List routes for action. | `{podId, actionId}` | `{routes: [...]}` | `read` | Includes transports per route. |
-| `create_tp_route` | Create route. | `{podId, actionId, name, notes?, sortOrder?}` | New route | `create` | Name required. |
-| `update_tp_route` | Update route. | `{podId, routeId, name?, notes?, sortOrder?}` | Updated route | `update` | |
-| `delete_tp_route` | Delete route. | `{podId, routeId}` | `{ok: true}` | `delete` | Cascade deletes transports; nullifies `selected_route_id` on parent action. |
-| `select_tp_route` | Set selected route. | `{podId, actionId, routeId}` | `{ok: true}` | `update` | Updates `selected_route_id` on action; recalcs span/mirrors for multi-day travel. |
+| Tool | Input Schema | Output | Action | Description |
+| --- | --- | --- | --- | --- |
+| `create_tp_route` | `{podId: string, actionId: string, name: string, notes?: string, sortOrder?: number}` | New route | `create` | Create route for travel action. |
+| `update_tp_route` | `{podId: string, routeId: string, name?: string, notes?: string, sortOrder?: number}` | Updated route | `update` | Update route. **Reorder via `sortOrder`** (no separate reorder tool). |
+| `delete_tp_route` | `{podId: string, routeId: string}` | `{ok: true}` | `delete` | Delete route. Cascade deletes transports; nullifies `selected_route_id`. |
+| `select_tp_route` | `{podId: string, actionId: string, routeId: string}` | `{ok: true}` | `update` | Set selected route. Recalcs span/mirrors for multi-day travel. |
 
 ### Transports
 
-Transports are segments within a route.
-
-| Tool | Description | Input | Output | Action | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `list_tp_transports` | List transports for route. | `{podId, routeId}` | `{transports: [...]}` | `read` | Ordered by `sort_order`. |
-| `create_tp_transport` | Create transport. | `{podId, routeId, mode?, fromPlace?, toPlace?, departAt?, arriveAt?, departTimezone?, arriveTimezone?, costAmount?, costCurrency?, bookingRef?, url?, notes?, sortOrder?}` | New transport | `create` | Mode defaults to `other`; choices: `flight`, `train`, `coach`, `bus`, `car`, `ferry`, `walk`, `other`. Times are ISO 8601 instants. |
-| `update_tp_transport` | Update transport. | `{podId, transportId, mode?, fromPlace?, toPlace?, departAt?, arriveAt?, departTimezone?, arriveTimezone?, costAmount?, costCurrency?, bookingRef?, url?, notes?}` | Updated transport | `update` | Changing times/timezones may recalc anchor day on parent action. |
-| `delete_tp_transport` | Delete transport. | `{podId, transportId}` | `{ok: true}` | `delete` | Cascade deletes attachments. |
-| `reorder_tp_transports` | Reorder transports. | `{podId, routeId, orderedIds: string[]}` | `{ok: true}` | `update` | Array of transport IDs in new order for that route. |
+| Tool | Input Schema | Output | Action | Description |
+| --- | --- | --- | --- | --- |
+| `create_tp_transport` | `{podId: string, routeId: string, mode?: 'flight' \| 'train' \| 'coach' \| 'bus' \| 'car' \| 'ferry' \| 'walk' \| 'other', fromPlace?: string, toPlace?: string, departLocalTime?: string, arriveLocalTime?: string, departTimezone?: string, arriveTimezone?: string, costAmount?: number, costCurrency?: string, bookingRef?: string, url?: string, notes?: string, sortOrder?: number}` | New transport | `create` | Create transport. Depart/arrive: **local wall time** (e.g. `2026-11-15T14:00`) + IANA timezone. Server converts to UTC instant. |
+| `update_tp_transport` | `{podId: string, transportId: string, mode?: string, fromPlace?: string, toPlace?: string, departLocalTime?: string, arriveLocalTime?: string, departTimezone?: string, arriveTimezone?: string, costAmount?: number, costCurrency?: string, bookingRef?: string, url?: string, notes?: string, sortOrder?: number}` | Updated transport | `update` | Update transport. **Reorder via `sortOrder`** (no separate reorder tool). Changing times/timezones may recalc anchor day. |
+| `delete_tp_transport` | `{podId: string, transportId: string}` | `{ok: true}` | `delete` | Delete transport. Cascade deletes attachments. |
 
 ### Attachments
 
-Attachments hang off **transports** (tickets) or **destinations** (safety docs). MIME: `image/jpeg`, `image/png`, `application/pdf`. Limit: 5MB per file.
+| Tool | Input Schema | Output | Action | Description |
+| --- | --- | --- | --- | --- |
+| `list_tp_attachments` | `{podId: string, transportId?: string, destinationId?: string}` | `{attachments: [{id, fileName, mimeType, byteSize, signedUrl, uploadedBy, createdAt}, ...]}` | `read` | List attachments for transport or destination (optional filter). Returns metadata + signed URLs (7-day expiry). |
+| `upload_tp_attachment` | `{podId: string, transportId?: string, destinationId?: string, fileName: string, mimeType: 'image/jpeg' \| 'image/png' \| 'application/pdf', contentBase64: string}` | `{id, signedUrl}` | `create` | Upload attachment (base64-encoded). **5MB decoded limit.** Exactly one parent (transport XOR destination). |
+| `delete_tp_attachment` | `{podId: string, attachmentId: string}` | `{ok: true}` | `delete` | Delete attachment + storage object. |
 
-| Tool | Description | Input | Output | Action | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `list_tp_attachments` | List attachments. | `{podId, transportId?, destinationId?}` | `{attachments: [...]}` | `read` | Filter by parent. Returns metadata + signed URLs. |
-| `upload_tp_attachment` | Upload attachment. | `{podId, transportId?, destinationId?, fileName, mimeType, contentBase64}` | New attachment | `create` | Exactly one parent (transport XOR destination). Base64 encode file. Size check: decoded bytes ≤ 5MB. MIME must be jpeg/png/pdf. |
-| `delete_tp_attachment` | Delete attachment. | `{podId, attachmentId}` | `{ok: true}` | `delete` | Removes storage object + DB row. |
-
-**Upload flow:**  
-1. Client base64-encodes file.  
-2. MCP tool validates size/MIME.  
-3. Server decodes, uploads to `pod-private` storage (`{podId}/tp/transport/{transportId}/{attachmentId}-{safe_filename}` or `{podId}/tp/destination/{destinationId}/{attachmentId}-{safe_filename}`).  
-4. DB row created with `storage_path`.  
-
-**Read flow:**  
-List/get tools include signed URLs (7-day expiry, like todo card icons).
-
-### Workspace and bulk read
-
-| Tool | Description | Input | Output | Action | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `get_tp_workspace` | Load full workspace. | `{podId}` | `{trip, destinations, days, actions, routes, transports, attachments, setting}` | `read` | Uses existing `loadDbTpWorkspace` helper. One call returns entire trip data (like UI workspace load). |
-
-**Open question:** Should this be in v1, or should agents call individual list tools? (Prefer including it for efficiency.)
+**Total: 20 tools** (1 workspace + 2 trip + 3 destinations + 1 day + 3 actions + 4 routes + 3 transports + 3 attachments)
 
 ---
 
@@ -199,50 +169,40 @@ List/get tools include signed URLs (7-day expiry, like todo card icons).
 
 REST routes mirror MCP tools under `/api/pods/{podId}/trip/...`. Method + path patterns:
 
-### Trip and settings
+### Trip
 
-- `GET /api/pods/{podId}/trip` → `get_trip`
-- `PATCH /api/pods/{podId}/trip` → `update_trip`
-- `GET /api/pods/{podId}/trip/settings` → `get_tp_setting`
-- `PATCH /api/pods/{podId}/trip/settings` → `update_tp_setting`
+- `GET /api/pods/{podId}/trip/workspace` → `get_tp_workspace`
+- `PATCH /api/pods/{podId}/trip` → `update_trip` (includes `defaultCurrency` for settings)
+- `GET /api/pods/{podId}/trip/budget` → `get_tp_budget_rollup`
 
 ### Destinations
 
-- `GET /api/pods/{podId}/trip/destinations` → `list_tp_destinations`
 - `POST /api/pods/{podId}/trip/destinations` → `create_tp_destination`
-- `PATCH /api/pods/{podId}/trip/destinations/{destinationId}` → `update_tp_destination`
+- `PATCH /api/pods/{podId}/trip/destinations/{destinationId}` → `update_tp_destination` (includes `sortOrder` for reorder)
 - `DELETE /api/pods/{podId}/trip/destinations/{destinationId}` → `delete_tp_destination`
-- `POST /api/pods/{podId}/trip/destinations/reorder` → `reorder_tp_destinations` (body: `{orderedIds}`)
 
 ### Days
 
-- `GET /api/pods/{podId}/trip/days` → `list_tp_days`
 - `PATCH /api/pods/{podId}/trip/days/{dayId}` → `update_tp_day`
 
 ### Actions
 
-- `GET /api/pods/{podId}/trip/actions` → `list_tp_actions` (query: `?anchorDayId={uuid}`)
-- `GET /api/pods/{podId}/trip/actions/{actionId}` → `get_tp_action`
 - `POST /api/pods/{podId}/trip/actions` → `create_tp_action`
-- `PATCH /api/pods/{podId}/trip/actions/{actionId}` → `update_tp_action`
+- `PATCH /api/pods/{podId}/trip/actions/{actionId}` → `update_tp_action` (includes `sortOrder` for reorder, `anchorDayId` for manual override)
 - `DELETE /api/pods/{podId}/trip/actions/{actionId}` → `delete_tp_action`
-- `POST /api/pods/{podId}/trip/actions/reorder` → `reorder_tp_actions` (body: `{anchorDayId, orderedIds}`)
 
 ### Routes
 
-- `GET /api/pods/{podId}/trip/routes` → `list_tp_routes` (query: `?actionId={uuid}`)
 - `POST /api/pods/{podId}/trip/routes` → `create_tp_route`
-- `PATCH /api/pods/{podId}/trip/routes/{routeId}` → `update_tp_route`
+- `PATCH /api/pods/{podId}/trip/routes/{routeId}` → `update_tp_route` (includes `sortOrder` for reorder)
 - `DELETE /api/pods/{podId}/trip/routes/{routeId}` → `delete_tp_route`
 - `POST /api/pods/{podId}/trip/routes/select` → `select_tp_route` (body: `{actionId, routeId}`)
 
 ### Transports
 
-- `GET /api/pods/{podId}/trip/transports` → `list_tp_transports` (query: `?routeId={uuid}`)
 - `POST /api/pods/{podId}/trip/transports` → `create_tp_transport`
-- `PATCH /api/pods/{podId}/trip/transports/{transportId}` → `update_tp_transport`
+- `PATCH /api/pods/{podId}/trip/transports/{transportId}` → `update_tp_transport` (includes `sortOrder` for reorder)
 - `DELETE /api/pods/{podId}/trip/transports/{transportId}` → `delete_tp_transport`
-- `POST /api/pods/{podId}/trip/transports/reorder` → `reorder_tp_transports` (body: `{routeId, orderedIds}`)
 
 ### Attachments
 
@@ -250,56 +210,144 @@ REST routes mirror MCP tools under `/api/pods/{podId}/trip/...`. Method + path p
 - `POST /api/pods/{podId}/trip/attachments` → `upload_tp_attachment`
 - `DELETE /api/pods/{podId}/trip/attachments/{attachmentId}` → `delete_tp_attachment`
 
-### Workspace
-
-- `GET /api/pods/{podId}/trip/workspace` → `get_tp_workspace`
-
 **Dispatcher:** Extend `dispatchAgentRest.ts` and/or `dispatchAgentRestMore.ts` with trip routes (follow existing `/pods/{podId}/todo/...` pattern).
 
 ---
 
-## Implementation notes
+## Per-feature MCP endpoints (DECIDED)
 
-### Service layer
+**Decision:** Use **feature-scoped MCP endpoints only**. No combined all-tools endpoint. No backward compatibility needed (internal use only).
 
-**Existing helpers** (merged from PR #9, `packages/web/lib/api/db/tp/`):
+### Endpoint layout
 
-- `createDbTpAction`, `updateDbTpAction`, `updateDbTpActionSortOrders`
-- `createDbTpAttachment`, `deleteDbTpAttachment`
-- `createDbTpRoute`, `deleteDbTpRoute`, `selectDbTpRoute`
-- `createDbTpTransport`, `deleteDbTpTransport`, `updateDbTpTransport`
-- `updateDbTpDay`, `updateDbTpDestination`
-- `createDbTpTripBundle` (wizard helper)
-- `loadDbTpWorkspace` (full workspace load)
+| Path | Exposed tools | Purpose |
+| --- | --- | --- |
+| `/api/mcp` | **Core tools only** | Spaces, groups, pods/membership/invites, profile, API key permissions |
+| `/api/mcp/trip` | **Trip tools only** | Trip planning operations (no core duplication) |
+| `/api/mcp/todo` | **Todo tools only** | Todo list operations |
+| `/api/mcp/fp` | **FP tools only** | Financial planning operations |
 
-**New helpers needed:**
+**No duplication:** Core tools live only on `/api/mcp`. Feature endpoints expose only their feature-specific tools.
 
-- `getDbTpTrip`, `updateDbTpTrip`
-- `listDbTpDestinations`, `createDbTpDestination`, `deleteDbTpDestination`, `reorderDbTpDestinations`
-- `listDbTpDays`
-- `listDbTpActions`, `getDbTpAction`, `deleteDbTpAction`, `reorderDbTpActions`
-- `listDbTpRoutes`, `createDbTpRoute`, `updateDbTpRoute`, `selectDbTpRoute` (may exist)
-- `listDbTpTransports`, `createDbTpTransport`, `updateDbTpTransport`, `reorderDbTpTransports`
-- `listDbTpAttachments` (with signed URLs)
-- `getDbTpSetting`, `updateDbTpSetting`
-- Sync helper `syncTpDaysForTrip` (called on trip date update)
+### Core tools (`/api/mcp`)
 
-**Attachment storage:**  
-- Use existing storage helpers pattern (`uploadStorageTpAttachment`, signed URL generation like `listStorageTodoCardIconSignedUrls`).
-- Bucket: `pod-private`
-- Paths: `{podId}/tp/transport/{transportId}/{attachmentId}-{safe_filename}` or `{podId}/tp/destination/{destinationId}/{attachmentId}-{safe_filename}`
+**API key introspection:**
+- `get_api_key_permissions`
 
-**Authz enforcement:**  
-- `requirePodAgent(request, {featureKind: 'trip_planning', podId, resource: 'trip', action})` (follow `fpCall` pattern).
-- RLS already enforces `can_read_tp_pod` / `can_write_tp_pod` (viewer vs writer).
+**Profile:**
+- `get_profile`, `update_profile_display_name`, `update_profile_username`
 
-### Agent adapter layer
+**Spaces:**
+- `list_spaces`, `create_space`, `join_space_by_invite`
+- `get_space`, `update_space`
+- `list_space_pods`, `search_pods`
 
-**MCP catalog:** Add trip tools to `mcpCatalogExtra.ts` (or new `tpAgentTools.ts` if grouping separately).  
-**REST dispatcher:** Extend `dispatchAgentRest.ts` or `dispatchAgentRestMore.ts` with trip routes.
+**Pods (lifecycle):**
+- `create_pod`, `update_pod`, `set_pod_status` (archive/restore), `delete_pod`
+- `join_open_pod`, `create_pod_join_request`
 
-**Valibot schemas:** Define in `@so/model` (e.g. `agentTpActionSchema`, `agentTpTransportSchema`, `agentTpAttachmentUploadSchema`).  
-**Agent result types:** Mirror UI types from `@so/model` trip schemas.
+**Group (membership/invites):**
+- `list_space_members`, `update_space_member_role`
+- `list_space_invites`, `create_space_invite`, `delete_space_invite`, `disable_space_invite`
+- `list_pod_members`, `add_pod_member_by_username`, `update_pod_member_role`
+- `list_pod_join_requests`, `approve_pod_join_request`, `deny_pod_join_request`
+
+**Total core: ~25 tools**
+
+### Feature tools
+
+**`/api/mcp/trip` (20 tools):**  
+All trip planning tools listed in "MCP tools" section above. No core duplication.
+
+**`/api/mcp/todo` (~15 tools):**  
+Columns, cards, comments, reorder, archive, card icons. No core duplication.
+
+**`/api/mcp/fp` (~30 tools):**  
+Accounts, categories, transactions, parsers, imports, bill split, settings, auto-assign, delete-all. No core duplication.
+
+### Authorization-aware `tools/list`
+
+`tools/list` on each endpoint **filters** by grants:
+
+1. Parse `Authorization: Bearer <key>` and load `permissions`.
+2. For each tool, check if `permissions` includes the required resource (spaces, pods, profile).
+3. Return **only tools** the key can potentially call.
+
+**Example:**  
+- Key grants: `pods[podA].trip` (read/update), `profile` (read)  
+- `GET /api/mcp/trip` → returns trip read/update tools (filtered)  
+- `GET /api/mcp/todo` → returns **empty** (no todo grants)  
+- `GET /api/mcp` → returns core tools the key can call (profile + space navigation if space member)
+
+**Benefit:** Clients see a relevant catalog on connect.
+
+### Implementation approach
+
+1. **Catalog split:** Organize tools by feature in `mcpCatalog.ts` / `mcpCatalogExtra.ts`:
+
+```ts
+export const CORE_MCP_TOOLS = [
+  // API key introspection
+  tool('get_api_key_permissions', ...),
+  
+  // Profile
+  tool('get_profile', ...),
+  tool('update_profile_display_name', ...),
+  
+  // Spaces, pods, group
+  tool('list_spaces', ...),
+  tool('create_pod', ...),
+  tool('list_pod_members', ...),
+  // ... all core tools
+];
+
+export const TODO_MCP_TOOLS = [
+  tool('list_todo_columns', ...),
+  tool('create_todo_card', ...),
+  // ... all todo tools
+];
+
+export const FP_MCP_TOOLS = [
+  tool('list_fp_accounts', ...),
+  // ... all fp tools
+];
+
+export const TRIP_MCP_TOOLS = [
+  tool('get_tp_workspace', ...),
+  tool('create_tp_action', ...),
+  // ... all trip tools
+];
+```
+
+2. **Route handler:** `app/api/mcp/[[...segments]]/route.ts`:
+
+```ts
+export async function POST(request: Request, {params}: {params: {segments?: string[]}}) {
+  const feature = params.segments?.[0] as 'trip' | 'todo' | 'fp' | undefined;
+  let tools: readonly McpTool[];
+  
+  if (feature === 'trip') tools = TRIP_MCP_TOOLS;
+  else if (feature === 'todo') tools = TODO_MCP_TOOLS;
+  else if (feature === 'fp') tools = FP_MCP_TOOLS;
+  else tools = CORE_MCP_TOOLS; // /api/mcp (no feature segment)
+  
+  return handleMcpRequest(request, tools);
+}
+```
+
+3. **Authorization filter in `tools/list`:**
+
+```ts
+if (method === 'tools/list') {
+  const apiKey = await loadApiKey(request);
+  const filteredTools = apiKey
+    ? tools.filter(tool => canCallTool(tool.name, apiKey.permissions))
+    : tools;
+  return {tools: filteredTools.map(...)};
+}
+```
+
+**No backward compatibility:** Existing `/api/mcp` clients (Matthew and bot only) will get core tools; they must move to feature endpoints for feature operations.
 
 ---
 
@@ -307,32 +355,51 @@ REST routes mirror MCP tools under `/api/pods/{podId}/trip/...`. Method + path p
 
 ### Input format
 
-**Dates:** ISO 8601 date strings (`YYYY-MM-DD`) for `startDate`, `endDate`, `calendar_date`, `activeStartDate`, `activeEndDate`, `postedDate`.
+**Dates:** ISO 8601 date strings (`YYYY-MM-DD`) for `startDate`, `endDate`, `activeStartDate`, `activeEndDate`.
 
-**Instants:** ISO 8601 datetime strings (UTC) for `checkInAt`, `checkOutAt`, `departAt`, `arriveAt`. Examples:
-- `2026-11-15T14:00:00Z` (UTC)
-- `2026-11-15T14:00:00+08:00` (offset; server converts to UTC)
+**Local times + timezone (stays and transports):**  
+- **Input:** Local wall time (e.g. `2026-11-15T14:00` or `2026-11-03T14:05:30`) + separate IANA timezone field (`checkInTimezone`, `departTimezone`, etc.).  
+- **Server:** Converts `localTime + timezone → UTC instant` and stores both the instant (`timestamptz`) and the timezone (`text`) in DB.  
+- **Example:**  
+  - Input: `checkInLocalTime: "2026-11-15T15:00"`, `checkInTimezone: "Asia/Hong_Kong"`  
+  - Stored: `check_in_at: 2026-11-15 07:00:00+00` (UTC), `check_in_timezone: "Asia/Hong_Kong"`
 
-**Timezones:** IANA timezone strings for `timezone`, `checkInTimezone`, `checkOutTimezone`, `departTimezone`, `arriveTimezone`, `timezoneHint`. Examples: `Europe/London`, `Asia/Hong_Kong`, `America/New_York`.
+**Trip timezone:** `timezone` field on trip (IANA string) used for day strip generation and fallback display.
 
-**Times (local):** ISO 8601 time strings (`HH:MM` or `HH:MM:SS`) for `startTime`, `endTime` on activities/notes (interpreted in trip timezone context on anchor day).
+**Activity/note times:** `startTime` / `endTime` as local time-of-day strings (`HH:MM` or `HH:MM:SS`), interpreted in trip timezone on anchor day. No separate timezone field.
 
 ### Output format
 
-**Dates:** ISO 8601 date strings.  
-**Instants:** ISO 8601 datetime strings (UTC).  
-**Timezones:** IANA strings.  
-**Formatted display:** Client-side (e.g. `14:00 HKT → 18:30 GMT` using `formatTpInstant` from `@so/model`).
+**Dates:** ISO 8601 date strings (`YYYY-MM-DD`).
+
+**Instants:** Objects with **both** local time and UTC:
+
+```ts
+// Example transport output
+{
+  departLocalTime: "2026-11-15T14:00:00",  // local wall time
+  departTimezone: "Asia/Hong_Kong",        // IANA
+  departAt: "2026-11-15T06:00:00Z",        // UTC instant (ISO 8601)
+  
+  arriveLocalTime: "2026-11-15T18:30:00",
+  arriveTimezone: "Europe/London",
+  arriveAt: "2026-11-15T18:30:00Z"
+}
+```
+
+**Rationale:** Agents can use local time for display (`14:00 HKT → 18:30 GMT`) and UTC instant for calculations (duration, overlap).
+
+**Formatted display:** Client-side (e.g. `formatTpInstant(instant, zone)` in `@so/model`).
 
 ### Multi-day logic
 
 **Span calculation** (stay/travel):  
-- Stay: `[check_in_at, check_out_at]`  
+- Stay: `[check_in_at, check_out_at]` (UTC instants)  
 - Travel (selected route): `[first_transport.depart_at, last_transport.arrive_at]`
 
-**Mirror days:** Action appears on every trip day D where `dayInterval(D, tripTz)` intersects span. (Handled by existing `tpDayOverlapsTripDay`, `listTpDayTimeline` helpers in `@so/model` — not exposed as separate MCP tools.)
+**Mirror days:** Action appears on every trip day D where `dayInterval(D, tripTz)` intersects span (UTC). Handled by existing `tpDayOverlapsTripDay`, `listTpDayTimeline` helpers in `@so/model` — **not exposed as separate MCP tools.**
 
-**Anchor day:** Trip day matching `localDate(depart_at, depart_timezone)` for travel; `localDate(check_in_at, check_in_timezone)` for stay.
+**Anchor day:** Trip day matching `localDate(depart_at, depart_timezone)` for travel; `localDate(check_in_at, check_in_timezone)` for stay. **Manual override allowed** via `update_tp_action(anchorDayId)` (UI already supports this).
 
 ---
 
@@ -347,7 +414,7 @@ REST routes mirror MCP tools under `/api/pods/{podId}/trip/...`. Method + path p
 | Delete route | `delete` | Cascade deletes transports; nullifies `selected_route_id`. |
 | Delete transport | `delete` | Cascade deletes attachments. |
 | Delete attachment | `delete` | Removes storage object + DB row. |
-| Delete trip | N/A (pod delete) | Handled by `delete_pod` tool (space/pod admin). |
+| Delete trip | N/A | Handled by `delete_pod` tool (space/pod admin). |
 
 **Read-only (viewer) behavior:** `pod_viewer` cannot delete anything. Calls fail with authz error.
 
@@ -374,7 +441,7 @@ For each new `{action}DbTp{Resource}` helper:
 - **Validation:** missing required fields → error.
 - **Authz:** viewer cannot write → RLS blocks.
 - **Cascade:** deleting parent removes children (destination → nullifies action FKs; action → deletes routes/transports).
-- **Timezone logic:** anchor day recalculated when transport times change; span overlaps correct trip days.
+- **Timezone logic:** local time + zone → UTC instant conversion; anchor day recalculated when transport times change; span overlaps correct trip days.
 
 **Existing tests:** PR #9 may have tests for merged helpers; extend/verify coverage.
 
@@ -386,12 +453,13 @@ For each MCP tool and matching REST endpoint:
 - **Role matrix:** viewer cannot create/update/delete → fail.
 - **Input validation:** valibot schema enforcement.
 - **Service call:** REST and MCP produce identical DB state for same input.
-- **Cascade:** delete action via REST → transports removed; verify via MCP list.
+- **Cascade:** delete action via REST → transports removed; verify via MCP workspace load.
+- **Timezone round-trip:** create transport with local time + zone → read back → verify both local and UTC match.
 
 ### Attachment tests
 
 - **Upload:** base64 JPEG → storage object created + DB row.
-- **Size limit:** 6MB file → fail (over 5MB).
+- **Size limit:** 6MB file (decoded) → fail (over 5MB).
 - **MIME filter:** `text/plain` → fail (not jpeg/png/pdf).
 - **Read:** list attachments → signed URLs valid for 7 days.
 - **Delete:** remove attachment → storage object deleted + DB row removed.
@@ -401,40 +469,79 @@ For each MCP tool and matching REST endpoint:
 - **Stay spanning 3 nights:** verify mirrors on 4 trip days (check-in day + 3 nights).
 - **Travel >24h:** flight departing Mon 10:00 HKT, arriving Wed 06:00 GMT → mirrors on Mon/Tue/Wed.
 - **Anchor day:** change transport departure time → anchor day ID updated if local date shifts.
+- **Manual override:** set `anchorDayId` explicitly → stays pinned even if times change.
+
+### Per-feature endpoint tests
+
+- **Tool catalog:** `GET /api/mcp/trip` with trip grant → returns 20 trip tools + shared core.
+- **Filtered list:** Key with only trip grant → `tools/list` on `/api/mcp` returns trip tools only (no todo/fp).
+- **No grant:** Key with only todo grant → `GET /api/mcp/trip` → returns shared core only.
+- **Backwards compat:** Existing `/api/mcp` clients work unchanged.
 
 ---
 
-## Open questions for Matthew
+## Decisions (locked)
 
-1. **Workspace bulk read (`get_tp_workspace`):** Include in v1, or require agents to call individual list tools? (Recommendation: include for efficiency, mirrors UI load.)
+These questions were resolved by Matthew:
 
-2. **Attachment upload approach:**  
-   - **Option A (recommended):** Base64 in MCP tool body (like `replace_todo_card_icon`). 5MB limit enforced on decoded size.  
-   - **Option B:** Separate signed upload URL endpoint (more complex; defer to phase 2).  
-   
-   → **Decision:** Use base64 in v1.
+1. **Workspace bulk read (`get_tp_workspace`):** ✅ Included in v1 for efficiency.
+2. **Attachment upload:** ✅ Base64 in MCP tool body (like `replace_todo_card_icon`). 5MB limit.
+3. **Attachment list filtering:** ✅ One tool with optional `transportId` / `destinationId` filter params.
+4. **Trip deletion:** ✅ Via `delete_pod` only (space/pod admin). No separate `delete_trip` tool.
+5. **Day create/delete:** ✅ Omit; days auto-sync from trip dates. No explicit day CRUD tools.
+6. **Anchor day manual override:** ✅ **Allowed** via `update_tp_action(anchorDayId)` (UI already supports).
+7. **Budget rollup:** ✅ Expose `get_tp_budget_rollup` tool using `tpBudgetRollup` helper.
+8. **Error granularity:** ✅ Generic errors in v1 (e.g. `not_found`); detailed codes deferred to phase 2.
+9. **Active destinations inference:** ✅ Omit `get_tp_active_destinations_for_day` tool; agents compute client-side from workspace data.
+10. **Reorder operations:** ✅ **Fold into update via `sortOrder` field** (no separate reorder tools). Mirrors `update_todo_card`.
+11. **Trip settings:** ✅ **Fold into trip get/update** (`defaultCurrency` on `update_trip`). No separate setting tools.
+12. **Tool count:** ✅ **Trim to ~20 tools.** Remove redundant list/get (workspace covers them). Separate create/update (distinct API key rights).
+13. **Time input format:** ✅ **Local wall time + IANA timezone** (not UTC). Server converts. Outputs return both local and UTC.
+14. **Per-feature MCP endpoints:** ✅ **DECIDED** — `/api/mcp` becomes core-only (spaces, groups, pods, membership, profile, API key permissions). Feature endpoints `/api/mcp/trip`, `/api/mcp/todo`, `/api/mcp/fp` have ONLY that feature's tools (no core duplication). No backward compatibility needed.
 
-3. **Destination important-info auto-inference:** The `tpActiveDestinationsForDay` helper (auto from stays/travel) is UI logic in `@so/model`. Expose as a separate MCP tool (`get_tp_active_destinations_for_day(podId, dayId)`) or omit from agent surface? (Recommendation: omit v1; agents can implement inference client-side from workspace data.)
+---
 
-4. **Reorder operations scope:**  
-   - Destinations: trip-level reorder (simple).  
-   - Actions: per anchor-day reorder (matches `updateDbTpActionSortOrders`).  
-   - Transports: per route reorder (simple).  
-   - **Routes:** per action reorder? (Not in existing helpers; add if needed.)  
-   
-   → **Decision:** Add `reorder_tp_routes` (per action) for completeness.
+## Implementation notes
 
-5. **Trip deletion:** Covered by `delete_pod` tool (space/pod admin), or expose separate `delete_trip` tool (no-op; trip is 1:1 with pod)? (Recommendation: omit; deleting trip = delete pod.)
+### Service layer
 
-6. **Attachment list filtering:** Filter by parent (`transportId` XOR `destinationId`) via query params, or separate tools (`list_tp_transport_attachments`, `list_tp_destination_attachments`)? (Recommendation: one tool with optional filter params, like `list_fp_transactions` with account filter.)
+**Existing helpers** (merged from PR #9, `packages/web/lib/api/db/tp/`):
 
-7. **Day create/delete:** Days are auto-synced from trip dates. Expose explicit `create_tp_day` / `delete_tp_day` tools, or omit? (Recommendation: omit; day lifecycle tied to trip date updates.)
+- `createDbTpAction`, `updateDbTpAction`, `updateDbTpActionSortOrders` → use `update` for sortOrder changes
+- `createDbTpAttachment`, `deleteDbTpAttachment`
+- `createDbTpRoute`, `deleteDbTpRoute`, `selectDbTpRoute`
+- `createDbTpTransport`, `deleteDbTpTransport`, `updateDbTpTransport`
+- `updateDbTpDay`, `updateDbTpDestination`
+- `createDbTpTripBundle` (wizard helper)
+- `loadDbTpWorkspace` (full workspace load)
 
-8. **Anchor day manual override:** Expose tool to manually set `anchor_day_id` on action (e.g. for ideas → pinned day), or keep auto-only? (Recommendation: auto-only in v1; manual pin in UI phase 2.)
+**New helpers needed:**
 
-9. **Budget rollup:** Expose `get_tp_budget_rollup(podId)` tool returning `{totalCost, budgetAmount, breakdown: [...]}`, or expect agents to compute client-side from trip/actions/transports? (Recommendation: include tool using existing `tpBudgetRollup` helper from `@so/model`.)
+- `updateDbTpTrip` (includes `defaultCurrency` for `tp_setting`)
+- `createDbTpDestination`, `deleteDbTpDestination`
+- `listDbTpAttachments` (with signed URLs)
+- `getBudgetRollup` (compute total costs vs budget)
+- `syncTpDaysForTrip` (called on trip date update)
+- **Timezone conversion helpers:** `localTimeToUtc(localTime, timezone)`, `utcToLocalTime(instant, timezone)`
 
-10. **Error granularity:** When a nested create fails (e.g. `create_tp_transport` with invalid route ID), return `{error: {code: 'not_found', resource: 'route', id}}` or generic `not_found`? (Recommendation: generic in v1; detailed error codes in phase 2 if needed.)
+**Attachment storage:**  
+- Use existing storage helpers pattern (`uploadStorageTpAttachment`, signed URL generation like `listStorageTodoCardIconSignedUrls`).
+- Bucket: `pod-private`
+- Paths: `{podId}/tp/transport/{transportId}/{attachmentId}-{safe_filename}` or `{podId}/tp/destination/{destinationId}/{attachmentId}-{safe_filename}`
+
+**Authz enforcement:**  
+- `requirePodAgent(request, {featureKind: 'trip_planning', podId, resource: 'trip', action})` (follow `fpCall` pattern).
+- RLS already enforces `can_read_tp_pod` / `can_write_tp_pod` (viewer vs writer).
+
+### Agent adapter layer
+
+**MCP catalog:** Add trip tools to `mcpCatalogExtra.ts` or new `tpAgentTools.ts`.  
+**REST dispatcher:** Extend `dispatchAgentRest.ts` or `dispatchAgentRestMore.ts` with trip routes.
+
+**Valibot schemas:** Define in `@so/model` (e.g. `agentTpActionSchema`, `agentTpTransportSchema`, `agentTpAttachmentUploadSchema`).  
+**Agent result types:** Mirror UI types from `@so/model` trip schemas.
+
+**Per-feature endpoints:** New route `app/api/mcp/[[...segments]]/route.ts` + `getMcpToolsForFeature` helper in catalog.
 
 ---
 
@@ -442,51 +549,43 @@ For each MCP tool and matching REST endpoint:
 
 1. **Matrix UI:** Trip pods appear in the pod table with Create/Read/Update/Delete cells writing `pods[podId].trip`.
 2. **Presets:** All on, All off, All read correctly toggle trip pod rows.
-3. **MCP catalog:** All tools listed above registered in `mcpCatalog.ts` / `mcpCatalogExtra.ts`.
+3. **MCP catalog:** 20 trip tools registered; total catalog size documented.
 4. **REST routes:** All endpoints under `/api/pods/{podId}/trip/...` callable with Bearer token.
 5. **Same service layer:** REST and MCP call identical helpers; no duplicated logic.
 6. **Authz enforced:** Key grant + membership + featureKind + role checked per call; viewer read-only.
 7. **Attachment upload/download:** Base64 upload, 5MB limit, jpeg/png/pdf only; signed URLs on read.
-8. **Timezone handling:** Instants + IANA timezones in/out; anchor day and mirrors correctly computed.
-9. **Tests pass:** Unit tests for new service helpers; integration tests for agent layer.
-10. **Docs:** MCP config snippet in create key flow; tool descriptions match existing terse style.
+8. **Timezone handling:** Local time + zone inputs → UTC instant storage; outputs return both; anchor day and mirrors correctly computed.
+9. **Tests pass:** Unit tests for new service helpers; integration tests for agent layer; timezone round-trip; per-feature endpoints.
+10. **Per-feature endpoints:** `/api/mcp/trip`, `/api/mcp/todo`, `/api/mcp/fp` work; `tools/list` filters by grants.
+11. **Docs:** MCP config snippet in create key flow; tool descriptions match existing terse style.
 
 ---
 
-## Approval
+## Tool count summary
 
-**Status:** PLAN ONLY — awaiting Matthew's review and approval before implementation.
-
-**Open questions above** should be resolved before starting implementation.
-
-After approval, implementation proceeds on this branch (`cursor/trip-planning-api-mcp-plan-c7f9`) or a new branch named by Matthew.
-
----
-
-## Appendix: Tool count summary
-
-**Total proposed tools:** ~36
-
-**Breakdown by category:**
+**Final: 20 trip tools** (vs 36 in first draft)
 
 | Category | Tools | Notes |
 | --- | --- | --- |
-| Trip/settings | 4 | get/update trip, get/update setting |
-| Destinations | 5 | list, create, update, delete, reorder |
-| Days | 2 | list, update (no create/delete) |
-| Actions | 6 | list, get, create, update, delete, reorder |
-| Routes | 6 | list, create, update, delete, select, reorder (if added) |
-| Transports | 6 | list, create, update, delete, reorder |
-| Attachments | 3 | list, upload, delete |
-| Workspace | 1 | get workspace (bulk load) |
-| Budget | 1 | get budget rollup (if added) |
-| Active destinations | 1 | get active destinations for day (if added) |
+| Workspace | 1 | `get_tp_workspace` (replaces individual list/get) |
+| Trip | 2 | `update_trip` (includes settings), `get_tp_budget_rollup` |
+| Destinations | 3 | create, update (includes reorder via sortOrder), delete |
+| Days | 1 | update (no create/delete; auto-synced) |
+| Actions | 3 | create, update (includes reorder, manual anchor day), delete |
+| Routes | 4 | create, update (includes reorder), delete, select |
+| Transports | 3 | create, update (includes reorder), delete |
+| Attachments | 3 | list, upload (base64), delete |
 
-**Defer to phase 2:**  
-- Trip-level whole-journey plan compare (`tp_travel_plan` style)  
-- Soft links to todo / FP pods  
-- Telegram bridge integration  
-- AI trip generation
+**Shared core** (every feature endpoint): `get_api_key_permissions`, `get_profile`, `list_spaces`, `list_space_pods`
+
+**Total MCP catalog** (all features):  
+- Todo: ~15 tools  
+- FP: ~30 tools  
+- Trip: 20 tools  
+- Space/group: ~10 tools  
+- Profile: 3 tools  
+- Shared: 4 tools  
+- **Total: ~78 tools** (existing + trip)
 
 ---
 
