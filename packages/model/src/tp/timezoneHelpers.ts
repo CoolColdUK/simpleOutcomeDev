@@ -93,27 +93,40 @@ function wallTimeToUtcMillis(parts: WallTimeParts): number {
   );
 }
 
+function sameWallTime(a: WallTimeParts, b: WallTimeParts): boolean {
+  return (
+    a.year === b.year &&
+    a.month === b.month &&
+    a.day === b.day &&
+    a.hour === b.hour &&
+    a.minute === b.minute &&
+    a.second === b.second
+  );
+}
+
+function wallTimeInZone(utcMs: number, ianaZone: string): WallTimeParts {
+  return parseUsLocaleDateTime(formatUtcInZone(new Date(utcMs), ianaZone));
+}
+
 /**
  * Convert local wall time + timezone to UTC instant
  */
 export function localTimeToUtc(localTime: string, ianaZone: string): string {
-  const wall = parseLocalWallTime(localTime);
+  const target = parseLocalWallTime(localTime);
   assertValidIanaZone(ianaZone);
 
-  const localIso = `${String(wall.year).padStart(4, '0')}-${String(wall.month).padStart(2, '0')}-${String(wall.day).padStart(2, '0')}T${String(wall.hour).padStart(2, '0')}:${String(wall.minute).padStart(2, '0')}:${String(wall.second).padStart(2, '0')}`;
+  let utcMs = wallTimeToUtcMillis(target);
 
-  const utcMillis = wallTimeToUtcMillis(wall);
-  const utcDate = new Date(`${localIso}Z`);
-  const utcMilliseconds = utcDate.getTime();
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const current = wallTimeInZone(utcMs, ianaZone);
+    if (sameWallTime(current, target)) {
+      return new Date(utcMs).toISOString();
+    }
+    const delta = wallTimeToUtcMillis(target) - wallTimeToUtcMillis(current);
+    utcMs += delta;
+  }
 
-  const inTargetZone = formatUtcInZone(utcDate, ianaZone);
-  const targetParts = parseUsLocaleDateTime(inTargetZone);
-  const targetMillis = wallTimeToUtcMillis(targetParts);
-
-  const offsetMs = utcMilliseconds - targetMillis;
-  const desiredUtcMs = utcMillis - offsetMs;
-
-  return new Date(desiredUtcMs).toISOString();
+  return new Date(utcMs).toISOString();
 }
 
 /**
