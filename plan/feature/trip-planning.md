@@ -1,6 +1,6 @@
 # In-app trip planning — feature plan
 
-Stippl-inspired **day-by-day itineraries** inside SimpleOutcome: each **day** holds ordered **actions** (travel, stay, activity, note). **Travel** actions support alternative **routes** (e.g. coach vs train), each route an ordered chain of **transports** (multi-modal). Optional **budget**, **costs**, and **attachments** (images + PDF on transports only) — without map tiles, booking marketplaces, or affiliate clutter in v1.
+Stippl-inspired **day-by-day itineraries** inside SimpleOutcome: each **day** lists ordered **actions** (travel, stay, activity, note) plus **read-only mirrors** for multi-night **stays** and multi-day **travel**. **Travel** → alternative **routes** → ordered **transports**. Optional **budget**, **costs**, and **attachments** (images + PDF on transports only) — without map tiles, booking marketplaces, or affiliate clutter in v1.
 
 **Repo:** [CoolColdUK/simpleOutcomeDev](https://github.com/CoolColdUK/simpleOutcomeDev)  
 **Related:** [API keys, REST, and MCP](./api-mcp.md) (agent surface — trip tools are **phase 2**), [Telegram bot bridge](https://github.com/CoolColdUK/simpleOutcomeDev/blob/cursor/telegram-bridge-plan-f6f2/plan/feature/telegram-bridge.md) (separate track; ships **before** this feature)
