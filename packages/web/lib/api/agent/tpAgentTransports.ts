@@ -117,7 +117,7 @@ export async function updateAgentTpTransport(request: Request, input: unknown): 
     }
   }
   
-  const result = await updateDbTpTransport(ctx.data.supabase, {transportId, ...updates} as any);
+  const result = await updateDbTpTransport(ctx.data.supabase, {transportId, ...updates});
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   if (result.data === null) return agentErr(404, 'not_found', 'Transport not found');

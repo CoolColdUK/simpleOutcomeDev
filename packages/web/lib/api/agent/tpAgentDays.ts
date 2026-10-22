@@ -6,7 +6,7 @@ import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
-import {updateDbTpDay} from '@/lib/api/db/tp/updateDbTpDay';
+import {updateDbTpDay, type UpdateTpDayInput} from '@/lib/api/db/tp/updateDbTpDay';
 
 export async function updateAgentTpDay(request: Request, input: unknown): Promise<AgentResult<unknown>> {
   const args = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
@@ -24,15 +24,17 @@ export async function updateAgentTpDay(request: Request, input: unknown): Promis
   const owned = await ownedTpRow(ctx.data, 'tp_day', dayId, podId);
   if (!owned.ok) return owned;
   
-  const updates: Record<string, unknown> = {};
-  if ('dayTitle' in args) updates.day_title = args.dayTitle;
-  if ('dayNotes' in args) updates.day_notes = args.dayNotes;
-  if ('primaryDestinationId' in args) updates.primary_destination_id = args.primaryDestinationId;
+  const updates: Omit<UpdateTpDayInput, 'dayId'> = {};
+  if ('dayTitle' in args && typeof args.dayTitle === 'string') updates.day_title = args.dayTitle;
+  if ('dayNotes' in args && typeof args.dayNotes === 'string') updates.day_notes = args.dayNotes;
+  if ('primaryDestinationId' in args && typeof args.primaryDestinationId === 'string') {
+    updates.primary_destination_id = args.primaryDestinationId;
+  }
   
   const result = await updateDbTpDay(ctx.data.supabase, {
     dayId,
     ...updates,
-  } as any);
+  });
   
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;

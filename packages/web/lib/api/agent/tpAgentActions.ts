@@ -142,7 +142,7 @@ export async function updateAgentTpAction(request: Request, input: unknown): Pro
     }
   }
   
-  const result = await updateDbTpAction(ctx.data.supabase, {actionId, ...updates} as any);
+  const result = await updateDbTpAction(ctx.data.supabase, {actionId, ...updates});
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   if (result.data === null) return agentErr(404, 'not_found', 'Action not found');

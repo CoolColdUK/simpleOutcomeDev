@@ -14,7 +14,7 @@ export async function ownedTpRow(
   ctx: AgentContext,
   table: 'tp_destination' | 'tp_day' | 'tp_action' | 'tp_route' | 'tp_transport' | 'tp_attachment',
   id: string,
-  podId: string,
+  _podId: string,
 ): Promise<AgentResult<true>> {
   const row = await ctx.supabase.from(table).select('id').eq('id', id).maybeSingle();
   const rowErr = dbErr(row.error);

@@ -6,7 +6,13 @@ import {ApiKeyAction} from '@so/model';
 import {agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall} from '@/lib/api/agent/tpAgentCall';
-import {loadDbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWorkspace';
+import {
+  loadDbTpWorkspace,
+  type DbTpAction,
+  type DbTpRoute,
+  type DbTpTransport,
+} from '@/lib/api/db/tp/loadDbTpWorkspace';
+import type {UpdateTpTripInput} from '@/lib/api/db/tp/updateDbTpTrip';
 
 /**
  * Load full trip workspace
@@ -50,7 +56,7 @@ export async function updateAgentTpTrip(request: Request, input: unknown): Promi
     return ctx;
   }
   
-  const updates: Record<string, unknown> = {podId};
+  const updates: UpdateTpTripInput = {podId};
   
   if ('title' in args && typeof args.title === 'string') updates.title = args.title;
   if ('timezone' in args && typeof args.timezone === 'string') updates.timezone = args.timezone;
@@ -60,11 +66,11 @@ export async function updateAgentTpTrip(request: Request, input: unknown): Promi
   if ('budgetAmount' in args && typeof args.budgetAmount === 'number') updates.budgetAmount = args.budgetAmount;
   if ('budgetCurrency' in args && typeof args.budgetCurrency === 'string') updates.budgetCurrency = args.budgetCurrency;
   if ('defaultCurrency' in args && typeof args.defaultCurrency === 'string') updates.defaultCurrency = args.defaultCurrency;
-  if ('mapsUrl' in args) updates.mapsUrl = args.mapsUrl;
-  if ('notes' in args) updates.notes = args.notes;
+  if ('mapsUrl' in args && typeof args.mapsUrl === 'string') updates.mapsUrl = args.mapsUrl;
+  if ('notes' in args && typeof args.notes === 'string') updates.notes = args.notes;
   
   const {default: updateDbTpTrip} = await import('@/lib/api/db/tp/updateDbTpTrip');
-  const result = await updateDbTpTrip(ctx.data.supabase, updates as any);
+  const result = await updateDbTpTrip(ctx.data.supabase, updates);
   
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) {
@@ -103,7 +109,7 @@ export async function getAgentTpBudgetRollup(request: Request, input: unknown): 
     return workspaceErr;
   }
   
-  if (workspace.data === null) {
+  if (workspace.data === null || workspace.data.trip === undefined) {
     return {ok: false, status: 404, code: 'not_found', message: 'Trip not found'};
   }
   
@@ -111,25 +117,25 @@ export async function getAgentTpBudgetRollup(request: Request, input: unknown): 
   let totalCost = 0;
   
   // Actions (stay/activity/note): count cost once per action
-  const actions = workspace.data.actions ?? [];
-  actions.forEach((action: any) => {
-    if (action.cost_amount && typeof action.cost_amount === 'number') {
-      totalCost += action.cost_amount;
+  const actions: readonly DbTpAction[] = workspace.data.actions;
+  actions.forEach((action) => {
+    if (action.costAmount !== undefined) {
+      totalCost += action.costAmount;
     }
   });
   
   // Transports: sum costs of transports on selected routes
-  const routes = workspace.data.routes ?? [];
-  const transports = workspace.data.transports ?? [];
+  const routes: readonly DbTpRoute[] = workspace.data.routes;
+  const transports: readonly DbTpTransport[] = workspace.data.transports;
   
-  actions.forEach((action: any) => {
-    if (action.kind === 'travel' && action.selected_route_id) {
-      const selectedRoute = routes.find((r: any) => r.id === action.selected_route_id);
-      if (selectedRoute) {
-        const routeTransports = transports.filter((t: any) => t.route_id === selectedRoute.id);
-        routeTransports.forEach((t: any) => {
-          if (t.cost_amount && typeof t.cost_amount === 'number') {
-            totalCost += t.cost_amount;
+  actions.forEach((action) => {
+    if (action.kind === 'travel' && action.selectedRouteId !== undefined) {
+      const selectedRoute = routes.find((route) => route.id === action.selectedRouteId);
+      if (selectedRoute !== undefined) {
+        const routeTransports = transports.filter((transport) => transport.routeId === selectedRoute.id);
+        routeTransports.forEach((transport) => {
+          if (transport.costAmount !== undefined) {
+            totalCost += transport.costAmount;
           }
         });
       }
@@ -137,14 +143,14 @@ export async function getAgentTpBudgetRollup(request: Request, input: unknown): 
   });
   
   const trip = workspace.data.trip;
-  const budgetAmount = trip?.budget_amount ?? 0;
+  const budgetAmount = trip.budgetAmount ?? 0;
   
   return agentOk({
     totalCost,
     budgetAmount,
     breakdown: {
-      actionCosts: actions.filter((a: any) => a.cost_amount).length,
-      transportCosts: transports.filter((t: any) => t.cost_amount).length,
+      actionCosts: actions.filter((action) => action.costAmount !== undefined).length,
+      transportCosts: transports.filter((transport) => transport.costAmount !== undefined).length,
     },
   });
 }

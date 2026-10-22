@@ -39,7 +39,7 @@ export default async function uploadDbTpAttachment(
   let buffer: Buffer;
   try {
     buffer = Buffer.from(input.contentBase64, 'base64');
-  } catch (e) {
+  } catch {
     return {
       data: null,
       error: new Error('Invalid base64 content'),
