@@ -9,7 +9,8 @@
     "clean:node": "rm -rf node_modules",
     "dev": "next dev -p 3000 --webpack",
     "lint": "eslint --fix \"app/**/*.{ts,tsx}\" \"components/**/*.{ts,tsx}\" \"lib/**/*.{ts,tsx}\" \"styles/**/*.ts\"",
-    "start": "next start"
+    "start": "next start",
+    "vercel-build": "next build --webpack"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.36.1",
