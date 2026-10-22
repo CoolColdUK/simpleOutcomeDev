@@ -513,6 +513,255 @@ export interface Database {
         };
         Relationships: [];
       };
+      tp_setting: {
+        Row: {pod_id: string; default_currency: string; created_at: string; updated_at: string};
+        Insert: {pod_id: string; default_currency?: string};
+        Update: {default_currency?: string};
+        Relationships: [];
+      };
+      tp_trip: {
+        Row: {
+          id: string;
+          pod_id: string;
+          title: string;
+          timezone: string;
+          start_date: string;
+          end_date: string;
+          status: string;
+          budget_amount: string | null;
+          budget_currency: string | null;
+          maps_url: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pod_id: string;
+          title: string;
+          timezone?: string;
+          start_date: string;
+          end_date: string;
+          status?: string;
+          budget_amount?: number | string | null;
+          budget_currency?: string | null;
+          maps_url?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          title?: string;
+          timezone?: string;
+          start_date?: string;
+          end_date?: string;
+          status?: string;
+          budget_amount?: number | string | null;
+          budget_currency?: string | null;
+          maps_url?: string | null;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
+      tp_destination: {
+        Row: {
+          id: string;
+          trip_id: string;
+          name: string;
+          sort_order: number;
+          maps_url: string | null;
+          timezone_hint: string | null;
+          important_info: string | null;
+          active_start_date: string | null;
+          active_end_date: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          name: string;
+          sort_order?: number;
+          maps_url?: string | null;
+          timezone_hint?: string | null;
+          important_info?: string | null;
+          active_start_date?: string | null;
+          active_end_date?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          name?: string;
+          sort_order?: number;
+          maps_url?: string | null;
+          timezone_hint?: string | null;
+          important_info?: string | null;
+          active_start_date?: string | null;
+          active_end_date?: string | null;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
+      tp_day: {
+        Row: {
+          id: string;
+          trip_id: string;
+          day_index: number;
+          calendar_date: string;
+          day_title: string | null;
+          day_notes: string | null;
+          primary_destination_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          day_index: number;
+          calendar_date: string;
+          day_title?: string | null;
+          day_notes?: string | null;
+          primary_destination_id?: string | null;
+        };
+        Update: {
+          day_title?: string | null;
+          day_notes?: string | null;
+          primary_destination_id?: string | null;
+        };
+        Relationships: [];
+      };
+      tp_day_destination: {
+        Row: {day_id: string; destination_id: string};
+        Insert: {day_id: string; destination_id: string};
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      tp_action: {
+        Row: {
+          id: string;
+          trip_id: string;
+          anchor_day_id: string | null;
+          kind: string;
+          title: string;
+          place_text: string | null;
+          maps_url: string | null;
+          destination_id: string | null;
+          from_place: string | null;
+          to_place: string | null;
+          from_destination_id: string | null;
+          to_destination_id: string | null;
+          from_maps_url: string | null;
+          to_maps_url: string | null;
+          check_in_at: string | null;
+          check_out_at: string | null;
+          check_in_timezone: string | null;
+          check_out_timezone: string | null;
+          start_time: string | null;
+          end_time: string | null;
+          cost_amount: string | null;
+          cost_currency: string | null;
+          booking_ref: string | null;
+          url: string | null;
+          notes: string | null;
+          selected_route_id: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          anchor_day_id?: string | null;
+          kind: string;
+          title: string;
+          sort_order?: number;
+        };
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      tp_route: {
+        Row: {
+          id: string;
+          action_id: string;
+          name: string;
+          is_selected: boolean;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          action_id: string;
+          name: string;
+          is_selected?: boolean;
+          notes?: string | null;
+          sort_order?: number;
+        };
+        Update: {
+          name?: string;
+          is_selected?: boolean;
+          notes?: string | null;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      tp_transport: {
+        Row: {
+          id: string;
+          route_id: string;
+          mode: string;
+          from_place: string | null;
+          to_place: string | null;
+          depart_at: string | null;
+          arrive_at: string | null;
+          depart_timezone: string | null;
+          arrive_timezone: string | null;
+          cost_amount: string | null;
+          cost_currency: string | null;
+          booking_ref: string | null;
+          url: string | null;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          route_id: string;
+          mode?: string;
+          sort_order?: number;
+        };
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      tp_attachment: {
+        Row: {
+          id: string;
+          pod_id: string;
+          trip_id: string;
+          transport_id: string | null;
+          destination_id: string | null;
+          storage_path: string;
+          file_name: string;
+          mime_type: string;
+          byte_size: number;
+          uploaded_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pod_id: string;
+          trip_id: string;
+          transport_id?: string | null;
+          destination_id?: string | null;
+          storage_path: string;
+          file_name: string;
+          mime_type: string;
+          byte_size: number;
+          uploaded_by: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

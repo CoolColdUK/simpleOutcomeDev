@@ -10,6 +10,10 @@ describe('parseFeatureKind', () => {
     expect(parseFeatureKind('financial_planning')).toBe(FeatureKind.FINANCIAL_PLANNING);
   });
 
+  it('accepts trip_planning', () => {
+    expect(parseFeatureKind('trip_planning')).toBe(FeatureKind.TRIP_PLANNING);
+  });
+
   it('rejects unknown kinds', () => {
     expect(() => parseFeatureKind('calendar')).toThrow();
   });

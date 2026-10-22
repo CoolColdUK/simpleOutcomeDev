@@ -7,7 +7,7 @@ Stippl-inspired **day-by-day itineraries** inside SimpleOutcome: each **day** ha
 
 **Product positioning:** In-app SimpleOutcome feature (web UI first). Not external Travel assistant bots.
 
-This is a **plan / requirements** document. Product code waits until Matthew approves this plan on the implementation PR branch, then lands on **that same branch**.
+**Status:** Approved (Matthew) — **v1 implementation** on PR #9 branch `cursor/trip-planning-plan-bd93`. This file remains the requirements source of truth.
 
 ---
 
@@ -40,7 +40,7 @@ Matthew confirmed in Technical Forum (Oct 2026). Do not re-litigate without a ne
 | 8 | **Travel endpoints** | **Travel action:** overall **`from_place`** / **`to_place`** (city/region text) + optional **`from_maps_url`** / **`to_maps_url`** (journey intent A→Z). **Each transport:** segment **`from_place`** / **`to_place`** (airport/station names OK). **Single-transport route:** action endpoints **default from / sync with** the transport on save. **Multi-modal:** action = overall A→Z; transports = A→B, B→C, …, C→Z (first transport `from` should chain from action `from_place`; last `to` aligns with action `to_place` — validate in UI, soft warnings not hard block in v1). |
 | 9 | **Timezones** | **Do not** assume one trip timezone for all dep/arr display. Store **timestamptz** instants **and** explicit **IANA** `depart_timezone` / `arrive_timezone` per transport (and check-in/out zones on stays). **`tp_trip.timezone`** = default for **generating the day strip** and fallback UI only. Display: **local time + abbreviation** per endpoint (e.g. `14:00 HKT → 18:30 GMT`). Calendar-day rules for mirrors: [Timezone and calendar rules](#timezone-and-calendar-rules). |
 | 10 | **Day planning notes** | Each **`tp_day`** has optional **`day_title`** + **`day_notes`** (broad plan for that day, e.g. “Ghibli studio”) — **day fields**, not a `note` action. Shown at **top of day**; editable inline. Distinct from ordered **`note`** actions in the list. |
-| 11 | **Important / safety info** | **Destination-scoped** in v1 (not one blob for whole trip). Rich **`important_info`** (markdown/text) on **`tp_destination`**; optional **attachments** (image/PDF) on destination. Show when viewing a day if that destination is **active** that day (date range + optional day links). Example: earthquake guidance for Japan days only; Tokyo evac map for Tokyo days only. |
+| 11 | **Important / safety info** | **Destination-scoped** in v1. **`important_info`** + attachments on **`tp_destination`**. **Primary surfacing path is automatic** — infer active destination(s) per day from **stays** (`destination_id` on overlapping stays) and **travel** (endpoint destinations on **transit days** via selected-route transports). **Optional `tp_day.primary_destination_id`** overrides inference on messy days. **Do not** require manual per-day tagging as the default workflow (`tp_day_destination` / date ranges are optional supplements only). |
 | 12 | **Attachments** | **v1:** JPEG/PNG/PDF on **`tp_transport`** (tickets) **and** on **`tp_destination`** (safety docs). **`pod-private`**, **5 MB** per file. Not on trip/day/action in v1. |
 | 13 | **Cross-feature** | Todo / FP soft links → **phase 2**. |
 | 14 | **Map / bookings** | No map SDK; no booking marketplaces. |
@@ -82,7 +82,7 @@ Matthew confirmed in Technical Forum (Oct 2026). Do not re-litigate without a ne
 | Endpoint timezones | Instants + IANA per transport/stay endpoint; trip TZ = strip only. |
 | Journey A→Z | Travel action places + per-segment places. |
 | Day header ≠ note action | `day_title` / `day_notes` are planning chrome above the action list. |
-| Destination-scoped safety | Important info follows **where/when** you are on the trip, not the whole itinerary. |
+| Destination-scoped safety | Inferred from **stays and travel** by default; override only when needed. |
 | Attachments | Tickets on **transport**; safety PDFs on **destination**. |
 | Platform `pod_viewer` | Added for all pod kinds; trip is first feature that **needs** view-only sharing. |
 | Storage reuse | [`pod-private`](packages/model/src/todo/constants.ts) + todo-style upload helpers. |
@@ -150,19 +150,31 @@ Ordered places / sections for the trip (replaces a standalone `primary_destinati
 | `maps_url` | Optional outbound link |
 | `timezone_hint` | Optional IANA — UI default when adding times in this section |
 | `important_info` | Optional markdown/text — safety, embassy, evac, local rules |
-| `active_start_date`, `active_end_date` | Optional **inclusive** trip-calendar dates when this destination applies (section of trip) |
+| `active_start_date`, `active_end_date` | Optional **coarse** section dates — **not** the primary surfacing path once itinerary exists; useful before stays/travel are filled |
 | `notes` | Optional internal planner note (not shown as day header) |
 
-**When is a destination “active” on day D?**
+**No `tp_country` table in v1** — broader regions are just destination rows (e.g. “Japan (general)”).
 
-1. `D.calendar_date` lies within `[active_start_date, active_end_date]` when both ends set (either end null = open), **or**
-2. Explicit link in **`tp_day_destination`** (`day_id`, `destination_id`) for fine-grained control (e.g. Tokyo vs Osaka days inside “Japan” dates).
+#### Which destinations surface on day D? (`tpActiveDestinationsForDay`)
 
-If both range and day links exist for a destination, **union**: linked days always active; range adds any day in interval. Multiple destinations may be active same day (show **stacked info panels**).
+**1. Override (optional):** If `tp_day.primary_destination_id` is set → **only** that destination’s important-info panel on D (ignores auto for surfacing). UI: “Pin safety info for this day” picker; clear to revert to auto.
 
-**Stays:** optional `destination_id` on **`tp_action`** (`kind = stay`) to tie lodging to a destination (helps default active context).
+**2. Auto inference (default):** When override is null, **union**:
 
-**No `tp_country` table in v1** — broader regions are just destination rows with wider date ranges.
+| Signal | Rule |
+| --- | --- |
+| **Stay** | Each **stay** overlapping trip day D (mirror or canonical) with `destination_id` → include that destination. |
+| **Travel (transit days)** | For each **travel** action overlapping D (selected route), inspect **transports** on that route: if D is the **departure local date** (`depart_timezone`) → include `from_destination_id` when set; if D is the **arrival local date** (`arrive_timezone`) → include `to_destination_id`; if D is an **intermediate** overlapped day (in transit, including **> 24 h** segments) → include **both** endpoint destinations for transports spanning D (or the in-progress segment’s from/to destinations). |
+| **Name fallback** | If FKs unset, soft-match `from_place` / `to_place` / stay `place_text` to `tp_destination.name` (case-insensitive contains) — best-effort; UI nudges user to pick `destination_id` on stay/travel. |
+
+**3. Optional supplements (not required for v1 happy path):**
+
+- **`tp_day_destination`** — add an **extra** destination to a day’s panels (additive to auto).
+- **Destination date range** — include destination on days in `[active_start_date, active_end_date]` **only when** auto inference would otherwise return empty (early planning skeleton).
+
+Multiple destinations on one day → **stacked** collapsed panels (e.g. “Japan (general)” + “Tokyo”).
+
+**Travel action fields (for auto):** optional **`from_destination_id`** / **`to_destination_id`** on `tp_action` (`kind = travel`) — set from wizard or when user picks destinations for overall A→Z; segment transports inherit unless overridden per transport (implementation may copy from action on create).
 
 ### Day (`tp_day`)
 
@@ -171,16 +183,17 @@ If both range and day links exist for a destination, **union**: linked days alwa
 | `trip_id`, `day_index`, `calendar_date` | |
 | `day_title` | Optional short label (“Day 1 — Ghibli”) |
 | `day_notes` | Optional longer rough plan for the day |
+| `primary_destination_id` | Optional FK → `tp_destination` — **override** for important-info surfacing on this day only |
 
 Synced when trip dates change. **Not** the same as a `note` **action** in the list below.
 
-### Day ↔ destination (`tp_day_destination`)
+### Day ↔ destination (`tp_day_destination`) — optional supplement
 
 | Column | Notes |
 | --- | --- |
-| `day_id`, `destination_id` | Composite PK; optional explicit tagging |
+| `day_id`, `destination_id` | Composite PK; **additive** extra panel — **not** the primary way to assign destinations to days |
 
-Synced when trip dates change.
+Use sparingly; prefer **auto-from-stay/travel** + `primary_destination_id` override.
 
 ### Action (`tp_action`)
 
@@ -195,6 +208,7 @@ One row per logical action. **Day strip** also shows **mirrors** (computed or ma
 | `destination_id` | Optional FK → `tp_destination` (**stay** recommended; optional on activity/note) |
 | `place_text`, `maps_url` | **Stay** property; optional on activity/note |
 | `from_place`, `to_place` | **Travel only** — overall journey endpoints (text) |
+| `from_destination_id`, `to_destination_id` | **Travel only** — optional FKs for **auto** important-info on transit days |
 | `from_maps_url`, `to_maps_url` | **Travel only** — optional outbound links |
 | `check_in_at`, `check_out_at` | **Stay** — timestamptz instants |
 | `check_in_timezone`, `check_out_timezone` | **Stay** — IANA at property |
@@ -365,10 +379,10 @@ When + **destinations** (names; optional date ranges later) + title + timezone +
 ### 2. Day timeline
 
 - **Day header** (top): edit **`day_title`** / **`day_notes`** inline — rough plan before detailed actions.
-- **Important info panel(s):** for each **active destination** on this calendar day, show collapsed/expandable **`important_info`** + attachment list (read-only for viewers). Trip overview tab lists **all destinations** with same panels for editing.
+- **Important info panel(s):** computed by **`tpActiveDestinationsForDay`** (auto from stays + travel; override via **`primary_destination_id`**). Collapsed/expandable **`important_info`** + attachments per destination. Trip overview lists **all destinations** for editing content (not per-day assignment).
 - Day strip; per day: **canonical actions** for that `anchor_day_id` plus **mirror** rows for spanning stay/travel.
 - **+ Add action** → kind.
-- **Stay:** check-in / check-out datetimes (and property place text); card appears on **each night/day** in range; edit on **check-in anchor day** (or tap mirror → jump to anchor).
+- **Stay:** check-in / check-out; **`destination_id`** picker (recommended — drives safety panels on all overlapped nights); property place text.
 - **Activity / note:** single-day on anchor day.
 - **Travel:** overall **from → to** on action; each transport segment places + **depart/arrive instants** with **depart/arrive timezone** pickers (default sensibly from previous segment or trip TZ). Summary line: **`14:00 HKT → 18:30 GMT`** style.
 - **Selected route** drives span mirrors on **all overlapped trip days** (confirmed). Canonical editor on **anchor day**; other days read-only mirror, same `action_id`.
@@ -377,8 +391,10 @@ When + **destinations** (names; optional date ranges later) + title + timezone +
 
 ### 3. Destinations (planner)
 
-- Reorder destinations; set **active date range**; optionally tag specific days via day↔destination links.
-- Edit **`important_info`** (markdown); upload safety PDFs/images on **destination** (not on trip root).
+- Create/reorder destinations; edit **`important_info`** + safety attachments.
+- Optional coarse **active date range** for skeleton trips (before stays exist).
+- Per day: optional **pin** (`primary_destination_id`) only when auto is wrong — **not** required to tag every day.
+- Optional **`tp_day_destination`** links for rare additive cases.
 
 ### 4. Attachments
 
@@ -411,7 +427,7 @@ Pattern: [financial planning implementation](./financial%20planning-implementati
 | --- | --- |
 | **0** | **`pod_viewer`** platform-wide (migration, `PodRole`, RPCs, UI picker, read-only storage/todo/fp/trip) |
 | A | `FeatureKind.TRIP_PLANNING`; `tp_setting`; `tp_trip` + `tp_day` (`day_title`/`day_notes`) + `tp_destination`; wizard; day strip + **day header** |
-| A2 | **`tp_day_destination`**; active-date logic; **important info** panel on day + trip overview |
+| A2 | **`tpActiveDestinationsForDay`** (auto stay/travel + override); **`primary_destination_id`**; optional `tp_day_destination`; important-info panels |
 | B | `tp_action` — `activity`, `note`; ideas; reorder; costs; `anchor_day_id` |
 | B2 | **`stay`** with `check_in_at` / `check_out_at`; multi-day **mirrors** on day strip |
 | C | `tp_route` + `tp_transport`; travel **from/to** on action + segments; timezone fields; route select; multi-modal ordering; single-transport sync |

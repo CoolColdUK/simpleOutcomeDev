@@ -7,5 +7,8 @@ export default function podRoleLabel(role: PodRole): string {
   if (role === PodRole.ADMIN) {
     return 'admin';
   }
+  if (role === PodRole.VIEWER) {
+    return 'viewer';
+  }
   return 'user';
 }

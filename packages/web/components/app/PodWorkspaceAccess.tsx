@@ -30,9 +30,9 @@ export default function PodWorkspaceAccess({
 }: PodWorkspaceAccessProps) {
   const [addUsername, setAddUsername] = useState('');
 
-  const addMember = async (): Promise<void> => {
+  const addMember = async (role: PodRole.USER | PodRole.VIEWER): Promise<void> => {
     try {
-      await addDbPodMemberByUsername(podId, addUsername.trim(), PodRole.USER);
+      await addDbPodMemberByUsername(podId, addUsername.trim(), role);
       setAddUsername('');
       onChanged();
     } catch (e) {
@@ -48,9 +48,14 @@ export default function PodWorkspaceAccess({
             <Field.Label>Add space member by username</Field.Label>
             <Input value={addUsername} onChange={(e) => setAddUsername(e.target.value)} />
           </Field.Root>
-          <Button colorPalette="brand" onClick={() => void addMember()}>
-            Add as pod user
-          </Button>
+          <HStack>
+            <Button colorPalette="brand" onClick={() => void addMember(PodRole.USER)}>
+              Add as user
+            </Button>
+            <Button variant="outline" colorPalette="brand" onClick={() => void addMember(PodRole.VIEWER)}>
+              Add as viewer
+            </Button>
+          </HStack>
         </Stack>
       ) : null}
       <Stack gap={2}>
