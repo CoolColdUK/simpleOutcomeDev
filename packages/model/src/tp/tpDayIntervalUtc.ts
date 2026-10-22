@@ -12,7 +12,7 @@ export default function tpDayIntervalUtc(calendarDate: string, tripTimezone: str
   const offsetRaw = offsetParts.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT';
   const match = offsetRaw.match(/GMT([+-]\d{1,2})(?::(\d{2}))?/);
   let offsetMinutes = 0;
-  if (match !== null) {
+  if (match !== null && match[1] !== undefined) {
     const hours = Number.parseInt(match[1], 10);
     const mins = match[2] !== undefined ? Number.parseInt(match[2], 10) : 0;
     offsetMinutes = hours * 60 + (hours < 0 ? -mins : mins);

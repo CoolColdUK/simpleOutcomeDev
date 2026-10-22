@@ -69,7 +69,7 @@ export default function tpActiveDestinationsForDay(input: TpActiveDestinationsFo
       return;
     }
     const tz = stay.checkInTimezone ?? input.tripTimezone;
-    const overlaps = tpSpanOverlapsTripDay(stay.checkInAt, stay.checkOutAt, input.calendarDate, input.tripTimezone);
+    const overlaps = tpSpanOverlapsTripDay(stay.checkInAt, stay.checkOutAt, input.calendarDate, tz);
     if (!overlaps) {
       return;
     }
