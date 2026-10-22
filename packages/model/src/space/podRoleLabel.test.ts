@@ -13,4 +13,8 @@ describe('podRoleLabel', () => {
   it('maps user to user', () => {
     expect(podRoleLabel(PodRole.USER)).toBe('user');
   });
+
+  it('labels viewer', () => {
+    expect(podRoleLabel(PodRole.VIEWER)).toBe('viewer');
+  });
 });

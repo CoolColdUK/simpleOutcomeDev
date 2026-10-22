@@ -7,5 +7,8 @@ export default function featureKindLabel(kind: FeatureKind): string {
   if (kind === FeatureKind.SHOPPING_LIST) {
     return 'Shopping list';
   }
-  return 'Financial planning';
+  if (kind === FeatureKind.FINANCIAL_PLANNING) {
+    return 'Financial planning';
+  }
+  return 'Trip planning';
 }

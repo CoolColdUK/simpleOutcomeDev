@@ -353,6 +353,8 @@ The matrix UX in this revision, plus the families below. REST and MCP call the s
 
 `FeatureKind.SHOPPING_LIST` is already a reserved pod type: the catalog includes it and `create_pod` accepts it. If a pod of that kind is visible, the matrix shows an ordinary pod row for it, and the existing `pods[podId].shopping` field on the grant type can store those cells.
 
+**Trip planning** ([`trip-planning.md`](./trip-planning.md)) is a separate in-app product track (after the [Telegram bridge](https://github.com/CoolColdUK/simpleOutcomeDev/blob/cursor/telegram-bridge-plan-f6f2/plan/feature/telegram-bridge.md)). When `trip_planning` pods ship, extend this plan with a `pods[podId].trip` grant and MCP tool family — not in the current REST/MCP implementation scope until that product feature exists.
+
 ---
 
 ## Success

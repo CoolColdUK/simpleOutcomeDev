@@ -5,8 +5,20 @@ import {PodRole} from '../space/podRole';
 
 const allCrud: readonly FpAction[] = [FpAction.READ, FpAction.CREATE, FpAction.UPDATE, FpAction.DELETE];
 
+const readOnly: readonly FpAction[] = [FpAction.READ];
+
 export default function fpDefaultPermission(): FpPermissionMatrix {
   return {
+    [PodRole.VIEWER]: {
+      [FpResource.ACCOUNT]: readOnly,
+      [FpResource.CATEGORY]: readOnly,
+      [FpResource.TRANSACTION]: readOnly,
+      [FpResource.PARSER]: readOnly,
+      [FpResource.IMPORT]: readOnly,
+      [FpResource.BILL_SPLIT]: [],
+      [FpResource.SETTINGS]: readOnly,
+      [FpResource.DELETE_ALL]: [],
+    },
     [PodRole.USER]: {
       [FpResource.ACCOUNT]: [FpAction.READ, FpAction.CREATE, FpAction.UPDATE],
       [FpResource.CATEGORY]: [FpAction.READ, FpAction.CREATE, FpAction.UPDATE],
