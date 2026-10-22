@@ -37,6 +37,13 @@ import {
   updateAgentFpSetting,
 } from '@/lib/api/agent/fpAgentSetup';
 import {getAgentProfile, updateAgentProfileDisplayName, updateAgentProfileUsername} from '@/lib/api/agent/profileAgent';
+import {getAgentTpBudgetRollup, getAgentTpWorkspace, updateAgentTpTrip} from '@/lib/api/agent/tpAgentWorkspace';
+import {createAgentTpDestination, deleteAgentTpDestination, updateAgentTpDestination} from '@/lib/api/agent/tpAgentDestinations';
+import {updateAgentTpDay} from '@/lib/api/agent/tpAgentDays';
+import {createAgentTpAction, deleteAgentTpAction, updateAgentTpAction} from '@/lib/api/agent/tpAgentActions';
+import {createAgentTpRoute, deleteAgentTpRoute, selectAgentTpRoute, updateAgentTpRoute} from '@/lib/api/agent/tpAgentRoutes';
+import {createAgentTpTransport, deleteAgentTpTransport, updateAgentTpTransport} from '@/lib/api/agent/tpAgentTransports';
+import {deleteAgentTpAttachment, listAgentTpAttachments, uploadAgentTpAttachment} from '@/lib/api/agent/tpAgentAttachments';
 import {
   createAgentPod,
   createAgentPodJoinRequest,
@@ -325,5 +332,83 @@ async function dispatchFp(method: string, request: Request, path: readonly strin
     }
     return methodNotAllowed();
   }
+  
+  // Trip planning REST routes
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'workspace' && fifth === undefined) {
+    return method === 'GET' ? agentResultResponse(await getAgentTpWorkspace(request, {podId: id})) : methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === undefined) {
+    return method === 'PATCH' ? agentResultResponse(await updateAgentTpTrip(request, await bodyWith(request, {podId: id}))) : methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'budget' && fifth === undefined) {
+    return method === 'GET' ? agentResultResponse(await getAgentTpBudgetRollup(request, {podId: id})) : methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'destinations' && fifth === undefined) {
+    return method === 'POST' ? agentResultResponse(await createAgentTpDestination(request, await bodyWith(request, {podId: id}))) : methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'destinations' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpDestination(request, await bodyWith(request, {podId: id, destinationId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpDestination(request, {podId: id, destinationId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'days' && isUuid(fifth) && sixth === undefined) {
+    return method === 'PATCH' ? agentResultResponse(await updateAgentTpDay(request, await bodyWith(request, {podId: id, dayId: fifth}))) : methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'actions' && fifth === undefined) {
+    return method === 'POST' ? agentResultResponse(await createAgentTpAction(request, await bodyWith(request, {podId: id}))) : methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'actions' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpAction(request, await bodyWith(request, {podId: id, actionId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpAction(request, {podId: id, actionId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'routes' && fifth === undefined) {
+    return method === 'POST' ? agentResultResponse(await createAgentTpRoute(request, await bodyWith(request, {podId: id}))) : methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'routes' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpRoute(request, await bodyWith(request, {podId: id, routeId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpRoute(request, {podId: id, routeId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'routes' && isUuid(fifth) && sixth === 'select') {
+    return method === 'POST' ? agentResultResponse(await selectAgentTpRoute(request, await bodyWith(request, {podId: id, routeId: fifth}))) : methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'transports' && fifth === undefined) {
+    return method === 'POST' ? agentResultResponse(await createAgentTpTransport(request, await bodyWith(request, {podId: id}))) : methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'transports' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpTransport(request, await bodyWith(request, {podId: id, transportId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpTransport(request, {podId: id, transportId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'attachments' && fifth === undefined) {
+    if (method === 'GET') {
+      return agentResultResponse(await listAgentTpAttachments(request, queryInput(request, {podId: id})));
+    }
+    if (method === 'POST') {
+      return agentResultResponse(await uploadAgentTpAttachment(request, await bodyWith(request, {podId: id})));
+    }
+    return methodNotAllowed();
+  }
+  if (root === 'pods' && isUuid(id) && third === 'trip' && fourth === 'attachments' && isUuid(fifth) && sixth === undefined) {
+    return method === 'DELETE' ? agentResultResponse(await deleteAgentTpAttachment(request, {podId: id, attachmentId: fifth})) : methodNotAllowed();
+  }
+  
   return undefined;
 }
