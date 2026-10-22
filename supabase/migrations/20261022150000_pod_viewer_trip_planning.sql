@@ -400,19 +400,19 @@ create trigger tp_on_pod_insert
   for each row execute function app_private.tp_on_pod_insert();
 
 create trigger tp_setting_set_updated_at before update on public.tp_setting
-  for each row execute function moddatetime(updated_at);
+  for each row execute function extensions.moddatetime('updated_at');
 create trigger tp_trip_set_updated_at before update on public.tp_trip
-  for each row execute function moddatetime(updated_at);
+  for each row execute function extensions.moddatetime('updated_at');
 create trigger tp_destination_set_updated_at before update on public.tp_destination
-  for each row execute function moddatetime(updated_at);
+  for each row execute function extensions.moddatetime('updated_at');
 create trigger tp_day_set_updated_at before update on public.tp_day
-  for each row execute function moddatetime(updated_at);
+  for each row execute function extensions.moddatetime('updated_at');
 create trigger tp_action_set_updated_at before update on public.tp_action
-  for each row execute function moddatetime(updated_at);
+  for each row execute function extensions.moddatetime('updated_at');
 create trigger tp_route_set_updated_at before update on public.tp_route
-  for each row execute function moddatetime(updated_at);
+  for each row execute function extensions.moddatetime('updated_at');
 create trigger tp_transport_set_updated_at before update on public.tp_transport
-  for each row execute function moddatetime(updated_at);
+  for each row execute function extensions.moddatetime('updated_at');
 
 alter table public.tp_setting enable row level security;
 alter table public.tp_trip enable row level security;
