@@ -1,6 +1,11 @@
 /**
- * Minimal baseline outside Chakra’s reset.
+ * Minimal baseline outside Chakra's reset.
  */
+
+:root {
+  --font-roboto: 'Roboto Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
 *,
 *::before,
 *::after {

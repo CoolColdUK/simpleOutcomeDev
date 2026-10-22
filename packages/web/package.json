@@ -4,13 +4,12 @@
   "version": "0.25.0",
   "type": "module",
   "scripts": {
-    "build:prod": "next build --webpack",
+    "build:prod": "next build",
     "clean:dist": "rm -rf .next && rm -rf tsconfig.tsbuildinfo",
     "clean:node": "rm -rf node_modules",
-    "dev": "next dev -p 3000 --webpack",
+    "dev": "next dev -p 3000",
     "lint": "eslint --fix \"app/**/*.{ts,tsx}\" \"components/**/*.{ts,tsx}\" \"lib/**/*.{ts,tsx}\" \"styles/**/*.ts\"",
-    "start": "next start",
-    "vercel-build": "next build --webpack"
+    "start": "next start"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.36.1",
@@ -19,6 +18,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
+    "@fontsource-variable/roboto": "^5.3.0",
     "@so/component": "^0.25.0",
     "@so/model": "^0.25.0",
     "@supabase/supabase-js": "^2.112.3",
