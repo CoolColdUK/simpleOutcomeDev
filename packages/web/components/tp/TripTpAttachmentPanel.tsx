@@ -32,7 +32,7 @@ export default function TripTpAttachmentPanel({
   );
 
   const upload = async (file: File | undefined): Promise<void> => {
-    if (file === undefined) {
+    if (file === undefined || userId === '') {
       return;
     }
     try {
