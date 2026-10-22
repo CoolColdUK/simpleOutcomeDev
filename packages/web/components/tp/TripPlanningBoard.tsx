@@ -28,7 +28,6 @@ import loadDbTpWorkspace, {type DbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWor
 import createDbTpTripBundle from '@/lib/api/db/tp/createDbTpTripBundle';
 import updateDbTpDay from '@/lib/api/db/tp/updateDbTpDay';
 import createDbTpAction from '@/lib/api/db/tp/createDbTpAction';
-import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import updateDbTpDestination from '@/lib/api/db/tp/updateDbTpDestination';
 import updateDbTpActionSortOrders from '@/lib/api/db/tp/updateDbTpActionSortOrders';
 import createDbTpRoute from '@/lib/api/db/tp/createDbTpRoute';
@@ -64,13 +63,13 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
   const reload = useCallback(async (): Promise<void> => {
     const next = await loadDbTpWorkspace(podId);
     setData(next);
-    if (selectedDayId === undefined && next.days[0] !== undefined) {
-      setSelectedDayId(next.days[0].id);
-    }
-  }, [podId, selectedDayId]);
+    setSelectedDayId((current) => current ?? next.days[0]?.id);
+  }, [podId]);
 
   useEffect(() => {
-    void reload().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+    void Promise.resolve().then(() =>
+      reload().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e))),
+    );
   }, [reload]);
 
   const selectedDay = data?.days.find((d) => d.id === selectedDayId);
