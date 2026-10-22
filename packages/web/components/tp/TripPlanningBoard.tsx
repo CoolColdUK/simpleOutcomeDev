@@ -10,6 +10,7 @@ import {
   Heading,
   HStack,
   Input,
+  NativeSelect,
   Stack,
   Text,
   Textarea,
@@ -29,8 +30,16 @@ import updateDbTpDay from '@/lib/api/db/tp/updateDbTpDay';
 import createDbTpAction from '@/lib/api/db/tp/createDbTpAction';
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import updateDbTpDestination from '@/lib/api/db/tp/updateDbTpDestination';
+import updateDbTpActionSortOrders from '@/lib/api/db/tp/updateDbTpActionSortOrders';
+import createDbTpRoute from '@/lib/api/db/tp/createDbTpRoute';
+import selectDbTpRoute from '@/lib/api/db/tp/selectDbTpRoute';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
+import TripStayActionEditor from '@/components/tp/TripStayActionEditor';
+import TripTravelActionEditor from '@/components/tp/TripTravelActionEditor';
+import TripSimpleActionEditor from '@/components/tp/TripSimpleActionEditor';
+import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
 
 export interface TripPlanningBoardProps {
   readonly podId: string;
@@ -40,8 +49,11 @@ export interface TripPlanningBoardProps {
 
 export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPlanningBoardProps) {
   const canWrite = canWriteTpPod(podRole, isSpaceOwner);
+  const {user} = useSupabaseAuthState();
+  const userId = user?.id ?? '';
   const [data, setData] = useState<DbTpWorkspace | undefined>(undefined);
   const [selectedDayId, setSelectedDayId] = useState<string | undefined>(undefined);
+  const [expandedActionId, setExpandedActionId] = useState<string | undefined>(undefined);
   const [error, setError] = useState('');
   const [wizardTitle, setWizardTitle] = useState('');
   const [wizardStart, setWizardStart] = useState('');
@@ -196,13 +208,50 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
     if (selectedDay === undefined || !canWrite) {
       return;
     }
-    await updateDbTpDay(selectedDay.id, {
-      dayTitle: selectedDay.dayTitle,
-      dayNotes: selectedDay.dayNotes,
-      primaryDestinationId: selectedDay.primaryDestinationId ?? null,
-    });
-    await reload();
+    try {
+      await updateDbTpDay(selectedDay.id, {
+        dayTitle: selectedDay.dayTitle,
+        dayNotes: selectedDay.dayNotes,
+        primaryDestinationId: selectedDay.primaryDestinationId ?? null,
+      });
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
+
+  const canonicalTimelineIds = useMemo(
+    () => timeline.filter((e) => e.displayMode === 'canonical').map((e) => e.actionId),
+    [timeline],
+  );
+
+  const moveCanonicalAction = async (actionId: string, direction: 'up' | 'down'): Promise<void> => {
+    if (!canWrite) {
+      return;
+    }
+    const ids = [...canonicalTimelineIds];
+    const idx = ids.indexOf(actionId);
+    if (idx < 0) {
+      return;
+    }
+    const swap = direction === 'up' ? idx - 1 : idx + 1;
+    if (swap < 0 || swap >= ids.length) {
+      return;
+    }
+    [ids[idx], ids[swap]] = [ids[swap], ids[idx]];
+    try {
+      await updateDbTpActionSortOrders(ids);
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const onEditorSaved = (): void => {
+    void reload().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+  };
+
+  const onEditorError = (message: string): void => setError(message);
 
   const addAction = async (kind: TpActionKind): Promise<void> => {
     if (trip === undefined || selectedDay === undefined || !canWrite) {
@@ -218,15 +267,10 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
       sortOrder: data?.actions.filter((a) => a.anchorDayId === selectedDay.id).length ?? 0,
     });
     if (kind === TpActionKind.TRAVEL) {
-      const supabase = getSupabaseBrowserClient();
-      const {data: route, error: routeErr} = await supabase
-        .from('tp_route')
-        .insert({action_id: actionId, name: 'Option A', is_selected: true, sort_order: 0})
-        .select('id')
-        .single();
-      throwIfSupabaseError(routeErr);
-      await updateDbTpAction(actionId, {selectedRouteId: route.id});
+      const routeId = await createDbTpRoute(actionId, 'Option A', 0);
+      await selectDbTpRoute(actionId, routeId);
     }
+    setExpandedActionId(actionId);
     await reload();
   };
 
@@ -343,6 +387,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                         },
                   )
                 }
+                onBlur={() => void saveDayHeader()}
                 disabled={!canWrite}
               />
               <Textarea
@@ -358,14 +403,40 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                         },
                   )
                 }
+                onBlur={() => void saveDayHeader()}
                 disabled={!canWrite}
                 rows={3}
               />
-              {canWrite ? (
-                <Button size="sm" colorPalette="brand" onClick={() => void saveDayHeader()}>
-                  Save day header
-                </Button>
-              ) : null}
+              <Field.Root>
+                <Field.Label>Primary destination (override)</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    value={selectedDay.primaryDestinationId ?? ''}
+                    disabled={!canWrite}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setData((prev) =>
+                        prev === undefined
+                          ? prev
+                          : {
+                              ...prev,
+                              days: prev.days.map((d) =>
+                                d.id === selectedDay.id
+                                  ? {...d, primaryDestinationId: value === '' ? undefined : value}
+                                  : d,
+                              ),
+                            },
+                      );
+                    }}
+                    onBlur={() => void saveDayHeader()}
+                  >
+                    <option value="">Auto from stay / travel</option>
+                    {data.destinations.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </NativeSelect.Field>
+                </NativeSelect.Root>
+              </Field.Root>
             </Stack>
           </Box>
           {activeDestinationIds.length > 0 ? (
@@ -400,14 +471,100 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             {timeline.length === 0 ? <Text color="fg.muted">No actions yet.</Text> : null}
             {timeline.map((entry) => {
               const action = data.actions.find((a) => a.id === entry.actionId);
+              const expanded = expandedActionId === entry.actionId;
+              const canonicalIdx = canonicalTimelineIds.indexOf(entry.actionId);
               return (
                 <Box key={`${entry.actionId}-${entry.displayMode}`} borderWidth="1px" borderRadius="md" p={3}>
-                  <HStack>
-                    <Badge>{entry.kind}</Badge>
-                    {entry.displayMode === 'mirror' ? <Badge variant="outline">mirror</Badge> : null}
-                    <Text fontWeight="medium">{entry.title}</Text>
+                  <HStack justify="space-between" wrap="wrap" gap={2}>
+                    <HStack>
+                      <Badge>{entry.kind}</Badge>
+                      {entry.displayMode === 'mirror' ? <Badge variant="outline">mirror</Badge> : null}
+                      <Text fontWeight="medium">{entry.title}</Text>
+                    </HStack>
+                    <HStack>
+                      {entry.displayMode === 'mirror' && action?.anchorDayId !== undefined ? (
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedDayId(action.anchorDayId);
+                            setExpandedActionId(entry.actionId);
+                          }}
+                        >
+                          Anchor day
+                        </Button>
+                      ) : null}
+                      {entry.displayMode === 'canonical' && canWrite ? (
+                        <>
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            disabled={canonicalIdx <= 0}
+                            onClick={() => void moveCanonicalAction(entry.actionId, 'up')}
+                          >
+                            ↑
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            disabled={canonicalIdx < 0 || canonicalIdx >= canonicalTimelineIds.length - 1}
+                            onClick={() => void moveCanonicalAction(entry.actionId, 'down')}
+                          >
+                            ↓
+                          </Button>
+                        </>
+                      ) : null}
+                      <Button
+                        size="xs"
+                        variant={expanded ? 'solid' : 'outline'}
+                        onClick={() => setExpandedActionId(expanded ? undefined : entry.actionId)}
+                      >
+                        {expanded ? 'Close' : 'Edit'}
+                      </Button>
+                    </HStack>
                   </HStack>
-                  {action?.notes !== undefined ? <Text fontSize="sm">{action.notes}</Text> : null}
+                  {expanded && action !== undefined && trip !== undefined ? (
+                    <Box mt={3} pt={3} borderTopWidth="1px">
+                      {action.kind === TpActionKind.STAY ? (
+                        <TripStayActionEditor
+                          action={action}
+                          destinations={data.destinations}
+                          tripTimezone={trip.timezone}
+                          defaultCurrency={trip.budgetCurrency}
+                          canWrite={canWrite}
+                          onSaved={onEditorSaved}
+                          onError={onEditorError}
+                        />
+                      ) : null}
+                      {action.kind === TpActionKind.TRAVEL ? (
+                        <TripTravelActionEditor
+                          podId={podId}
+                          tripId={trip.id}
+                          userId={userId}
+                          action={action}
+                          routes={data.routes}
+                          transports={data.transports}
+                          attachments={data.attachments}
+                          destinations={data.destinations}
+                          tripTimezone={trip.timezone}
+                          defaultCurrency={trip.budgetCurrency}
+                          canWrite={canWrite}
+                          onSaved={onEditorSaved}
+                          onError={onEditorError}
+                        />
+                      ) : null}
+                      {action.kind === TpActionKind.ACTIVITY || action.kind === TpActionKind.NOTE ? (
+                        <TripSimpleActionEditor
+                          action={action}
+                          defaultCurrency={trip.budgetCurrency}
+                          canWrite={canWrite}
+                          onSaved={onEditorSaved}
+                          onError={onEditorError}
+                        />
+                      ) : null}
+                    </Box>
+                  ) : null}
+                  {!expanded && action?.notes !== undefined ? <Text fontSize="sm" mt={2}>{action.notes}</Text> : null}
                 </Box>
               );
             })}
@@ -449,11 +606,25 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                   size="sm"
                   variant="outline"
                   onClick={() =>
-                    void updateDbTpDestination(d.id, {importantInfo: d.importantInfo}).then(() => reload())
+                    void updateDbTpDestination(d.id, {importantInfo: d.importantInfo})
+                      .then(() => reload())
+                      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
                   }
                 >
                   Save destination info
                 </Button>
+              ) : null}
+              {trip !== undefined ? (
+                <TripTpAttachmentPanel
+                  podId={podId}
+                  tripId={trip.id}
+                  userId={userId}
+                  canWrite={canWrite}
+                  parent={{destinationId: d.id}}
+                  attachments={data.attachments}
+                  onChanged={onEditorSaved}
+                  onError={onEditorError}
+                />
               ) : null}
             </Stack>
           ))}

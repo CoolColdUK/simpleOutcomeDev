@@ -5,6 +5,9 @@ export interface UpdateDbTpActionInput {
   readonly title?: string;
   readonly notes?: string;
   readonly placeText?: string;
+  readonly mapsUrl?: string | null;
+  readonly fromMapsUrl?: string | null;
+  readonly toMapsUrl?: string | null;
   readonly destinationId?: string | null;
   readonly checkInAt?: string | null;
   readonly checkOutAt?: string | null;
@@ -27,6 +30,9 @@ export default async function updateDbTpAction(actionId: string, input: UpdateDb
       title: input.title,
       notes: input.notes ?? null,
       place_text: input.placeText ?? null,
+      maps_url: input.mapsUrl ?? null,
+      from_maps_url: input.fromMapsUrl ?? null,
+      to_maps_url: input.toMapsUrl ?? null,
       destination_id: input.destinationId ?? null,
       check_in_at: input.checkInAt ?? null,
       check_out_at: input.checkOutAt ?? null,

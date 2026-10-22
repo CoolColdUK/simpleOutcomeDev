@@ -44,8 +44,11 @@ export interface DbTpAction {
   readonly title: string;
   readonly sortOrder: number;
   readonly placeText?: string;
+  readonly mapsUrl?: string;
   readonly fromPlace?: string;
   readonly toPlace?: string;
+  readonly fromMapsUrl?: string;
+  readonly toMapsUrl?: string;
   readonly destinationId?: string;
   readonly fromDestinationId?: string;
   readonly toDestinationId?: string;
@@ -78,6 +81,9 @@ export interface DbTpTransport {
   readonly departTimezone?: string;
   readonly arriveTimezone?: string;
   readonly costAmount?: number;
+  readonly costCurrency?: string;
+  readonly bookingRef?: string;
+  readonly notes?: string;
   readonly sortOrder: number;
 }
 
@@ -193,8 +199,11 @@ export default async function loadDbTpWorkspace(podId: string): Promise<DbTpWork
       title: a.title,
       sortOrder: a.sort_order,
       placeText: a.place_text ?? undefined,
+      mapsUrl: a.maps_url ?? undefined,
       fromPlace: a.from_place ?? undefined,
       toPlace: a.to_place ?? undefined,
+      fromMapsUrl: a.from_maps_url ?? undefined,
+      toMapsUrl: a.to_maps_url ?? undefined,
       destinationId: a.destination_id ?? undefined,
       fromDestinationId: a.from_destination_id ?? undefined,
       toDestinationId: a.to_destination_id ?? undefined,
@@ -225,6 +234,9 @@ export default async function loadDbTpWorkspace(podId: string): Promise<DbTpWork
       departTimezone: t.depart_timezone ?? undefined,
       arriveTimezone: t.arrive_timezone ?? undefined,
       costAmount: num(t.cost_amount),
+      costCurrency: t.cost_currency ?? undefined,
+      bookingRef: t.booking_ref ?? undefined,
+      notes: t.notes ?? undefined,
       sortOrder: t.sort_order,
     })),
     attachments: (attachRes.data ?? []).map((a) => ({
