@@ -34,12 +34,13 @@ Matthew confirmed in Technical Forum (Oct 2026). Do not re-litigate without a ne
 | 2 | **Multi-city** | **Yes in v1** — ordered `primary_destinations` text; no routing engine. |
 | 3 | **Authz** | **Pod roles** only. Repo today has `pod_owner` / `pod_admin` / `pod_user` only — **add `pod_viewer`** platform-wide (slice 0). Viewers read itinerary + download attachments; no writes/uploads. |
 | 4 | **Costs / budget** | **Yes in v1** — trip-level budget; optional costs on **actions** (stay/activity/note) and on each **transport**; travel action rollup uses **selected route** transports. |
-| 5 | **Core itinerary model** | **Day → ordered actions.** Kinds: `travel`, `stay`, `activity`, `note`. **Travel:** action → one or more alternative **routes** → ordered **transports** (multi-modal per route). Mark one route **selected** per travel action. **No** day-level alternative-group table; **no** trip-level whole-journey travel plan in v1 (compare journeys at **action** scope only). |
-| 6 | **Multi-day transport** | Transports use `depart_at` / `arrive_at` (timestamptz) and may cross calendar days. **UX:** travel action **listed on departure day**; card shows span text (“Arrives next day”, “Overnight”, “+2 days”). **Arrival day:** show a **read-only reference** row (“In transit from …” / link to travel action) — no duplicate editing surface. |
-| 7 | **Attachments** | **v1:** **images + PDF only** (`image/jpeg`, `image/png`, `application/pdf`). Attach to **`tp_transport` only** (ticket on the specific segment). Reuse **`pod-private`**, **5 MB** file limit (existing bucket). Trip/day-level file dump → **phase 2**. |
-| 8 | **Cross-feature** | Todo / FP soft links → **phase 2**. |
-| 9 | **Map / bookings** | No map SDK; no booking marketplaces. |
-| 10 | **Travellers** | Multiple named travellers → **later**. |
+| 5 | **Core itinerary model** | **Day → ordered actions.** Kinds: `travel`, `stay`, `activity`, `note`. **Travel:** action → alternative **routes** → ordered **transports**. One **selected** route per travel action. **No** trip-level whole-journey plan in v1. |
+| 6 | **Stay (lodging)** | First-class **`stay` action** with **`check_in_at`** / **`check_out_at`** (timestamptz). Lodging **spans nights** between them. **Show the stay on every calendar day** from check-in date through check-out date (inclusive, trip timezone) on the day strip — not a single-day card only. **Overlapping stays** on the same night with “winner” override → **out of v1** (known gap: render both; no conflict UI). |
+| 7 | **Multi-day travel** | Transports use **`depart_at`** / **`arrive_at`**. Span = **selected route** (first transport depart → last transport arrive). **One canonical `tp_action` row** (editable). **Read-only mirrors** on **every calendar day** from departure date through arrival date (**inclusive**), including multi-day flights **> 24 h** and intermediate days — same `action_id`, no second write target. **Canonical list position** / `sort_order` lives on **anchor day** (departure date of span). Mirrors are display-only rows (tap → scroll/focus canonical editor or navigate to anchor day). |
+| 8 | **Attachments** | **v1:** **images + PDF only**. **`tp_transport` only**; **`pod-private`**, **5 MB**. Trip/day dump → phase 2. |
+| 9 | **Cross-feature** | Todo / FP soft links → **phase 2**. |
+| 10 | **Map / bookings** | No map SDK; no booking marketplaces. |
+| 11 | **Travellers** | Multiple named travellers → **later**. |
 
 **Engineering defaults:** leg times stored UTC; day boundaries use trip `timezone`. Shortening trip dates with content on removed days → confirm before `syncTpDaysForTrip`.
 
@@ -48,8 +49,9 @@ Matthew confirmed in Technical Forum (Oct 2026). Do not re-litigate without a ne
 | Previous plan idea | Replacement |
 | --- | --- |
 | `tp_item` + `tp_alternative_group` + `tp_travel_leg` | `tp_action` + `tp_route` + `tp_transport` |
-| Trip-level `tp_travel_plan` (whole-journey compare) | **Out of v1** — optional phase 2 if Matthew wants cross-day journey templates |
+| Trip-level `tp_travel_plan` (whole-journey compare) | **Out of v1** — optional phase 2 |
 | Attachments on trip / day / action | **Transport only** in v1 |
+| Travel: departure day only + single arrival ghost | **Every day in span** gets a read-only mirror; one canonical action |
 
 ---
 
@@ -71,7 +73,7 @@ Matthew confirmed in Technical Forum (Oct 2026). Do not re-litigate without a ne
 | Day → action | The day timeline is an ordered list of actions, not a flat mix of items and separate OR widgets. |
 | Travel = routes × transports | Alternatives are **routes** under one travel action; each route is a **sequence** of transports. |
 | One trip per pod | Opening the pod opens the single itinerary. |
-| Multi-day honesty | Long-haul shows real dep/arr times; span copy on the card; ghost reference on arrival day. |
+| Spanning stays & travel | Stays and long-haul travel appear on **each covered calendar day**; one DB row, mirrors for read-only repeat. |
 | Transport = attachment target | Booking PDFs bind to the segment they belong to. |
 | Platform `pod_viewer` | Added for all pod kinds; trip is first feature that **needs** view-only sharing. |
 | Storage reuse | [`pod-private`](packages/model/src/todo/constants.ts) + todo-style upload helpers. |
@@ -83,7 +85,8 @@ Matthew confirmed in Technical Forum (Oct 2026). Do not re-litigate without a ne
 
 | In | Out of v1 |
 | --- | --- |
-| Day-by-day actions, multi-city text | Map SDK, route maps |
+| Day-by-day actions; multi-night **stay**; travel mirrors on all span days | Map SDK, route maps |
+| | Overlapping stay conflict resolution |
 | Route alternatives + multi-modal transports | Trip-level “Plan A vs Plan B” journey compare |
 | Budget + transport/action costs | Booking marketplaces |
 | Image/PDF on **transport** | Attachments on trip/day; trip file dump (**phase 2**) |
@@ -136,22 +139,25 @@ Synced when trip dates change.
 
 ### Action (`tp_action`)
 
-Ordered within a day (or **ideas** when `day_id` is null).
+One row per logical action. **Day strip** also shows **mirrors** (computed or materialized view) for spanning **stay** and **travel** — see [Multi-day display](#multi-day-display-stay-and-travel).
 
 | Column | Notes |
 | --- | --- |
 | `trip_id` | FK |
-| `day_id` | Nullable → ideas bucket |
+| `anchor_day_id` | FK → `tp_day`; **canonical** day for `sort_order` and primary edit entry. **Stay:** check-in calendar day. **Travel:** departure calendar day of selected-route span. **Activity / note:** the day they belong to. Null → **ideas** bucket. |
 | `kind` | `travel` \| `stay` \| `activity` \| `note` |
 | `title` | Required |
-| `place_text`, `maps_url` | Optional text place |
-| `start_time`, `end_time` | Optional **local** times for non-travel (same calendar day) |
-| `cost_amount`, `cost_currency` | Optional on **stay / activity / note** |
+| `place_text`, `maps_url` | Optional |
+| `check_in_at`, `check_out_at` | **Stay only** — timestamptz; defines night span |
+| `start_time`, `end_time` | **Activity / note** — optional local times on `anchor_day_id` |
+| `cost_amount`, `cost_currency` | Optional on **stay / activity / note** (count **once** in budget, not per mirror day) |
 | `booking_ref`, `url`, `notes` | Optional |
-| `selected_route_id` | Nullable; only for `kind = travel` — which route counts for budget/display |
-| `sort_order` | Within day (or ideas list) |
+| `selected_route_id` | **Travel only** — route used for display span, mirrors, and budget |
+| `sort_order` | Order among actions on **`anchor_day_id`** only |
 
-**Travel actions** do not store transport rows directly; they own `tp_route` children.
+**Travel** actions own `tp_route` / `tp_transport` children. **Do not** duplicate `tp_action` rows per mirror day.
+
+**Naming:** `anchor_day_id` replaces an earlier `day_id` sketch; same meaning for non-spanning kinds.
 
 ### Route (`tp_route`)
 
@@ -182,16 +188,32 @@ One **segment** within a route (former “leg”). Ordered multi-modal chain.
 
 **Attachments** hang off `transport_id` only (see below).
 
-### Day reference (`tp_action_day_ref`) — optional table vs computed
+### Multi-day display (stay and travel)
 
-For **arrival-day ghosts** without duplicating the travel action:
+Mirrors are **not** separate editable actions. One `tp_action.id` everywhere.
 
-| Approach | Detail |
-| --- | --- |
-| **Recommended** | No extra row: UI derives ghosts by scanning transports whose `arrive_at` (in trip TZ) falls on a day **≠** action’s `day_id` (departure day). Render read-only chip on those days linking to the travel action. |
-| Fallback | `tp_action_day_ref(action_id, day_id, ref_kind: 'arrival_ghost')` if queries need indexing — only if perf requires. |
+**Calendar-day helper** (trip `timezone`): `tpCalendarDate(ts)` → local date; `tpInclusiveDateRange(startTs, endTs)` → every date from start through end (inclusive).
 
-**Locked UX:** editable travel action appears **only** on **departure day** (`action.day_id` = calendar date of first transport’s `depart_at` in trip TZ, enforced on save).
+| Kind | Span source | Days that show a row |
+| --- | --- | --- |
+| **Stay** | `check_in_at` … `check_out_at` | Every calendar date **from check-in date through check-out date** (inclusive). Card copy: “Check-in”, “Night N”, “Check-out” as appropriate per day. |
+| **Travel** | Selected route: min(`depart_at`) → max(`arrive_at`) across its transports | **Every calendar date** in that inclusive range (covers overnight, **> 24 h** flights, arrival day, and **all intermediate days**). |
+| **Activity / note** | `anchor_day_id` only | Single day (no mirrors). |
+
+**Mirror row rules (UI model):**
+
+| Field | Canonical (anchor day) | Mirror (other span days) |
+| --- | --- | --- |
+| `action_id` | same | same |
+| `display_mode` | `canonical` | `mirror` |
+| Editing | Full form / drag reorder on anchor day | **Read-only** summary; tap opens canonical editor (same route/transport ids) |
+| `sort_order` | Stored on action | Mirrors sort after same-day canonical actions (fixed rule in `@so/model`, e.g. end of list or grouped “in progress”) |
+
+**Implementation note:** Prefer **computed** mirrors in list queries (`listTpDayTimeline(dayId)`). Optional materialized `tp_action_day_mirror(action_id, day_id, display_mode)` only if perf requires — not required for v1.
+
+**Stay overlap (v1 gap):** If two stays cover the same night, **both** mirrors render; no “primary stay” picker until later.
+
+**Travel anchor:** On save, set `anchor_day_id` to departure date of selected-route span; recompute mirrors when route selection or transport times change.
 
 ### Pod settings (`tp_setting`)
 
@@ -241,7 +263,7 @@ flowchart TB
 
 | Source | Included when |
 | --- | --- |
-| `stay` / `activity` / `note` actions | `cost_*` on action (scheduled days; ideas optional toggle in UI) |
+| `stay` / `activity` / `note` | `cost_*` on action **once** (not multiplied by mirror days; ideas optional in UI) |
 | `travel` actions | Sum `cost_*` on all transports of **`selected_route_id`** (if none selected, travel contributes 0 + UI warning) |
 | Total vs `tp_trip.budget_amount` | Header or Budget panel; no FX |
 
@@ -255,13 +277,13 @@ When + multi-city where + title + timezone + optional budget → `tp_trip` + `tp
 
 ### 2. Day timeline
 
-- Day strip; **ordered action cards** per day.
-- **+ Add action** → pick kind.
-- **Stay / activity / note:** title, place, times, cost, refs — single card.
-- **Travel:** card shows route tabs or stacked alternatives; expand route → ordered **transports** list; add/remove/reorder transports; mark **selected route**.
-- **Multi-day:** first transport `depart_at` sets departure day anchor; card subtitle shows arrival date/time and “overnight” / “+N days” when `arrive_at` crosses midnight in trip TZ.
-- **Arrival day:** ghost row (read-only) pointing to the travel action — user does not edit transports from ghost.
-- **Ideas:** actions with no `day_id`.
+- Day strip; per day: **canonical actions** for that `anchor_day_id` plus **mirror** rows for spanning stay/travel.
+- **+ Add action** → kind.
+- **Stay:** check-in / check-out datetimes (and property place text); card appears on **each night/day** in range; edit on **check-in anchor day** (or tap mirror → jump to anchor).
+- **Activity / note:** single-day on anchor day.
+- **Travel:** routes + transports; **selected route** drives span. Canonical editor on **departure day**; **mirrors** on every subsequent span day (including multi-day flights) — read-only, same `action_id`.
+- Mirror cards show condensed route/transport summary (“In flight · arrives Tue 14:30”, “Night 2 of 3 at Hotel X”).
+- **Ideas:** `anchor_day_id` null.
 
 ### 3. Attachments
 
@@ -293,9 +315,10 @@ Pattern: [financial planning implementation](./financial%20planning-implementati
 | --- | --- |
 | **0** | **`pod_viewer`** platform-wide (migration, `PodRole`, RPCs, UI picker, read-only storage/todo/fp/trip) |
 | A | `FeatureKind.TRIP_PLANNING`; `tp_setting`; `tp_trip` + `tp_day`; wizard; day strip shell |
-| B | `tp_action` — `stay`, `activity`, `note`; ideas; reorder; action costs |
-| C | `tp_route` + `tp_transport`; travel action UI; route select; multi-modal ordering |
-| D | Multi-day span copy + arrival-day **ghost** derivation; validate departure-day anchor |
+| B | `tp_action` — `activity`, `note`; ideas; reorder; costs; `anchor_day_id` |
+| B2 | **`stay`** with `check_in_at` / `check_out_at`; multi-day **mirrors** on day strip |
+| C | `tp_route` + `tp_transport`; travel UI; route select; multi-modal ordering |
+| D | **Travel span mirrors** — all inclusive calendar days (incl. >24h); `listTpDayTimeline` + mirror sort; anchor sync; stay/travel mirror UX (tap → canonical) |
 | E | Budget rollup UI; trip status/archive |
 | F | `tp_attachment` + bucket MIME (jpeg/png/pdf) + transport upload/download |
 
@@ -304,7 +327,7 @@ Pattern: [financial planning implementation](./financial%20planning-implementati
 - `syncTpDaysForTrip`
 - `{action}DbTpTrip`, `DbTpDay`, `DbTpAction`, `DbTpRoute`, `DbTpTransport`, `DbTpAttachment`
 - `uploadStorageTpTransportAttachment`, signed URL helpers
-- `@so/model`: `tpBudgetRollup`, `tpTransportSpansDays`, ghost-day helper — **unit tests**
+- `@so/model`: `tpBudgetRollup`, `tpInclusiveDateRange`, `tpStaySpanDates`, `tpTravelSpanDates` (selected route), `tpDayTimelineEntries` (canonical + mirrors) — **unit tests**
 
 ### REST / MCP
 
@@ -321,7 +344,7 @@ After in-app v1; tool names align to action/route/transport (`list_tp_actions`, 
 
 ## Success criteria
 
-- Plan reflects **day → action → route → transport**, **transport-only** attachments (image/PDF), **no** trip-level travel plans in v1, plus prior locks: one trip/pod, multi-city, `pod_viewer`, budget, Telegram-first, map-free.
+- Plan reflects **spanning stays**, **travel mirrors on every span day**, day → action → route → transport, transport-only attachments, prior locks (one trip/pod, multi-city, `pod_viewer`, budget, Telegram-first, map-free).
 - Slices **0** + **A** are unambiguous for implementation.
 
 ---
