@@ -27,12 +27,25 @@ export function agentResultResponse<T>(result: AgentResult<T>): Response {
   return Response.json(result.data);
 }
 
-export function dbErr(error: {message: string} | null | undefined): AgentErr | undefined {
+interface AgentDbError {
+  readonly message: string;
+  readonly code?: string;
+  readonly details?: string;
+  readonly hint?: string;
+}
+
+export function dbErr(error: AgentDbError | null | undefined): AgentErr | undefined {
   if (error === undefined || error === null) {
     return undefined;
   }
-  console.error('agent db', error.message);
-  return agentErr(500, 'error', 'Request failed');
+  console.error('agent db', {
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+  });
+  const code = error.code?.trim();
+  return agentErr(500, 'database_error', code === undefined || code === '' ? 'Database request failed' : `Database request failed (${code})`);
 }
 
 export function agentValidation(message: string): AgentErr {
