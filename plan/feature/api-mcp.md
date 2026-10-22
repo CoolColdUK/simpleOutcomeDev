@@ -1,6 +1,6 @@
 # API keys, REST, and MCP — feature plan
 
-Expose **current** SimpleOutcome features to agents and integrations the way EndureTrade does: API keys, REST, and hosted MCP, with **one shared code path**. Telegram and chat bridges are **out of this plan**.
+Expose **current** SimpleOutcome features to agents and integrations the way EndureTrade does: API keys, REST, and hosted MCP, with **one shared code path**. Telegram and other chat bridges are **out of this plan** — see [Telegram bot bridge](./telegram-bridge.md).
 
 **Repo:** [CoolColdUK/simpleOutcomeDev](https://github.com/CoolColdUK/simpleOutcomeDev)  
 **Reference pattern:** [CoolColdUK/trading-journal](https://github.com/CoolColdUK/trading-journal) (`packages/model/src/apiKey`, hosted `POST /api/mcp` only — do **not** copy the local stdio package)
@@ -42,7 +42,7 @@ This is a **plan / requirements** document. User-scoped keys are already impleme
 
 ## Out of scope (this plan)
 
-- Telegram / WhatsApp / chat bridges
+- Telegram / WhatsApp / chat bridges ([Telegram](./telegram-bridge.md) has its own plan; WhatsApp / Signal remain parked)
 - A new generic bulk-import tool. The existing financial-planning import service is in scope.
 - Billing / marketplace
 - Streaming chat over MCP
@@ -270,7 +270,7 @@ There is no second table and no per-space section under the pod matrix. The head
 14. One pod table, pods **grouped by space**. A full-width **space header** (label = space name, different colour) writes `spaces[spaceId].space`. The **Group** row directly under it (same tint family, label Group) writes `spaces[spaceId].group`. Pod rows under that write `pods[podId]`. An fp pod row has a separate Delete all transactions checkbox. A **Profile** row sits outside the space blocks and writes `profile`. Column toggles apply to pod rows only. The space header, Group row, and Profile row have their own row toggle and cells. No separate space-permission table.
 15. First-slice keys: **revoke active rows and recreate**. Do not translate empty allowlists into pod grants. Already migrated.
 16. Fp row CRUD writes `account`, `category`, `transaction`, `parser`, `import`, `bill_split`, and `settings`. It does not write `delete_all`. Delete all transactions is the extra checkbox (`fp.delete_all: ['create']`). The implementation exposes the fp families in “Agent surface”, including bill split, settings, auto-assign, confirm, and delete-all.
-17. Parked: Telegram, a generic bulk-import tool, billing, EndureTrade-style local stdio MCP, the contact stub, and a shopping product. Profile is in this implementation.
+17. Parked: WhatsApp / Signal chat bridges, a generic bulk-import tool, billing, EndureTrade-style local stdio MCP, the contact stub, and a shopping product. **Telegram** is planned in [telegram-bridge.md](./telegram-bridge.md). Profile is in this implementation.
 
 ---
 
@@ -352,6 +352,8 @@ The matrix UX in this revision, plus the families below. REST and MCP call the s
 ## Future note
 
 `FeatureKind.SHOPPING_LIST` is already a reserved pod type: the catalog includes it and `create_pod` accepts it. If a pod of that kind is visible, the matrix shows an ordinary pod row for it, and the existing `pods[podId].shopping` field on the grant type can store those cells.
+
+**Chat:** Hosted MCP/REST covers agent tools; user-facing chat is the [Telegram bot bridge](./telegram-bridge.md) (thin adapter over the same key authz). WhatsApp and Signal are not planned here.
 
 ---
 
