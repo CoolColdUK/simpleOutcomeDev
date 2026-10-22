@@ -2,8 +2,10 @@
  * Trip planning agent: workspace operations
  */
 
+import {ApiKeyAction} from '@so/model';
 import {agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
-import {requirePodAgent, type AgentContext} from '@/lib/api/agent/loadAgentContext';
+import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
+import {tpCall} from '@/lib/api/agent/tpAgentCall';
 import {loadDbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWorkspace';
 
 /**
@@ -16,12 +18,7 @@ export async function getAgentTpWorkspace(request: Request, input: unknown): Pro
     return {ok: false, status: 400, code: 'validation_error', message: 'podId is required'};
   }
   
-  const ctx = await requirePodAgent(request, {
-    featureKind: 'trip_planning',
-    podId,
-    resource: 'trip',
-    action: 'read',
-  });
+  const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.READ));
   
   if (!ctx.ok) {
     return ctx;
@@ -47,12 +44,7 @@ export async function updateAgentTpTrip(request: Request, input: unknown): Promi
     return {ok: false, status: 400, code: 'validation_error', message: 'podId is required'};
   }
   
-  const ctx = await requirePodAgent(request, {
-    featureKind: 'trip_planning',
-    podId,
-    resource: 'trip',
-    action: 'update',
-  });
+  const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.UPDATE));
   
   if (!ctx.ok) {
     return ctx;
@@ -74,12 +66,7 @@ export async function getAgentTpBudgetRollup(request: Request, input: unknown): 
     return {ok: false, status: 400, code: 'validation_error', message: 'podId is required'};
   }
   
-  const ctx = await requirePodAgent(request, {
-    featureKind: 'trip_planning',
-    podId,
-    resource: 'trip',
-    action: 'read',
-  });
+  const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.READ));
   
   if (!ctx.ok) {
     return ctx;
