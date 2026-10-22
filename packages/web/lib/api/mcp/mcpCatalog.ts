@@ -38,7 +38,8 @@ function tool(
   return {name, description, inputSchema: {type: 'object', properties, required}, run};
 }
 
-export const MCP_TOOLS: readonly McpTool[] = [
+// Core MCP tools: API key, spaces, pods, membership, profile
+export const CORE_MCP_TOOLS: readonly McpTool[] = [
   tool('get_api_key_permissions', 'Effective rights for this API key.', {}, [], (request) => getAgentApiKeyPermissions(request)),
   tool('get_space', 'Read a space.', {spaceId}, ['spaceId'], (request, args) => getAgentSpace(request, stringField(args, 'spaceId'))),
   tool('update_space', 'Update the space name and description.', {spaceId, name: title, description: {type: 'string'}}, ['spaceId', 'name'], (request, args) =>
@@ -64,6 +65,11 @@ export const MCP_TOOLS: readonly McpTool[] = [
   tool('delete_space_invite', 'Delete a space invite.', {spaceId, inviteId: {type: 'string'}}, ['spaceId', 'inviteId'], (request, args) =>
     deleteAgentSpaceInvite(request, args),
   ),
+  ...MCP_EXTRA_TOOLS,
+];
+
+// Todo MCP tools
+export const TODO_MCP_TOOLS: readonly McpTool[] = [
   tool('list_todo_columns', 'List columns on a todo pod.', {podId, limit, offset}, ['podId'], (request, args) => listAgentTodoColumns(request, args)),
   tool('create_todo_column', 'Create a todo column.', {podId, title, sortOrder: {type: 'number'}}, ['podId', 'title'], (request, args) =>
     createAgentTodoColumn(request, args),
@@ -131,8 +137,10 @@ export const MCP_TOOLS: readonly McpTool[] = [
     ['podId', 'cardId', 'commentId'],
     (request, args) => deleteAgentTodoComment(request, args),
   ),
-  ...MCP_EXTRA_TOOLS,
 ];
+
+// Legacy MCP_TOOLS for backward compatibility (will be removed)
+export const MCP_TOOLS: readonly McpTool[] = CORE_MCP_TOOLS;
 
 function stringField(args: unknown, key: string): string {
   if (typeof args === 'object' && args !== null && key in args) {
@@ -142,6 +150,6 @@ function stringField(args: unknown, key: string): string {
   return '';
 }
 
-export function findMcpTool(name: string): McpTool | undefined {
-  return MCP_TOOLS.find((item) => item.name === name);
+export function findMcpTool(name: string, tools: readonly McpTool[]): McpTool | undefined {
+  return tools.find((item) => item.name === name);
 }
