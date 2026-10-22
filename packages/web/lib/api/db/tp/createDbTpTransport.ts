@@ -9,5 +9,8 @@ export default async function createDbTpTransport(routeId: string, sortOrder: nu
     .select('id')
     .single();
   throwIfSupabaseError(error);
+  if (data === undefined || data === null) {
+    throw new Error('create transport returned no id');
+  }
   return data.id;
 }

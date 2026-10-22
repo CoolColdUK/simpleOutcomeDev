@@ -30,6 +30,9 @@ export default async function createDbTpTripBundle(input: CreateDbTpTripBundleIn
     .select('id')
     .single();
   throwIfSupabaseError(tripErr);
+  if (trip === undefined || trip === null) {
+    throw new Error('create trip returned no id');
+  }
   const tripId = trip.id;
   const dates = syncTpCalendarDates(input.startDate, input.endDate);
   if (dates.length > 0) {
