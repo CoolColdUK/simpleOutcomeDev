@@ -1,7 +1,25 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
+import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
+import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 
-export interface CreateTpTransportInput {
+// Client-side UI helper (from PR #14)
+export default async function createDbTpTransport(routeId: string, sortOrder: number): Promise<string> {
+  const supabase = getSupabaseBrowserClient();
+  const {data, error} = await supabase
+    .from('tp_transport')
+    .insert({route_id: routeId, mode: 'other', sort_order: sortOrder})
+    .select('id')
+    .single();
+  throwIfSupabaseError(error);
+  if (data === undefined || data === null) {
+    throw new Error('create transport returned no id');
+  }
+  return data.id;
+}
+
+// Server-side agent helper (for REST/MCP API)
+export interface CreateTpTransportInputForAgent {
   readonly routeId: string;
   readonly mode: string;
   readonly fromPlace?: string;
@@ -18,9 +36,9 @@ export interface CreateTpTransportInput {
   readonly sortOrder: number;
 }
 
-export async function createDbTpTransport(
+export async function createDbTpTransportForAgent(
   supabase: SupabaseClient<Database>,
-  input: CreateTpTransportInput,
+  input: CreateTpTransportInputForAgent,
 ) {
   return supabase
     .from('tp_transport')

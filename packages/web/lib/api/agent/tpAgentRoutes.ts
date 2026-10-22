@@ -6,7 +6,7 @@ import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
-import {createDbTpRoute} from '@/lib/api/db/tp/createDbTpRoute';
+import {createDbTpRouteForAgent} from '@/lib/api/db/tp/createDbTpRoute';
 import {deleteDbTpRoute} from '@/lib/api/db/tp/deleteDbTpRoute';
 import {selectDbTpRoute} from '@/lib/api/db/tp/selectDbTpRoute';
 
@@ -27,7 +27,7 @@ export async function createAgentTpRoute(request: Request, input: unknown): Prom
   const owned = await ownedTpRow(ctx.data, 'tp_action', actionId, podId);
   if (!owned.ok) return owned;
   
-  const result = await createDbTpRoute(ctx.data.supabase, {
+  const result = await createDbTpRouteForAgent(ctx.data.supabase, {
     actionId,
     name,
     notes: typeof args.notes === 'string' ? args.notes : undefined,

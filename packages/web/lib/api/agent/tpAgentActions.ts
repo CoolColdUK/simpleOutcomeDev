@@ -6,7 +6,7 @@ import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
-import {createDbTpAction} from '@/lib/api/db/tp/createDbTpAction';
+import {createDbTpActionForAgent} from '@/lib/api/db/tp/createDbTpAction';
 import {updateDbTpAction} from '@/lib/api/db/tp/updateDbTpAction';
 import deleteDbTpAction from '@/lib/api/db/tp/deleteDbTpAction';
 import {localTimeToUtc} from '@so/model';
@@ -51,7 +51,7 @@ export async function createAgentTpAction(request: Request, input: unknown): Pro
     }
   }
   
-  const result = await createDbTpAction(ctx.data.supabase, {
+  const result = await createDbTpActionForAgent(ctx.data.supabase, {
     tripId: trip.data.id,
     kind,
     title,

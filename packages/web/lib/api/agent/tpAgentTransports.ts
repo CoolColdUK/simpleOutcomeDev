@@ -6,7 +6,7 @@ import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
-import {createDbTpTransport} from '@/lib/api/db/tp/createDbTpTransport';
+import {createDbTpTransportForAgent} from '@/lib/api/db/tp/createDbTpTransport';
 import {updateDbTpTransport} from '@/lib/api/db/tp/updateDbTpTransport';
 import {deleteDbTpTransport} from '@/lib/api/db/tp/deleteDbTpTransport';
 import {localTimeToUtc} from '@so/model';
@@ -47,7 +47,7 @@ export async function createAgentTpTransport(request: Request, input: unknown): 
     }
   }
   
-  const result = await createDbTpTransport(ctx.data.supabase, {
+  const result = await createDbTpTransportForAgent(ctx.data.supabase, {
     routeId,
     mode: typeof args.mode === 'string' ? args.mode : 'other',
     fromPlace: typeof args.fromPlace === 'string' ? args.fromPlace : undefined,

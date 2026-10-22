@@ -1,7 +1,40 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
+import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
+import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import type {TpActionKind} from '@so/model';
 
-export interface CreateTpActionInput {
+// Client-side UI helper (from PR #14)
+export interface CreateDbTpActionInput {
+  readonly tripId: string;
+  readonly anchorDayId?: string;
+  readonly kind: TpActionKind;
+  readonly title: string;
+  readonly sortOrder?: number;
+}
+
+export default async function createDbTpAction(input: CreateDbTpActionInput): Promise<string> {
+  const supabase = getSupabaseBrowserClient();
+  const {data, error} = await supabase
+    .from('tp_action')
+    .insert({
+      trip_id: input.tripId,
+      anchor_day_id: input.anchorDayId ?? null,
+      kind: input.kind,
+      title: input.title,
+      sort_order: input.sortOrder ?? 0,
+    })
+    .select('id')
+    .single();
+  throwIfSupabaseError(error);
+  if (data === undefined || data === null) {
+    throw new Error('create action returned no id');
+  }
+  return data.id;
+}
+
+// Server-side agent helper (for REST/MCP API)
+export interface CreateTpActionInputForAgent {
   readonly tripId: string;
   readonly kind: string;
   readonly title: string;
@@ -29,9 +62,9 @@ export interface CreateTpActionInput {
   readonly sortOrder: number;
 }
 
-export async function createDbTpAction(
+export async function createDbTpActionForAgent(
   supabase: SupabaseClient<Database>,
-  input: CreateTpActionInput,
+  input: CreateTpActionInputForAgent,
 ) {
   return supabase
     .from('tp_action')
