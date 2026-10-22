@@ -13,7 +13,7 @@ import {createAgentTodoCard, deleteAgentTodoCard, listAgentTodoCards, updateAgen
 import {createAgentTodoColumn, deleteAgentTodoColumn, listAgentTodoColumns, updateAgentTodoColumn} from '@/lib/api/agent/todoAgentColumns';
 import {createAgentTodoComment, deleteAgentTodoComment, listAgentTodoComments, updateAgentTodoComment} from '@/lib/api/agent/todoAgentComments';
 import type {AgentResult} from '@/lib/api/agent/agentResult';
-import {MCP_EXTRA_TOOLS} from '@/lib/api/mcp/mcpCatalogExtra';
+import {CORE_EXTRA_MCP_TOOLS} from '@/lib/api/mcp/mcpCatalogExtra';
 
 export interface McpTool {
   readonly name: string;
@@ -65,7 +65,7 @@ export const CORE_MCP_TOOLS: readonly McpTool[] = [
   tool('delete_space_invite', 'Delete a space invite.', {spaceId, inviteId: {type: 'string'}}, ['spaceId', 'inviteId'], (request, args) =>
     deleteAgentSpaceInvite(request, args),
   ),
-  ...MCP_EXTRA_TOOLS,
+  ...CORE_EXTRA_MCP_TOOLS,
 ];
 
 // Todo MCP tools

@@ -66,6 +66,10 @@ function tool(
   return {name: toolName, description, inputSchema: {type: 'object', properties, required}, run};
 }
 
+// Re-export reorganized tools
+export {CORE_EXTRA_MCP_TOOLS, TODO_EXTRA_MCP_TOOLS, FP_MCP_TOOLS} from '@/lib/api/mcp/reorganizeMcpCatalogExtra';
+
+// Legacy export for backward compatibility (will be removed)
 export const MCP_EXTRA_TOOLS: readonly McpTool[] = [
   tool('list_spaces', 'List spaces the key owner belongs to.', {}, [], (request) => listAgentSpaces(request)),
   tool('create_space', 'Create a space. The new space is not granted on this key.', {name, description: {type: 'string'}}, ['name'], (request, args) =>
