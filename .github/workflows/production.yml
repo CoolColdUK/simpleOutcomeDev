@@ -148,6 +148,38 @@ jobs:
 
       # Dashboard: Framework Preset = Next.js, Root Directory = packages/web, “Include files outside root” on.
       # Disable Git→Vercel auto-deploy if you only want GHA deploys.
+      - name: Sync SUPABASE_SECRET_KEY to Vercel (production)
+        if: ${{ inputs.deploy_vercel }}
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_PRODUCTION }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo '::error::Add repository secret SUPABASE_SECRET_KEY (Supabase secret key for server-side API routes).'
+            exit 1
+          fi
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo '::error::Add repository secret VERCEL_TOKEN (https://vercel.com/account/tokens).'
+            exit 1
+          fi
+          if printf '%s' "$SUPABASE_SECRET_KEY" | npx vercel env update SUPABASE_SECRET_KEY \
+            --environment=production \
+            --sensitive \
+            --yes \
+            --token="$VERCEL_TOKEN"; then
+            echo 'Updated SUPABASE_SECRET_KEY on Vercel (production).'
+          else
+            printf '%s' "$SUPABASE_SECRET_KEY" | npx vercel env add SUPABASE_SECRET_KEY \
+              --environment=production \
+              --sensitive \
+              --yes \
+              --token="$VERCEL_TOKEN"
+            echo 'Added SUPABASE_SECRET_KEY on Vercel (production).'
+          fi
+
       - name: Deploy web to Vercel (production, prebuilt)
         if: ${{ inputs.deploy_vercel }}
         env:
