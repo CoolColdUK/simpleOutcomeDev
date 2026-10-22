@@ -1,13 +1,13 @@
 # In-app trip planning — feature plan
 
-Stippl-inspired **day-by-day itineraries** inside SimpleOutcome: destinations, stays, activities, meals, notes, **file attachments**, optional **costs and trip budget**, and **multiple alternative travel plans** — without slow map tiles, booking marketplaces, or affiliate clutter in v1.
+Stippl-inspired **day-by-day itineraries** inside SimpleOutcome: each **day** holds ordered **actions** (travel, stay, activity, note). **Travel** actions support alternative **routes** (e.g. coach vs train), each route an ordered chain of **transports** (multi-modal). Optional **budget**, **costs**, and **attachments** (images + PDF on transports only) — without map tiles, booking marketplaces, or affiliate clutter in v1.
 
 **Repo:** [CoolColdUK/simpleOutcomeDev](https://github.com/CoolColdUK/simpleOutcomeDev)  
 **Related:** [API keys, REST, and MCP](./api-mcp.md) (agent surface — trip tools are **phase 2**), [Telegram bot bridge](https://github.com/CoolColdUK/simpleOutcomeDev/blob/cursor/telegram-bridge-plan-f6f2/plan/feature/telegram-bridge.md) (separate track; ships **before** this feature)
 
-**Product positioning:** This is an **in-app SimpleOutcome product feature** (web UI first). It is **not** the external Travel assistant bots or a generic chat trip generator.
+**Product positioning:** In-app SimpleOutcome feature (web UI first). Not external Travel assistant bots.
 
-This is a **plan / requirements** document. Product code waits until Matthew approves this plan on the implementation PR branch, then lands on **that same branch** (not a separate implementation PR by default).
+This is a **plan / requirements** document. Product code waits until Matthew approves this plan on the implementation PR branch, then lands on **that same branch**.
 
 ---
 
@@ -15,43 +15,52 @@ This is a **plan / requirements** document. Product code waits until Matthew app
 
 | Order | Track | Notes |
 | --- | --- | --- |
-| 1 | [Telegram bridge](https://github.com/CoolColdUK/simpleOutcomeDev/blob/cursor/telegram-bridge-plan-f6f2/plan/feature/telegram-bridge.md) | Plan + implementation on `cursor/telegram-bridge-plan-f6f2` (or follow-on branch). Todo-focused v1 chat adapter. |
-| 2 | **Trip planning (this plan)** | Product UI in `packages/web`; new `trip_planning` pod kind. |
-| 3 | Agent surface (optional) | REST / MCP tools for trips after the in-app feature is stable — extend [api-mcp.md](./api-mcp.md) with `pods[podId].trip` (name TBD). |
-| 4 | Cross-feature links (optional) | Soft links from trip items to **todo** cards and **financial planning** transactions — not v1 blockers. |
+| 1 | [Telegram bridge](https://github.com/CoolColdUK/simpleOutcomeDev/blob/cursor/telegram-bridge-plan-f6f2/plan/feature/telegram-bridge.md) | Ships before trip planning. |
+| 2 | **Trip planning (this plan)** | `trip_planning` pod kind; day → action model. |
+| 3 | Agent surface (optional) | REST / MCP after in-app v1 — extend [api-mcp.md](./api-mcp.md). |
+| 4 | Cross-feature links (optional) | Soft links to **todo** / **financial planning** — phase 2. |
 
-Do not fold trip planning into the Telegram PR or bridge v1 scope.
+Do not fold trip planning into the Telegram PR.
 
 ---
 
 ## Decisions (locked)
 
-Matthew confirmed in Technical Forum (Oct 2026). Implementation should not re-litigate these without a new decision.
+Matthew confirmed in Technical Forum (Oct 2026). Do not re-litigate without a new decision.
 
 | # | Topic | Decision |
 | --- | --- | --- |
-| 1 | **Cardinality** | **One trip per pod.** The pod is the trip container (like one todo board per pod). No trip list inside a pod. |
-| 2 | **Multi-city** | **Yes in v1.** Multiple cities/regions on a trip via ordered `primary_destinations` text — no routing engine. |
-| 3 | **Authz / collaborators** | Use **pod roles**, not a parallel collaborator system. Today [`PodRole`](packages/model/src/space/podRole.ts) is only `pod_owner`, `pod_admin`, `pod_user` — **no read-only role** (`pod_member.role_check` in migrations matches that trio). **Add `pod_viewer` (read-only)** as a **platform** pod role in the same implementation track (member picker, RPCs, RLS helpers). Viewers can read the itinerary and download attachments; they cannot mutate trip data or upload files. |
-| 4 | **Costs / budget** | **Yes in v1.** Optional `cost_amount` / `cost_currency` on **items** and **travel legs**; **trip-level budget** (amount + currency, default from pod settings). UI shows a simple rollup (planned spend vs budget). |
-| 5 | **Travel model** | **Confirmed split:** day-level **`tp_alternative_group`** + legs (mutually exclusive options on a day) **and** trip-level **`tp_travel_plan`** + ordered legs (whole-journey alternatives). `is_selected` on a plan; `selected_leg_id` on each alternative group. |
-| 6 | **Cross-feature** | **Phase 2:** optional soft links (`linked_todo_card_id`, `linked_fp_transaction_id`, or a small link table) — **not** v1 scope. |
-| 7 | **Attachments** | **In v1.** Upload booking confirmations, tickets, PDFs, images — reuse **`pod-private`** Supabase Storage (see [File attachments](#file-attachments-v1)). |
-| 8 | **Map / bookings** | No map SDK; no booking marketplaces (unchanged). |
-| 9 | **Travellers** | One logical planning owner per pod; **multiple named travellers** on a trip is **later**. |
+| 1 | **Cardinality** | **One trip per pod.** No trip list inside a pod. |
+| 2 | **Multi-city** | **Yes in v1** — ordered `primary_destinations` text; no routing engine. |
+| 3 | **Authz** | **Pod roles** only. Repo today has `pod_owner` / `pod_admin` / `pod_user` only — **add `pod_viewer`** platform-wide (slice 0). Viewers read itinerary + download attachments; no writes/uploads. |
+| 4 | **Costs / budget** | **Yes in v1** — trip-level budget; optional costs on **actions** (stay/activity/note) and on each **transport**; travel action rollup uses **selected route** transports. |
+| 5 | **Core itinerary model** | **Day → ordered actions.** Kinds: `travel`, `stay`, `activity`, `note`. **Travel:** action → one or more alternative **routes** → ordered **transports** (multi-modal per route). Mark one route **selected** per travel action. **No** day-level alternative-group table; **no** trip-level whole-journey travel plan in v1 (compare journeys at **action** scope only). |
+| 6 | **Multi-day transport** | Transports use `depart_at` / `arrive_at` (timestamptz) and may cross calendar days. **UX:** travel action **listed on departure day**; card shows span text (“Arrives next day”, “Overnight”, “+2 days”). **Arrival day:** show a **read-only reference** row (“In transit from …” / link to travel action) — no duplicate editing surface. |
+| 7 | **Attachments** | **v1:** **images + PDF only** (`image/jpeg`, `image/png`, `application/pdf`). Attach to **`tp_transport` only** (ticket on the specific segment). Reuse **`pod-private`**, **5 MB** file limit (existing bucket). Trip/day-level file dump → **phase 2**. |
+| 8 | **Cross-feature** | Todo / FP soft links → **phase 2**. |
+| 9 | **Map / bookings** | No map SDK; no booking marketplaces. |
+| 10 | **Travellers** | Multiple named travellers → **later**. |
 
-**Timezone / archive (engineering defaults unless Matthew overrides during implementation):** store leg `depart_at` / `arrive_at` in UTC; day boundaries use trip `timezone`. Shortening the date range with content on dropped days → confirm dialog before regenerating days.
+**Engineering defaults:** leg times stored UTC; day boundaries use trip `timezone`. Shortening trip dates with content on removed days → confirm before `syncTpDaysForTrip`.
+
+### Superseded (do not implement in v1)
+
+| Previous plan idea | Replacement |
+| --- | --- |
+| `tp_item` + `tp_alternative_group` + `tp_travel_leg` | `tp_action` + `tp_route` + `tp_transport` |
+| Trip-level `tp_travel_plan` (whole-journey compare) | **Out of v1** — optional phase 2 if Matthew wants cross-day journey templates |
+| Attachments on trip / day / action | **Transport only** in v1 |
 
 ---
 
 ## Goal
 
-1. Plan a trip **top-down**: create a **`trip_planning` pod** (one trip), set **dates / duration** and **multiple destination** strings, then fill **days** with items, alternatives, and travel plans.
-2. **List / timeline-first UI** (day strip + per-day lists). Places are **text** with an optional **user-pasted** maps URL — **no map SDK** in v1.
-3. Support **multiple alternative travel plans** at trip level and **grouped leg alternatives under a day** without forcing a single booked itinerary.
-4. **Share** via existing **space / pod membership**; assign **`pod_viewer`** for read-only collaborators, **`pod_user`** / **`pod_admin`** for editors.
-5. Optional **budget** and **line-item costs**; **attachments** on trip, day, item, and leg.
-6. No hotel/flight **booking engines** or affiliate UI in v1.
+1. **Top-down:** create `trip_planning` pod → dates + **multi-city** destinations → fill each **day** with **actions**.
+2. **List / timeline-first** (day strip + action cards). Places as **text** + optional maps URL — **no map SDK**.
+3. **Travel** actions: add alternative **routes**, each with sequential **transports**; pick a **selected** route.
+4. **Share** via space/pod membership; **`pod_viewer`** for read-only.
+5. **Budget** + line costs; **PDF/image** tickets on transports.
+6. No booking engines or affiliate UI.
 
 ---
 
@@ -59,222 +68,182 @@ Matthew confirmed in Technical Forum (Oct 2026). Implementation should not re-li
 
 | Principle | Detail |
 | --- | --- |
-| Top-down, not map-first | Pod create / trip wizard → days → items/legs. No map-first workflow. |
-| One trip per pod | Pod name and trip title may align at create time; opening the pod opens the itinerary directly. |
-| Fast UI | Day strip + lists; reorder via drag handles. No interactive route map. |
-| Places as text | Destinations and leg from/to are **free text**. Optional `maps_url` — outbound link only. |
-| Alternatives are first-class | OR groups and trip-level plans are visible, comparable, and selectable. |
-| Same pod pattern | `trip_planning` pod in a **space**; RLS by `pod_id`; cascade delete with pod. |
-| Platform viewer role | `pod_viewer` is added for **all** pod kinds (todo, fp, trip) so view-only sharing is consistent. |
-| Reuse storage | Attachments use existing **`pod-private`** bucket patterns from todo card icons ([`BUCKET_POD_PRIVATE`](packages/model/src/todo/constants.ts), [`uploadStorageTodoCardIcon`](packages/web/lib/api/storage/uploadStorageTodoCardIcon.ts)). |
-| Agent later | Web product first; MCP/REST after stable. |
-| Separate from Telegram | Telegram bridge does not manage trips in v1. |
+| Day → action | The day timeline is an ordered list of actions, not a flat mix of items and separate OR widgets. |
+| Travel = routes × transports | Alternatives are **routes** under one travel action; each route is a **sequence** of transports. |
+| One trip per pod | Opening the pod opens the single itinerary. |
+| Multi-day honesty | Long-haul shows real dep/arr times; span copy on the card; ghost reference on arrival day. |
+| Transport = attachment target | Booking PDFs bind to the segment they belong to. |
+| Platform `pod_viewer` | Added for all pod kinds; trip is first feature that **needs** view-only sharing. |
+| Storage reuse | [`pod-private`](packages/model/src/todo/constants.ts) + todo-style upload helpers. |
+| Telegram / agents later | Product UI first. |
 
 ---
 
 ## Inspiration vs out of scope (v1)
 
-| Stippl-like (in) | Out of v1 |
+| In | Out of v1 |
 | --- | --- |
-| Day-by-day itinerary, multi-city text destinations | Interactive map tiles, route polylines, map SDK |
-| Stays, activities, transport legs, alternatives | Booking / affiliate marketplaces |
-| Trip budget + optional line costs | AI full-trip generation (optional later) |
-| Notes, booking refs, **file uploads** | eSIM, reels, social feed |
-| Share via space/pod + **viewer role** | Per-traveller profiles |
-| Paste external URL in notes | Telegram bot commands for trips |
-| | Packing lists (unless trivial “note” items) |
-| | Soft links to todo / FP (**phase 2**) |
+| Day-by-day actions, multi-city text | Map SDK, route maps |
+| Route alternatives + multi-modal transports | Trip-level “Plan A vs Plan B” journey compare |
+| Budget + transport/action costs | Booking marketplaces |
+| Image/PDF on **transport** | Attachments on trip/day; trip file dump (**phase 2**) |
+| `pod_viewer` sharing | Per-traveller profiles, Telegram trip commands |
+| | Soft todo/FP links (**phase 2**) |
+| | AI trip generation |
 
 ---
 
-## Product context (SimpleOutcome domain)
+## Product context
 
 ### Where it lives
 
-- New catalog value: **`FeatureKind.TRIP_PLANNING = 'trip_planning'`** (align with `pod_feature_check` and `create_pod`).
-- User creates a **pod** of kind `trip_planning` in a **space** via [`SpaceCreatePodDialog`](packages/web/components/app/SpaceCreatePodDialog.tsx) / `create_pod`.
-- **Exactly one `tp_trip` row per pod** (`unique (pod_id)`). Creating the pod runs the trip wizard (or creates an empty draft trip row immediately).
+- **`FeatureKind.TRIP_PLANNING = 'trip_planning'`** on `pod`.
+- **One `tp_trip` per pod** (`unique (pod_id)`).
+- Wizard on pod create (or first open).
 
 ### Membership and roles
 
-**Current repo state:** [`PodRole`](packages/model/src/space/podRole.ts) = `OWNER` | `ADMIN` | `USER` only. `public.pod_member.role` check constraint allows those three strings. There is **no** viewer/read-only pod role today.
+**Today:** [`PodRole`](packages/model/src/space/podRole.ts) has no viewer; `pod_member.role_check` allows three roles only.
 
-**Planned (locked):** add **`PodRole.VIEWER = 'pod_viewer'`** platform-wide:
-
-| Role | Trip planning v1 |
-| --- | --- |
-| `pod_viewer` | **Read** trip, days, items, plans, legs, attachments (signed download URLs). **No** create/update/delete, **no** uploads. |
-| `pod_user` | Read + create/update/delete itinerary content and attachments (not pod delete / not member admin). |
-| `pod_admin` | Same as user plus pod admin actions per existing pod rules. |
-| `pod_owner` / space owner | Full control including pod settings, budget currency default, member roles. |
-
-Implementation must update: `pod_member` check, `add_pod_member_by_username` / `update_pod_member_role`, [`podRoleLabel`](packages/model/src/space/podRoleLabel.ts), group/agent role picklists, **todo** and **fp** read vs write helpers where membership gates UI, and **storage RLS** (viewers: `select` only on `pod-private` objects for pods they can read).
-
-No separate “trip collaborator” table.
-
-### API keys (future)
-
-- Grant: `pods[podId].trip` with Create/Read/Update/Delete.
-- `pod_viewer` membership still gates role matrix on the key owner’s effective rights.
-- Not part of Telegram bridge v1.
+**Add `pod_viewer`:** read trip + signed attachment URLs; no mutations. Editors use `pod_user` / `pod_admin` / `pod_owner`. Update member RPCs, labels, todo/fp/trip RLS and storage policies (slice 0).
 
 ---
 
 ## Core objects (schema sketch)
 
-Prefix `tp_*`. UUID PKs, `moddatetime` on `updated_at`, RLS via `app_private.tp_can(p_pod_id, p_action)` (`read` | `write` | `manage_settings`).
+Prefix `tp_*`. RLS: `app_private.tp_can(pod_id, read|write|manage_settings)`.
 
 ### Trip (`tp_trip`)
 
-One row per pod.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | uuid | PK |
-| `pod_id` | uuid | FK → `pod`, **unique**, on delete cascade |
-| `title` | text | Display name (may mirror pod name) |
-| `timezone` | text | IANA; day boundaries |
-| `start_date`, `end_date` | date | Inclusive range |
-| `primary_destinations` | text[] | **Ordered multi-city** list |
-| `status` | enum | `draft` \| `active` \| `done` \| `archived` |
-| `budget_amount` | numeric | Optional trip budget |
-| `budget_currency` | text | ISO 4217; default from `tp_setting` |
-| `maps_url`, `notes` | text | Optional |
-| `created_at`, `updated_at` | timestamptz | |
-
-**Derived days:** `syncTpDaysForTrip` upserts `tp_day` when dates change; warn if shortening drops days with content.
+| Column | Notes |
+| --- | --- |
+| `pod_id` | **unique** FK |
+| `title`, `timezone` | |
+| `start_date`, `end_date` | Inclusive |
+| `primary_destinations` | `text[]`, ordered multi-city |
+| `status` | `draft` \| `active` \| `done` \| `archived` |
+| `budget_amount`, `budget_currency` | Optional |
+| `maps_url`, `notes` | Optional |
 
 ### Day (`tp_day`)
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | uuid | PK |
-| `trip_id` | uuid | FK |
-| `day_index` | int | 0-based |
-| `calendar_date` | date | In trip timezone |
-| `label`, `notes` | text | Optional |
+| Column | Notes |
+| --- | --- |
+| `trip_id`, `day_index`, `calendar_date` | |
+| `label`, `notes` | Optional |
 
-### Itinerary items (`tp_item`)
+Synced when trip dates change.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | uuid | PK |
-| `trip_id` | uuid | FK |
-| `day_id` | uuid | Nullable → **ideas** bucket |
-| `kind` | enum | `stay` \| `activity` \| `meal` \| `note` \| `other` |
-| `title`, `place_text`, `maps_url` | text | |
-| `start_time`, `end_time` | time | Optional |
-| `cost_amount`, `cost_currency` | numeric, text | Optional |
-| `booking_ref`, `url`, `notes` | text | |
-| `sort_order` | int | |
+### Action (`tp_action`)
 
-### Trip-level travel plans (`tp_travel_plan`)
+Ordered within a day (or **ideas** when `day_id` is null).
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | uuid | PK |
-| `trip_id` | uuid | FK |
-| `name` | text | |
-| `is_selected` | boolean | At most one `true` per trip (app + constraint/trigger) |
-| `notes`, `sort_order` | | |
+| Column | Notes |
+| --- | --- |
+| `trip_id` | FK |
+| `day_id` | Nullable → ideas bucket |
+| `kind` | `travel` \| `stay` \| `activity` \| `note` |
+| `title` | Required |
+| `place_text`, `maps_url` | Optional text place |
+| `start_time`, `end_time` | Optional **local** times for non-travel (same calendar day) |
+| `cost_amount`, `cost_currency` | Optional on **stay / activity / note** |
+| `booking_ref`, `url`, `notes` | Optional |
+| `selected_route_id` | Nullable; only for `kind = travel` — which route counts for budget/display |
+| `sort_order` | Within day (or ideas list) |
 
-### Travel leg (`tp_travel_leg`)
+**Travel actions** do not store transport rows directly; they own `tp_route` children.
 
-Exactly one of `travel_plan_id` or `alternative_group_id` set.
+### Route (`tp_route`)
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | uuid | PK |
-| `travel_plan_id` | uuid | Nullable |
-| `alternative_group_id` | uuid | Nullable |
-| `day_id` | uuid | Required when in an alternative group |
-| `mode` | enum | `flight` \| `train` \| `coach` \| `bus` \| `car` \| `ferry` \| `walk` \| `other` |
-| `from_text`, `to_text` | text | |
-| `depart_at`, `arrive_at` | timestamptz | Optional UTC |
-| `cost_amount`, `cost_currency` | | Optional |
-| `booking_ref`, `url`, `notes` | text | |
-| `sort_order` | int | |
+Alternative way to complete a **travel** action (e.g. “Via coach” vs “Via train + taxi”).
 
-### Alternative group (`tp_alternative_group`)
+| Column | Notes |
+| --- | --- |
+| `action_id` | FK → `tp_action` where `kind = travel` |
+| `name` | Short label |
+| `is_selected` | At most one `true` per `action_id` (app + DB guard) |
+| `notes`, `sort_order` | |
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | uuid | PK |
-| `day_id` | uuid | FK |
-| `title` | text | e.g. “Arrival transfer” |
-| `selected_leg_id` | uuid | Nullable |
-| `sort_order` | int | |
+`selected_route_id` on the action should stay in sync with `is_selected` (single source of truth: prefer **action.selected_route_id** with route `is_selected` derived in reads, or trigger — pick one in implementation).
+
+### Transport (`tp_transport`)
+
+One **segment** within a route (former “leg”). Ordered multi-modal chain.
+
+| Column | Notes |
+| --- | --- |
+| `route_id` | FK → `tp_route` |
+| `mode` | `flight` \| `train` \| `coach` \| `bus` \| `car` \| `ferry` \| `walk` \| `other` |
+| `from_text`, `to_text` | |
+| `depart_at`, `arrive_at` | **timestamptz**; may span days |
+| `cost_amount`, `cost_currency` | Optional |
+| `booking_ref`, `url`, `notes` | |
+| `sort_order` | Within route |
+
+**Attachments** hang off `transport_id` only (see below).
+
+### Day reference (`tp_action_day_ref`) — optional table vs computed
+
+For **arrival-day ghosts** without duplicating the travel action:
+
+| Approach | Detail |
+| --- | --- |
+| **Recommended** | No extra row: UI derives ghosts by scanning transports whose `arrive_at` (in trip TZ) falls on a day **≠** action’s `day_id` (departure day). Render read-only chip on those days linking to the travel action. |
+| Fallback | `tp_action_day_ref(action_id, day_id, ref_kind: 'arrival_ghost')` if queries need indexing — only if perf requires. |
+
+**Locked UX:** editable travel action appears **only** on **departure day** (`action.day_id` = calendar date of first transport’s `depart_at` in trip TZ, enforced on save).
 
 ### Pod settings (`tp_setting`)
 
 | Column | Notes |
 | --- | --- |
-| `pod_id` | 1:1 with pod |
-| `default_currency` | For new cost/budget fields |
+| `pod_id` | 1:1 |
+| `default_currency` | For budget/cost fields |
 
-### File attachments (v1)
+### Attachments (`tp_attachment`) — v1
 
-Metadata table + objects in **`pod-private`** (existing bucket from todo migration).
-
-**`tp_attachment`**
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | uuid | PK |
-| `pod_id` | uuid | Denormalized for RLS |
-| `trip_id` | uuid | FK |
-| `parent_type` | enum | `trip` \| `day` \| `item` \| `travel_leg` |
-| `parent_id` | uuid | Id of parent row |
-| `storage_path` | text | Object key in `pod-private` |
-| `file_name` | text | Original name |
-| `mime_type` | text | |
-| `byte_size` | int | |
-| `uploaded_by` | uuid | FK profile |
-| `created_at` | timestamptz | |
-
-**Storage path (proposed):** `{pod_id}/tp/{parent_type}/{parent_id}/{attachment_id}-{safe_filename}` — first segment remains `pod_id` so existing [`pod_id_from_storage_object_name`](supabase/migrations/20260829114000_todo_list_pod_description.sql) keeps working.
-
-**Limits (proposed, match todo spirit):**
-
-| Limit | Value |
+| Column | Notes |
 | --- | --- |
-| Max file size | **5 MB** (existing bucket `file_size_limit`) |
-| Allowed MIME | **Extend** bucket: `image/jpeg`, `image/png`, `image/webp`, `application/pdf` (migration `update` on `storage.buckets`) |
-| Per parent cap | e.g. **20** attachments (constant in `@so/model`) |
+| `transport_id` | FK → `tp_transport`, on delete cascade |
+| `pod_id`, `trip_id` | Denormalized for RLS |
+| `storage_path` | `pod-private` key |
+| `file_name`, `mime_type`, `byte_size` | |
+| `uploaded_by`, `created_at` | |
 
-**Authz:** `tp_can` write for upload/delete metadata + storage insert/delete policies using a new helper e.g. `app_private.can_write_trip_pod(pod_id)` (member with role ≠ `pod_viewer`). Read: any pod member who can read the pod (including viewer) → signed URL download.
+**MIME (locked):** `image/jpeg`, `image/png`, `application/pdf` only — migration extends `storage.buckets.allowed_mime_types` (drop webp from earlier draft).
 
-**Services (sketch):** `uploadStorageTpAttachment`, `deleteStorageTpAttachment`, `listStorageTpAttachmentSignedUrls` — mirror todo storage helpers.
+**Path:** `{pod_id}/tp/transport/{transport_id}/{attachment_id}-{safe_filename}`
+
+**Limits:** **5 MB** per file (bucket default); cap e.g. **10 files per transport** (`@so/model` constant).
+
+**Authz:** write = non-viewer pod member with `tp_can` write; read = any member including viewer → signed URL.
 
 ```mermaid
 flowchart TB
   pod[pod 1:1 trip]
   trip[tp_trip]
   day[tp_day]
-  item[tp_item]
-  ag[tp_alternative_group]
-  leg[tp_travel_leg]
-  plan[tp_travel_plan]
+  act[tp_action]
+  route[tp_route]
+  tr[tp_transport]
   att[tp_attachment]
-  store[pod-private storage]
+  store[pod-private]
   pod --> trip
   trip --> day
-  trip --> plan
-  day --> item
-  day --> ag
-  ag --> leg
-  plan --> leg
-  trip --> att
-  day --> att
-  item --> att
-  leg --> att
+  day --> act
+  act --> route
+  route --> tr
+  tr --> att
   att --> store
 ```
 
-### Budget rollup (v1 UX)
+### Budget rollup (v1)
 
-- **Inputs:** all `tp_item.cost_*` on scheduled days + ideas (optional include/exclude ideas in UI); legs on the **selected** `tp_travel_plan`; for each alternative group, cost of **`selected_leg_id`** only (if unset, group contributes 0 to rollup).
-- **Display:** `sum` vs `tp_trip.budget_amount` in trip header or Budget tab (no FX conversion).
+| Source | Included when |
+| --- | --- |
+| `stay` / `activity` / `note` actions | `cost_*` on action (scheduled days; ideas optional toggle in UI) |
+| `travel` actions | Sum `cost_*` on all transports of **`selected_route_id`** (if none selected, travel contributes 0 + UI warning) |
+| Total vs `tp_trip.budget_amount` | Header or Budget panel; no FX |
 
 ---
 
@@ -282,83 +251,81 @@ flowchart TB
 
 ### 1. Create pod / trip wizard
 
-Triggered when user creates a `trip_planning` pod (or first open of empty pod):
-
-1. **When:** start + end date (or duration → end).
-2. **Where:** **multiple** destination fields (add city/region rows).
-3. **Title** + timezone; optional **budget** + currency.
-4. Creates pod (if not exists) + single `tp_trip` + `tp_day` rows → **day 1**.
+When + multi-city where + title + timezone + optional budget → `tp_trip` + `tp_day` rows → land on day 1.
 
 ### 2. Day timeline
 
-- Day strip; per day: items + alternative groups.
-- Reorder; **Ideas** for unscheduled items.
-- Attach files on trip, day, item, or leg panels.
+- Day strip; **ordered action cards** per day.
+- **+ Add action** → pick kind.
+- **Stay / activity / note:** title, place, times, cost, refs — single card.
+- **Travel:** card shows route tabs or stacked alternatives; expand route → ordered **transports** list; add/remove/reorder transports; mark **selected route**.
+- **Multi-day:** first transport `depart_at` sets departure day anchor; card subtitle shows arrival date/time and “overnight” / “+N days” when `arrive_at` crosses midnight in trip TZ.
+- **Arrival day:** ghost row (read-only) pointing to the travel action — user does not edit transports from ghost.
+- **Ideas:** actions with no `day_id`.
 
-### 3. Travel section
+### 3. Attachments
 
-- Compare **travel plans**; select primary plan.
-- Per-day **alternative groups** with clear OR styling.
+- Upload control **on each transport** row (image/PDF); list + download; delete for editors.
+- No upload on trip, day, or non-travel action in v1.
 
 ### 4. Budget
 
-- Edit trip budget; enter costs on items/legs.
-- Summary: planned total vs budget.
+- Trip budget in header/settings; costs on actions/transports; rollup vs budget.
 
 ### 5. Sharing
 
-- Space invite + pod membership; assign **`pod_viewer`** for read-only.
+- Space + pod membership; assign **`pod_viewer`**.
 
-### 6. Visual design
+### 6. Visual
 
-- No map SDK; optional external link icon.
-- Mobile-friendly day strip and stacks.
+- No map SDK; optional external link on place text.
+- Route comparison: side-by-side or tabs with total duration/cost hint from transports.
 
 ---
 
 ## Implementation sketch
 
-Follow [financial planning implementation](./financial%20planning-implementation.md): migration → `@so/model` → `packages/web/lib/api/db/` → [`PodWorkspace`](packages/web/components/app/PodWorkspace.tsx).
+Pattern: [financial planning implementation](./financial%20planning-implementation.md).
 
 ### Suggested slices
 
 | Slice | Deliverable |
 | --- | --- |
-| **0** | **`pod_viewer`** platform role: migration, `PodRole`, member RPCs/UI, read/write splits for todo/fp storage policies (viewers read-only). |
-| A | `FeatureKind.TRIP_PLANNING`; `pod_feature_check`; `tp_setting`; empty `TripPlanningBoard` |
-| B | `tp_trip` (1:1 pod), `tp_day`; wizard; day strip |
-| C | `tp_item`; ideas; reorder; item costs |
-| D | `tp_travel_plan`, `tp_travel_leg`; trip-level compare UI |
-| E | `tp_alternative_group`; day OR legs; selection |
-| F | Trip **budget** rollup UI; status/archive |
-| G | **`tp_attachment`** + storage MIME extension + upload/download UI |
+| **0** | **`pod_viewer`** platform-wide (migration, `PodRole`, RPCs, UI picker, read-only storage/todo/fp/trip) |
+| A | `FeatureKind.TRIP_PLANNING`; `tp_setting`; `tp_trip` + `tp_day`; wizard; day strip shell |
+| B | `tp_action` — `stay`, `activity`, `note`; ideas; reorder; action costs |
+| C | `tp_route` + `tp_transport`; travel action UI; route select; multi-modal ordering |
+| D | Multi-day span copy + arrival-day **ghost** derivation; validate departure-day anchor |
+| E | Budget rollup UI; trip status/archive |
+| F | `tp_attachment` + bucket MIME (jpeg/png/pdf) + transport upload/download |
 
-### Packages
+### Services (names illustrative)
 
-| Area | Work |
-| --- | --- |
-| `supabase/migrations` | `tp_*` tables, RLS, `tp_can`, storage policy updates, bucket MIME extension |
-| `packages/model` | Enums, schemas, caps, budget rollup helper, tests |
-| `packages/web` | `components/tp/*`, storage helpers under `lib/api/storage/` |
+- `syncTpDaysForTrip`
+- `{action}DbTpTrip`, `DbTpDay`, `DbTpAction`, `DbTpRoute`, `DbTpTransport`, `DbTpAttachment`
+- `uploadStorageTpTransportAttachment`, signed URL helpers
+- `@so/model`: `tpBudgetRollup`, `tpTransportSpansDays`, ghost-day helper — **unit tests**
 
 ### REST / MCP
 
-After in-app v1: extend [api-mcp.md](./api-mcp.md) (`list_tp_*`, attachment upload likely **not** in agent v1 unless needed).
+After in-app v1; tool names align to action/route/transport (`list_tp_actions`, …). Attachment upload optional in agent v1.
 
 ### Phase 2 (not v1)
 
-- Soft links to todo cards and fp transactions.
-- AI trip suggestions; Telegram trip commands.
+- Trip-level attachment library / zip dump
+- Trip-level whole-journey plan compare (`tp_travel_plan` style)
+- Soft links todo / FP
+- Telegram / AI trip features
 
 ---
 
 ## Success criteria
 
-- Plan reflects **locked decisions**: one trip per pod, multi-city, `pod_viewer`, budget + costs, attachments, travel model split, Telegram-first sequencing, map-free.
-- Engineer can start slice **0** + **A** without new product questions.
+- Plan reflects **day → action → route → transport**, **transport-only** attachments (image/PDF), **no** trip-level travel plans in v1, plus prior locks: one trip/pod, multi-city, `pod_viewer`, budget, Telegram-first, map-free.
+- Slices **0** + **A** are unambiguous for implementation.
 
 ---
 
 ## Approval
 
-Matthew: comment **approve** (or requested edits) on the PR. Implementation on **`cursor/trip-planning-plan-bd93`** (same branch as this plan) unless you prefer a fresh branch name.
+Matthew: **approve** on the PR. Implementation on **`cursor/trip-planning-plan-bd93`** unless you choose another branch name.
