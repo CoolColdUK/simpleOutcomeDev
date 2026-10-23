@@ -1,16 +1,18 @@
 'use client';
 
-import {useState} from 'react';
-import {Button, Field, HStack, Input, Stack, Text, Textarea} from '@chakra-ui/react';
-import type {DbTpAction, DbTpActivityPlace} from '@/lib/api/db/tp/loadDbTpWorkspace';
+import {useMemo, useState} from 'react';
+import {Button, Field, HStack, Input, NativeSelect, Stack, Text} from '@chakra-ui/react';
+import type {DbTpAction, DbTpActionLocation, DbTpLocation} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
-import createDbTpActivityPlace from '@/lib/api/db/tp/createDbTpActivityPlace';
-import updateDbTpActivityPlace from '@/lib/api/db/tp/updateDbTpActivityPlace';
-import deleteDbTpActivityPlace from '@/lib/api/db/tp/deleteDbTpActivityPlace';
+import createDbTpActionLocation from '@/lib/api/db/tp/createDbTpActionLocation';
+import deleteDbTpActionLocation from '@/lib/api/db/tp/deleteDbTpActionLocation';
+import createDbTpLocation from '@/lib/api/db/tp/createDbTpLocation';
 
 export interface TripActivityActionEditorProps {
   readonly action: DbTpAction;
-  readonly places: readonly DbTpActivityPlace[];
+  readonly tripId: string;
+  readonly locations: readonly DbTpLocation[];
+  readonly actionLocations: readonly DbTpActionLocation[];
   readonly defaultCurrency?: string;
   readonly canWrite: boolean;
   readonly onSaved: () => void;
@@ -26,7 +28,9 @@ function trimTime(t: string | undefined): string {
 
 export default function TripActivityActionEditor({
   action,
-  places,
+  tripId,
+  locations,
+  actionLocations,
   defaultCurrency,
   canWrite,
   onSaved,
@@ -34,22 +38,22 @@ export default function TripActivityActionEditor({
 }: TripActivityActionEditorProps) {
   const [title, setTitle] = useState(action.title);
   const [notes, setNotes] = useState(action.notes ?? '');
-  const [placeText, setPlaceText] = useState(action.placeText ?? '');
-  const [mapsUrl, setMapsUrl] = useState(action.mapsUrl ?? '');
   const [startTime, setStartTime] = useState(trimTime(action.startTime));
   const [endTime, setEndTime] = useState(trimTime(action.endTime));
   const [cost, setCost] = useState(action.costAmount?.toString() ?? '');
   const [currency, setCurrency] = useState(action.costCurrency ?? defaultCurrency ?? '');
-  const sortedPlaces = [...places].sort((a, b) => a.sortOrder - b.sortOrder);
-  const useChildPlaces = sortedPlaces.length > 0;
-
+  const links = useMemo(
+    () =>
+      [...actionLocations]
+        .filter((l) => l.actionId === action.id)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [actionLocations, action.id],
+  );
   const save = async (): Promise<void> => {
     try {
       await updateDbTpAction(action.id, {
         title,
         notes,
-        placeText: useChildPlaces ? action.placeText : placeText,
-        mapsUrl: useChildPlaces ? action.mapsUrl : mapsUrl === '' ? null : mapsUrl,
         startTime: startTime === '' ? null : startTime,
         endTime: endTime === '' ? null : endTime,
         costAmount: cost === '' ? null : Number(cost),
@@ -61,140 +65,108 @@ export default function TripActivityActionEditor({
     }
   };
 
-  const addPlace = async (): Promise<void> => {
+  const linkLocation = async (locationId: string): Promise<void> => {
+    if (locationId === '') {
+      return;
+    }
     try {
-      if (!useChildPlaces && placeText.trim() !== '') {
-        await createDbTpActivityPlace({
-          actionId: action.id,
-          placeText: placeText.trim(),
-          mapsUrl: mapsUrl === '' ? undefined : mapsUrl,
-          sortOrder: 0,
-        });
-      }
-      await createDbTpActivityPlace({
-        actionId: action.id,
-        placeText: 'New place',
-        sortOrder: sortedPlaces.length + (useChildPlaces ? 0 : placeText.trim() !== '' ? 1 : 0),
-      });
+      await createDbTpActionLocation({actionId: action.id, locationId, sortOrder: links.length});
       onSaved();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
     }
   };
 
-  const savePlace = async (place: DbTpActivityPlace, draft: {placeText: string; mapsUrl: string; notes: string}): Promise<void> => {
+  const unlink = async (linkId: string): Promise<void> => {
     try {
-      await updateDbTpActivityPlace(place.id, {
-        placeText: draft.placeText,
-        mapsUrl: draft.mapsUrl === '' ? null : draft.mapsUrl,
-        notes: draft.notes === '' ? null : draft.notes,
-      });
+      await deleteDbTpActionLocation(linkId);
       onSaved();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
     }
   };
 
-  const removePlace = async (placeId: string): Promise<void> => {
+  const quickAddLocation = async (): Promise<void> => {
     try {
-      await deleteDbTpActivityPlace(placeId);
+      const id = await createDbTpLocation({tripId, name: 'New location', sortOrder: locations.length});
+      await createDbTpActionLocation({actionId: action.id, locationId: id, sortOrder: links.length});
       onSaved();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
     }
   };
-
-  if (!canWrite) {
-    return (
-      <Stack gap={1} fontSize="sm">
-        {startTime !== '' || endTime !== '' ? <Text>{startTime}–{endTime}</Text> : null}
-        {useChildPlaces
-          ? sortedPlaces.map((p) => <Text key={p.id}>{p.placeText}</Text>)
-          : action.placeText !== undefined ? <Text>{action.placeText}</Text> : null}
-        {action.notes !== undefined ? <Text whiteSpace="pre-wrap">{action.notes}</Text> : null}
-      </Stack>
-    );
-  }
 
   return (
-    <Stack gap={2}>
+    <Stack gap={4}>
       <Field.Root>
         <Field.Label>Title</Field.Label>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} disabled={!canWrite} />
       </Field.Root>
-      <HStack>
+      <HStack wrap="wrap">
         <Field.Root>
           <Field.Label>Start</Field.Label>
-          <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} disabled={!canWrite} />
         </Field.Root>
         <Field.Root>
           <Field.Label>End</Field.Label>
-          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={!canWrite} />
         </Field.Root>
       </HStack>
-      {useChildPlaces ? (
-        <Stack gap={2}>
-          <HStack justify="space-between">
-            <Text fontWeight="medium">Places</Text>
-            <Button size="xs" onClick={() => void addPlace()}>+ Place</Button>
-          </HStack>
-          {sortedPlaces.map((place) => (
-            <PlaceRow key={place.id} place={place} onSave={savePlace} onRemove={() => void removePlace(place.id)} />
-          ))}
-        </Stack>
-      ) : (
-        <Stack gap={2}>
-          <Field.Root>
-            <Field.Label>Place</Field.Label>
-            <Input value={placeText} onChange={(e) => setPlaceText(e.target.value)} />
-          </Field.Root>
-          <Field.Root>
-            <Field.Label>Maps URL</Field.Label>
-            <Input value={mapsUrl} onChange={(e) => setMapsUrl(e.target.value)} />
-          </Field.Root>
-          <Button size="xs" alignSelf="flex-start" onClick={() => void addPlace()}>+ Another place</Button>
-        </Stack>
-      )}
-      <Field.Root>
-        <Field.Label>Notes</Field.Label>
-        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-      </Field.Root>
-      <HStack>
+      <HStack wrap="wrap">
         <Field.Root>
-          <Field.Label>Cost</Field.Label>
-          <Input value={cost} onChange={(e) => setCost(e.target.value)} />
+          <Field.Label>Activity cost</Field.Label>
+          <Input value={cost} onChange={(e) => setCost(e.target.value)} disabled={!canWrite} />
         </Field.Root>
         <Field.Root>
           <Field.Label>Currency</Field.Label>
-          <Input value={currency} onChange={(e) => setCurrency(e.target.value)} />
+          <Input value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!canWrite} />
         </Field.Root>
       </HStack>
-      <Button size="sm" colorPalette="brand" onClick={() => void save()}>Save</Button>
-    </Stack>
-  );
-}
-
-function PlaceRow({
-  place,
-  onSave,
-  onRemove,
-}: {
-  readonly place: DbTpActivityPlace;
-  readonly onSave: (place: DbTpActivityPlace, draft: {placeText: string; mapsUrl: string; notes: string}) => Promise<void>;
-  readonly onRemove: () => void;
-}) {
-  const [placeText, setPlaceText] = useState(place.placeText);
-  const [mapsUrl, setMapsUrl] = useState(place.mapsUrl ?? '');
-  const [notes, setNotes] = useState(place.notes ?? '');
-  return (
-    <Stack gap={1} pl={2} borderLeftWidth="2px">
-      <Input value={placeText} onChange={(e) => setPlaceText(e.target.value)} placeholder="Place name" />
-      <Input value={mapsUrl} onChange={(e) => setMapsUrl(e.target.value)} placeholder="Maps URL" size="sm" />
-      <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes" size="sm" />
-      <HStack>
-        <Button size="xs" colorPalette="brand" onClick={() => void onSave(place, {placeText, mapsUrl, notes})}>Save place</Button>
-        <Button size="xs" variant="outline" colorPalette="red" onClick={onRemove}>Remove</Button>
-      </HStack>
+      <Field.Root>
+        <Field.Label>Notes</Field.Label>
+        <Input value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!canWrite} />
+      </Field.Root>
+      <Stack gap={2}>
+        <Text fontWeight="medium">Locations</Text>
+        {links.map((link) => {
+          const loc = locations.find((l) => l.id === link.locationId);
+          if (loc === undefined) {
+            return null;
+          }
+          return (
+            <HStack key={link.id} justify="space-between">
+              <Text>{loc.name}{loc.address !== undefined && loc.address !== '' ? ` — ${loc.address}` : ''}</Text>
+              {canWrite ? (
+                <Button size="xs" variant="outline" onClick={() => void unlink(link.id)}>Remove</Button>
+              ) : null}
+            </HStack>
+          );
+        })}
+        {canWrite ? (
+          <HStack wrap="wrap">
+            <Field.Root flex="1" minW="12rem">
+              <Field.Label>Add location</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field
+                  value=""
+                  onChange={(e) => void linkLocation(e.target.value)}
+                >
+                  <option value="">Select…</option>
+                  {locations
+                    .filter((l) => !links.some((link) => link.locationId === l.id))
+                    .map((l) => (
+                      <option key={l.id} value={l.id}>{l.name}</option>
+                    ))}
+                </NativeSelect.Field>
+              </NativeSelect.Root>
+            </Field.Root>
+            <Button size="sm" variant="outline" onClick={() => void quickAddLocation()}>+ New location</Button>
+          </HStack>
+        ) : null}
+      </Stack>
+      {canWrite ? (
+        <Button colorPalette="brand" onClick={() => void save()}>Save activity</Button>
+      ) : null}
     </Stack>
   );
 }

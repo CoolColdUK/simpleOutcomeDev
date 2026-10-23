@@ -18,6 +18,10 @@ export default function tpBudgetRollup(
   let total = 0;
   actions.forEach((action) => {
     if (action.kind === TpActionKind.TRAVEL) {
+      if (action.costAmount !== undefined) {
+        total += action.costAmount;
+        return;
+      }
       if (action.selectedRouteId === undefined) {
         return;
       }

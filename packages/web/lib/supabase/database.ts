@@ -664,6 +664,9 @@ export interface Database {
           url: string | null;
           notes: string | null;
           selected_route_id: string | null;
+          from_location_id: string | null;
+          to_location_id: string | null;
+          duration_minutes: number | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -695,6 +698,9 @@ export interface Database {
           url?: string | null;
           notes?: string | null;
           selected_route_id?: string | null;
+          from_location_id?: string | null;
+          to_location_id?: string | null;
+          duration_minutes?: number | null;
           sort_order?: number;
         };
         Update: Record<string, unknown>;
@@ -743,6 +749,10 @@ export interface Database {
           booking_ref: string | null;
           url: string | null;
           notes: string | null;
+          transport_lib_id: string | null;
+          from_location_id: string | null;
+          to_location_id: string | null;
+          duration_minutes: number | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -762,16 +772,21 @@ export interface Database {
           booking_ref?: string | null;
           url?: string | null;
           notes?: string | null;
+          transport_lib_id?: string | null;
+          from_location_id?: string | null;
+          to_location_id?: string | null;
+          duration_minutes?: number | null;
           sort_order?: number;
         };
         Update: Record<string, unknown>;
         Relationships: [];
       };
-      tp_activity_place: {
+      tp_location: {
         Row: {
           id: string;
-          action_id: string;
-          place_text: string;
+          trip_id: string;
+          name: string;
+          address: string | null;
           maps_url: string | null;
           notes: string | null;
           sort_order: number;
@@ -780,16 +795,88 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          action_id: string;
-          place_text: string;
+          trip_id: string;
+          name: string;
+          address?: string | null;
           maps_url?: string | null;
           notes?: string | null;
           sort_order?: number;
         };
         Update: {
-          place_text?: string;
+          name?: string;
+          address?: string | null;
           maps_url?: string | null;
           notes?: string | null;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      tp_action_location: {
+        Row: {
+          id: string;
+          action_id: string;
+          location_id: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          action_id: string;
+          location_id: string;
+          sort_order?: number;
+        };
+        Update: {
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      tp_transport_lib: {
+        Row: {
+          id: string;
+          trip_id: string;
+          label: string;
+          mode: string;
+          duration_minutes: number | null;
+          cost_amount: string | null;
+          cost_currency: string | null;
+          from_location_id: string | null;
+          to_location_id: string | null;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          label: string;
+          mode?: string;
+          duration_minutes?: number | null;
+          cost_amount?: string | number | null;
+          cost_currency?: string | null;
+          from_location_id?: string | null;
+          to_location_id?: string | null;
+          notes?: string | null;
+          sort_order?: number;
+        };
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      tp_action_transport: {
+        Row: {
+          id: string;
+          action_id: string;
+          transport_lib_id: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          action_id: string;
+          transport_lib_id: string;
+          sort_order?: number;
+        };
+        Update: {
           sort_order?: number;
         };
         Relationships: [];

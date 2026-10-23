@@ -42,6 +42,7 @@ import TripStayActionEditor from '@/components/tp/TripStayActionEditor';
 import TripTravelActionEditor from '@/components/tp/TripTravelActionEditor';
 import TripSimpleActionEditor from '@/components/tp/TripSimpleActionEditor';
 import TripActivityActionEditor from '@/components/tp/TripActivityActionEditor';
+import TripTripCatalogPanel from '@/components/tp/TripTripCatalogPanel';
 import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
 
@@ -321,20 +322,32 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
     const arr = routeTransports.map((t) => t.arriveAt).filter((x): x is string => x !== undefined).sort().reverse()[0];
     const depTz = routeTransports.find((t) => t.departAt === dep)?.departTimezone;
     const arrTz = routeTransports.find((t) => t.arriveAt === arr)?.arriveTimezone;
+    const locName = (id?: string): string | undefined =>
+      id === undefined ? undefined : data.locations.find((l) => l.id === id)?.name;
+    const linkedLocationNames = data.actionLocations
+      .filter((l) => l.actionId === action.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((l) => ({name: locName(l.locationId) ?? 'Location'}));
+    const travelTransportLabels = data.actionTransports
+      .filter((l) => l.actionId === action.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((l) => data.transportLib.find((t) => t.id === l.transportLibId)?.label ?? 'Transport');
     const summary = tpActionDayCardSummary({
       kind: action.kind,
       title: action.title,
       placeText: action.placeText,
-      fromPlace: action.fromPlace,
-      toPlace: action.toPlace,
+      fromPlace: action.fromPlace ?? locName(action.fromLocationId),
+      toPlace: action.toPlace ?? locName(action.toLocationId),
       checkInAt: action.checkInAt,
       checkOutAt: action.checkOutAt,
       checkInTimezone: action.checkInTimezone,
       checkOutTimezone: action.checkOutTimezone,
       startTime: action.startTime,
       endTime: action.endTime,
+      durationMinutes: action.durationMinutes,
       notes: action.notes,
-      activityPlaces: data.activityPlaces.filter((p) => p.actionId === action.id),
+      locationNames: linkedLocationNames,
+      travelTransportLabels,
       selectedRouteName: selectedRoute?.name,
       travelDepartAt: dep,
       travelArriveAt: arr,
@@ -639,6 +652,9 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                           transports={data.transports}
                           attachments={data.attachments}
                           destinations={data.destinations}
+                          locations={data.locations}
+                          transportLib={data.transportLib}
+                          actionTransports={data.actionTransports}
                           tripTimezone={trip.timezone}
                           defaultCurrency={trip.budgetCurrency}
                           canWrite={canWrite && entry.displayMode === 'canonical'}
@@ -649,7 +665,9 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                       {action.kind === TpActionKind.ACTIVITY ? (
                         <TripActivityActionEditor
                           action={action}
-                          places={data.activityPlaces.filter((p) => p.actionId === action.id)}
+                          tripId={trip.id}
+                          locations={data.locations}
+                          actionLocations={data.actionLocations}
                           defaultCurrency={trip.budgetCurrency}
                           canWrite={canWrite && entry.displayMode === 'canonical'}
                           onSaved={onEditorSaved}
@@ -672,6 +690,17 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             })}
           </Stack>
         </Stack>
+      ) : null}
+      {trip !== undefined ? (
+        <TripTripCatalogPanel
+          tripId={trip.id}
+          locations={data.locations}
+          transportLib={data.transportLib}
+          defaultCurrency={trip.budgetCurrency}
+          canWrite={canWrite}
+          onSaved={() => void reload()}
+          onError={(message) => setError(message)}
+        />
       ) : null}
       <TripTpCollapsible title="Destinations (trip)">
         <Stack gap={4}>

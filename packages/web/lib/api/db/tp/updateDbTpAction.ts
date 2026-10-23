@@ -24,6 +24,9 @@ export interface UpdateDbTpActionInput {
   readonly selectedRouteId?: string | null;
   readonly startTime?: string | null;
   readonly endTime?: string | null;
+  readonly fromLocationId?: string | null;
+  readonly toLocationId?: string | null;
+  readonly durationMinutes?: number | null;
 }
 
 function buildTpActionPatch(input: UpdateDbTpActionInput): Database['public']['Tables']['tp_action']['Update'] {
@@ -87,6 +90,15 @@ function buildTpActionPatch(input: UpdateDbTpActionInput): Database['public']['T
   }
   if (input.endTime !== undefined) {
     patch.end_time = input.endTime;
+  }
+  if (input.fromLocationId !== undefined) {
+    patch.from_location_id = input.fromLocationId;
+  }
+  if (input.toLocationId !== undefined) {
+    patch.to_location_id = input.toLocationId;
+  }
+  if (input.durationMinutes !== undefined) {
+    patch.duration_minutes = input.durationMinutes;
   }
   return patch;
 }

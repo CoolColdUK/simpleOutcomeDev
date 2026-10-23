@@ -135,6 +135,9 @@ export const UpdateActionSchema = v.object({
   url: optionalString,
   notes: optionalString,
   selectedRouteId: optionalString,
+  fromLocationId: optionalString,
+  toLocationId: optionalString,
+  durationMinutes: optionalNumber,
   sortOrder: optionalNumber,
 });
 
@@ -234,25 +237,82 @@ export const DeleteAttachmentSchema = v.object({
   attachmentId: v.pipe(v.string(), v.minLength(1)),
 });
 
-export const CreateActivityPlaceSchema = v.object({
+export const CreateLocationSchema = v.object({
+  podId,
+  name: v.pipe(v.string(), v.minLength(1)),
+  address: optionalString,
+  mapsUrl: optionalString,
+  notes: optionalString,
+  sortOrder: optionalNumber,
+});
+
+export const UpdateLocationSchema = v.object({
+  podId,
+  locationId: v.pipe(v.string(), v.minLength(1)),
+  name: optionalString,
+  address: optionalString,
+  mapsUrl: optionalString,
+  notes: optionalString,
+  sortOrder: optionalNumber,
+});
+
+export const DeleteLocationSchema = v.object({
+  podId,
+  locationId: v.pipe(v.string(), v.minLength(1)),
+});
+
+export const LinkActionLocationSchema = v.object({
   podId,
   actionId: v.pipe(v.string(), v.minLength(1)),
-  placeText: v.pipe(v.string(), v.minLength(1)),
-  mapsUrl: optionalString,
+  locationId: v.pipe(v.string(), v.minLength(1)),
+  sortOrder: optionalNumber,
+});
+
+export const UnlinkActionLocationSchema = v.object({
+  podId,
+  linkId: v.pipe(v.string(), v.minLength(1)),
+});
+
+export const CreateTransportLibSchema = v.object({
+  podId,
+  label: v.pipe(v.string(), v.minLength(1)),
+  mode: optionalString,
+  durationMinutes: optionalNumber,
+  costAmount: optionalNumber,
+  costCurrency: optionalString,
+  fromLocationId: optionalString,
+  toLocationId: optionalString,
   notes: optionalString,
   sortOrder: optionalNumber,
 });
 
-export const UpdateActivityPlaceSchema = v.object({
+export const UpdateTransportLibSchema = v.object({
   podId,
-  placeId: v.pipe(v.string(), v.minLength(1)),
-  placeText: optionalString,
-  mapsUrl: optionalString,
+  transportLibId: v.pipe(v.string(), v.minLength(1)),
+  label: optionalString,
+  mode: optionalString,
+  durationMinutes: optionalNumber,
+  costAmount: optionalNumber,
+  costCurrency: optionalString,
+  fromLocationId: optionalString,
+  toLocationId: optionalString,
   notes: optionalString,
   sortOrder: optionalNumber,
 });
 
-export const DeleteActivityPlaceSchema = v.object({
+export const DeleteTransportLibSchema = v.object({
   podId,
-  placeId: v.pipe(v.string(), v.minLength(1)),
+  transportLibId: v.pipe(v.string(), v.minLength(1)),
+});
+
+export const LinkActionTransportSchema = v.object({
+  podId,
+  actionId: v.pipe(v.string(), v.minLength(1)),
+  transportLibId: v.pipe(v.string(), v.minLength(1)),
+  sortOrder: optionalNumber,
+});
+
+export const UnlinkActionTransportSchema = v.object({
+  podId,
+  linkId: v.pipe(v.string(), v.minLength(1)),
 });

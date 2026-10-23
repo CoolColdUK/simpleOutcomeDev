@@ -121,6 +121,9 @@ export async function updateAgentTpAction(request: Request, input: unknown): Pro
   if ('url' in args) updates.url = args.url;
   if ('notes' in args) updates.notes = args.notes;
   if ('selectedRouteId' in args) updates.selected_route_id = args.selectedRouteId;
+  if ('fromLocationId' in args) updates.from_location_id = args.fromLocationId;
+  if ('toLocationId' in args) updates.to_location_id = args.toLocationId;
+  if ('durationMinutes' in args) updates.duration_minutes = args.durationMinutes;
   if ('sortOrder' in args) updates.sort_order = args.sortOrder;
   
   // Handle timezone conversions for check-in/check-out
