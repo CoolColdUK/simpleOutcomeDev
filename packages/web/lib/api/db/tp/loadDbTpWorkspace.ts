@@ -77,6 +77,11 @@ export interface DbTpLocation {
   readonly address?: string;
   readonly mapsUrl?: string;
   readonly notes?: string;
+  readonly openTime?: string;
+  readonly closeTime?: string;
+  readonly website?: string;
+  readonly email?: string;
+  readonly phone?: string;
   readonly sortOrder: number;
 }
 
@@ -91,7 +96,7 @@ export interface DbTpTransportLib {
   readonly id: string;
   readonly tripId: string;
   readonly label: string;
-  readonly mode: string;
+  readonly mode?: string;
   readonly durationMinutes?: number;
   readonly costAmount?: number;
   readonly costCurrency?: string;
@@ -106,6 +111,11 @@ export interface DbTpActionTransport {
   readonly actionId: string;
   readonly transportLibId: string;
   readonly sortOrder: number;
+  readonly durationMinutes?: number;
+  readonly costAmount?: number;
+  readonly costCurrency?: string;
+  readonly fromLocationId?: string;
+  readonly toLocationId?: string;
 }
 
 export interface DbTpRoute {
@@ -396,6 +406,11 @@ export async function loadDbTpWorkspace(
         address: l.address ?? undefined,
         mapsUrl: l.maps_url ?? undefined,
         notes: l.notes ?? undefined,
+        openTime: l.open_time ?? undefined,
+        closeTime: l.close_time ?? undefined,
+        website: l.website ?? undefined,
+        email: l.email ?? undefined,
+        phone: l.phone ?? undefined,
         sortOrder: l.sort_order,
       })),
       actionLocations: (actionLocationRes.data ?? []).map((l) => ({
@@ -408,7 +423,7 @@ export async function loadDbTpWorkspace(
         id: t.id,
         tripId: t.trip_id,
         label: t.label,
-        mode: t.mode,
+        mode: t.mode ?? undefined,
         durationMinutes: t.duration_minutes ?? undefined,
         costAmount: num(t.cost_amount),
         costCurrency: t.cost_currency ?? undefined,
@@ -422,6 +437,11 @@ export async function loadDbTpWorkspace(
         actionId: l.action_id,
         transportLibId: l.transport_lib_id,
         sortOrder: l.sort_order,
+        durationMinutes: l.duration_minutes ?? undefined,
+        costAmount: num(l.cost_amount),
+        costCurrency: l.cost_currency ?? undefined,
+        fromLocationId: l.from_location_id ?? undefined,
+        toLocationId: l.to_location_id ?? undefined,
       })),
     },
     error: null,

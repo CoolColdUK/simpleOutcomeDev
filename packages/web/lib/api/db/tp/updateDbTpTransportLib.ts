@@ -5,7 +5,7 @@ import type {Database} from '@/lib/supabase/database';
 
 export interface UpdateDbTpTransportLibInput {
   readonly label?: string;
-  readonly mode?: string;
+  readonly mode?: string | null;
   readonly durationMinutes?: number | null;
   readonly costAmount?: number | null;
   readonly costCurrency?: string | null;

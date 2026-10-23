@@ -18,5 +18,7 @@ export {default as tpDefaultSelectedDayId} from './tpDefaultSelectedDayId';
 export type {TpDayForDefaultSelect} from './tpDefaultSelectedDayId';
 export {default as tpActionDayCardSummary} from './tpActionDayCardSummary';
 export type {TpActionDayCardSummaryInput, TpLocationNameRef} from './tpActionDayCardSummary';
+export {default as tpTagsFromLocationNotes} from './tpTagsFromLocationNotes';
+export {default as tpLocationNotesWithoutTagLines} from './tpLocationNotesWithoutTagLines';
 export {default as tpSpanOverlapsTripDay} from './tpSpanOverlapsTripDay';
 export type {TpDestinationRef} from './tpDestinationRef';

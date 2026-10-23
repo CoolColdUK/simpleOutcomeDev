@@ -9,12 +9,14 @@ import {
   Field,
   Heading,
   HStack,
+  IconButton,
   Input,
   NativeSelect,
   Stack,
   Text,
   Textarea,
 } from '@chakra-ui/react';
+import {ArrowDownIcon, ArrowUpIcon, CrossIcon, DeleteIcon, EditIcon} from '@so/component';
 import {
   canWriteTpPod,
   TpActionKind,
@@ -23,9 +25,13 @@ import {
   tpBudgetRollup,
   tpDayTimelineEntries,
   tpDefaultSelectedDayId,
+  tpTagsFromLocationNotes,
   TpTripStatus,
   type PodRole,
 } from '@so/model';
+import AppIconTooltip from '@/components/app/AppIconTooltip';
+import TripActivityActionDetails from '@/components/tp/TripActivityActionDetails';
+import TripDayCardTags from '@/components/tp/TripDayCardTags';
 import loadDbTpWorkspace, {type DbTpAction, type DbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import {deleteDbTpActionForBrowser} from '@/lib/api/db/tp/deleteDbTpAction';
 import createDbTpTripBundle from '@/lib/api/db/tp/createDbTpTripBundle';
@@ -564,17 +570,34 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
               const action = data.actions.find((a) => a.id === entry.actionId);
               const expanded = expandedActionId === entry.actionId;
               const canonicalIdx = canonicalTimelineIds.indexOf(entry.actionId);
+              const title = action?.title ?? entry.title;
+              const activityTags =
+                action !== undefined && entry.kind === TpActionKind.ACTIVITY
+                  ? tpTagsFromLocationNotes(
+                      data.actionLocations
+                        .filter((l) => l.actionId === action.id)
+                        .sort((a, b) => a.sortOrder - b.sortOrder)
+                        .map((l) => data.locations.find((loc) => loc.id === l.locationId)?.notes),
+                    )
+                  : [];
+              const showActivityEdit =
+                action === undefined
+                  ? false
+                  : entry.kind === TpActionKind.ACTIVITY
+                    ? canWrite && entry.displayMode === 'canonical'
+                    : true;
               return (
                 <Box key={`${entry.actionId}-${entry.displayMode}`} borderWidth="1px" borderRadius="md" p={3}>
-                  <HStack justify="space-between" wrap="wrap" gap={2}>
-                    <HStack>
+                  <HStack justify="space-between" wrap="wrap" gap={2} align="flex-start">
+                    <HStack align="flex-start">
                       <Badge>{entry.kind}</Badge>
                       {entry.displayMode === 'mirror' ? <Badge variant="outline">mirror</Badge> : null}
-                      <Stack gap={0}>
+                      <Stack gap={1}>
                         <Text fontWeight="medium">{entry.title}</Text>
                         {action !== undefined && actionCardSummary(action) !== '' ? (
                           <Text fontSize="sm" color="fg.muted">{actionCardSummary(action)}</Text>
                         ) : null}
+                        {activityTags.length > 0 ? <TripDayCardTags tags={activityTags} max={4} /> : null}
                       </Stack>
                     </HStack>
                     <HStack>
@@ -582,53 +605,71 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                         <Button
                           size="xs"
                           variant="outline"
-                          onClick={() => {
-                            setSelectedDayId(action.anchorDayId);
-                            setExpandedActionId(entry.actionId);
-                          }}
+                          onClick={() => setSelectedDayId(action.anchorDayId)}
                         >
                           Anchor day
                         </Button>
                       ) : null}
                       {entry.displayMode === 'canonical' && canWrite ? (
                         <>
-                          <Button
-                            size="xs"
-                            variant="outline"
-                            disabled={canonicalIdx <= 0}
-                            onClick={() => void moveCanonicalAction(entry.actionId, 'up')}
-                          >
-                            ↑
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="outline"
-                            disabled={canonicalIdx < 0 || canonicalIdx >= canonicalTimelineIds.length - 1}
-                            onClick={() => void moveCanonicalAction(entry.actionId, 'down')}
-                          >
-                            ↓
-                          </Button>
+                          <AppIconTooltip label={`Move ${entry.kind} ${title} up`}>
+                            <IconButton
+                              aria-label={`Move ${entry.kind} ${title} up`}
+                              size="xs"
+                              variant="outline"
+                              disabled={canonicalIdx <= 0}
+                              onClick={() => void moveCanonicalAction(entry.actionId, 'up')}
+                            >
+                              <ArrowUpIcon size={14} />
+                            </IconButton>
+                          </AppIconTooltip>
+                          <AppIconTooltip label={`Move ${entry.kind} ${title} down`}>
+                            <IconButton
+                              aria-label={`Move ${entry.kind} ${title} down`}
+                              size="xs"
+                              variant="outline"
+                              disabled={canonicalIdx < 0 || canonicalIdx >= canonicalTimelineIds.length - 1}
+                              onClick={() => void moveCanonicalAction(entry.actionId, 'down')}
+                            >
+                              <ArrowDownIcon size={14} />
+                            </IconButton>
+                          </AppIconTooltip>
                         </>
                       ) : null}
                       {canWrite ? (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          colorPalette="red"
-                          onClick={() => void deleteAction(entry.actionId)}
-                        >
-                          Delete
-                        </Button>
+                        <AppIconTooltip label={`Delete ${entry.kind} ${title}`}>
+                          <IconButton
+                            aria-label={`Delete ${entry.kind} ${title}`}
+                            size="xs"
+                            variant="ghost"
+                            colorPalette="red"
+                            onClick={() => void deleteAction(entry.actionId)}
+                          >
+                            <DeleteIcon size={14} />
+                          </IconButton>
+                        </AppIconTooltip>
                       ) : null}
-                      <Button
-                        size="xs"
-                        variant={expanded ? 'solid' : 'outline'}
-                        onClick={() => setExpandedActionId(expanded ? undefined : entry.actionId)}
-                      >
-                        {expanded ? 'Close' : 'Edit'}
-                      </Button>
+                      {showActivityEdit ? (
+                        <AppIconTooltip label={expanded ? `Close editor ${title}` : `Edit ${entry.kind} ${title}`}>
+                          <IconButton
+                            aria-label={expanded ? `Close editor ${title}` : `Edit ${entry.kind} ${title}`}
+                            size="xs"
+                            variant={expanded ? 'solid' : 'outline'}
+                            onClick={() => setExpandedActionId(expanded ? undefined : entry.actionId)}
+                          >
+                            {expanded ? <CrossIcon size={14} /> : <EditIcon size={14} />}
+                          </IconButton>
+                        </AppIconTooltip>
+                      ) : null}
                     </HStack>
                   </HStack>
+                  {action !== undefined && entry.kind === TpActionKind.ACTIVITY && !expanded ? (
+                    <TripActivityActionDetails
+                      action={action}
+                      locations={data.locations}
+                      actionLocations={data.actionLocations}
+                    />
+                  ) : null}
                   {expanded && action !== undefined && trip !== undefined ? (
                     <Box mt={3} pt={3} borderTopWidth="1px">
                       {action.kind === TpActionKind.STAY ? (

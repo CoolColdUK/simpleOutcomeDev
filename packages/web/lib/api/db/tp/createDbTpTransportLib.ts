@@ -6,7 +6,7 @@ import type {Database} from '@/lib/supabase/database';
 export interface CreateDbTpTransportLibInput {
   readonly tripId: string;
   readonly label: string;
-  readonly mode?: string;
+  readonly mode?: string | null;
   readonly durationMinutes?: number;
   readonly costAmount?: number;
   readonly costCurrency?: string;
@@ -25,7 +25,7 @@ export async function createDbTpTransportLibForAgent(
     .insert({
       trip_id: input.tripId,
       label: input.label,
-      mode: input.mode ?? 'other',
+      mode: input.mode ?? null,
       duration_minutes: input.durationMinutes ?? null,
       cost_amount: input.costAmount ?? null,
       cost_currency: input.costCurrency ?? null,

@@ -14,6 +14,7 @@ import type {
 } from '@/lib/api/db/tp/loadDbTpWorkspace';
 import createDbTpActionTransport from '@/lib/api/db/tp/createDbTpActionTransport';
 import deleteDbTpActionTransport from '@/lib/api/db/tp/deleteDbTpActionTransport';
+import updateDbTpActionTransport from '@/lib/api/db/tp/updateDbTpActionTransport';
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import createDbTpRoute from '@/lib/api/db/tp/createDbTpRoute';
 import deleteDbTpRoute from '@/lib/api/db/tp/deleteDbTpRoute';
@@ -179,13 +180,18 @@ export default function TripTravelActionEditor({
         actionId: action.id,
         transportLibId,
         sortOrder: travelLinks.length,
+        durationMinutes: lib?.durationMinutes,
+        costAmount: lib?.costAmount,
+        costCurrency: lib?.costCurrency,
+        fromLocationId: lib?.fromLocationId,
+        toLocationId: lib?.toLocationId,
       });
       const routeId = selectedRouteId ?? actionRoutes[0]?.id;
       if (routeId !== undefined && lib !== undefined) {
         const count = transports.filter((t) => t.routeId === routeId).length;
         await createDbTpTransport(routeId, count, {
           id: lib.id,
-          mode: lib.mode,
+          mode: lib.mode ?? 'other',
           durationMinutes: lib.durationMinutes,
           costAmount: lib.costAmount,
           costCurrency: lib.costCurrency,
@@ -315,18 +321,19 @@ export default function TripTravelActionEditor({
       </HStack>
       <Stack gap={2}>
         <Text fontWeight="medium">Linked transports</Text>
-        {travelLinks.map((link) => {
-          const lib = transportLib.find((t) => t.id === link.transportLibId);
-          return (
-            <HStack key={link.id} justify="space-between">
-              <Text>
-                {lib?.label ?? 'Transport'}
-                {lib?.durationMinutes !== undefined ? ` · ${lib.durationMinutes} min` : ''}
-              </Text>
-              <Button size="xs" variant="outline" onClick={() => void unlinkTransportLib(link.id)}>Remove</Button>
-            </HStack>
-          );
-        })}
+        {travelLinks.map((link) => (
+          <ActionTransportLinkRow
+            key={link.id}
+            link={link}
+            lib={transportLib.find((t) => t.id === link.transportLibId)}
+            locations={locations}
+            defaultCurrency={defaultCurrency}
+            canWrite={canWrite}
+            onRemove={() => void unlinkTransportLib(link.id)}
+            onError={onError}
+            onSaved={onSaved}
+          />
+        ))}
         <NativeSelect.Root>
           <NativeSelect.Field value="" onChange={(e) => void linkTransportLib(e.target.value)}>
             <option value="">Add from library…</option>
@@ -384,6 +391,127 @@ export default function TripTravelActionEditor({
           </TripTpCollapsible>
         );
       })}
+    </Stack>
+  );
+}
+
+function effectiveMinutes(link: DbTpActionTransport, lib?: DbTpTransportLib): number | undefined {
+  return link.durationMinutes ?? lib?.durationMinutes;
+}
+
+function effectiveCost(link: DbTpActionTransport, lib?: DbTpTransportLib): number | undefined {
+  return link.costAmount ?? lib?.costAmount;
+}
+
+function effectiveCurrency(link: DbTpActionTransport, lib?: DbTpTransportLib, defaultCurrency?: string): string {
+  return link.costCurrency ?? lib?.costCurrency ?? defaultCurrency ?? '';
+}
+
+function effectiveFromLocationId(link: DbTpActionTransport, lib?: DbTpTransportLib): string {
+  return link.fromLocationId ?? lib?.fromLocationId ?? '';
+}
+
+function effectiveToLocationId(link: DbTpActionTransport, lib?: DbTpTransportLib): string {
+  return link.toLocationId ?? lib?.toLocationId ?? '';
+}
+
+function ActionTransportLinkRow({
+  link,
+  lib,
+  locations,
+  defaultCurrency,
+  canWrite,
+  onRemove,
+  onError,
+  onSaved,
+}: {
+  readonly link: DbTpActionTransport;
+  readonly lib?: DbTpTransportLib;
+  readonly locations: readonly DbTpLocation[];
+  readonly defaultCurrency?: string;
+  readonly canWrite: boolean;
+  readonly onRemove: () => void;
+  readonly onError: (message: string) => void;
+  readonly onSaved: () => void;
+}) {
+  const [duration, setDuration] = useState(effectiveMinutes(link, lib)?.toString() ?? '');
+  const [cost, setCost] = useState(effectiveCost(link, lib)?.toString() ?? '');
+  const [currency, setCurrency] = useState(effectiveCurrency(link, lib, defaultCurrency));
+  const [fromLocationId, setFromLocationId] = useState(effectiveFromLocationId(link, lib));
+  const [toLocationId, setToLocationId] = useState(effectiveToLocationId(link, lib));
+
+  const save = async (): Promise<void> => {
+    try {
+      await updateDbTpActionTransport(link.id, {
+        durationMinutes: duration === '' ? null : Number(duration),
+        costAmount: cost === '' ? null : Number(cost),
+        costCurrency: currency === '' ? null : currency,
+        fromLocationId: fromLocationId === '' ? null : fromLocationId,
+        toLocationId: toLocationId === '' ? null : toLocationId,
+      });
+      onSaved();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const locName = (id: string): string => locations.find((l) => l.id === id)?.name ?? '—';
+
+  return (
+    <Stack gap={2} pl={2} borderLeftWidth="2px">
+      <Text fontWeight="medium">{lib?.label ?? 'Transport'}</Text>
+      {canWrite ? (
+        <>
+          <HStack wrap="wrap">
+            <Field.Root>
+              <Field.Label>Duration (min)</Field.Label>
+              <Input value={duration} onChange={(e) => setDuration(e.target.value)} size="sm" />
+            </Field.Root>
+            <Field.Root>
+              <Field.Label>Price</Field.Label>
+              <Input value={cost} onChange={(e) => setCost(e.target.value)} size="sm" />
+            </Field.Root>
+            <Field.Root>
+              <Field.Label>Currency</Field.Label>
+              <Input value={currency} onChange={(e) => setCurrency(e.target.value)} size="sm" width="5rem" />
+            </Field.Root>
+          </HStack>
+          <HStack wrap="wrap">
+            <Field.Root flex="1" minW="10rem">
+              <Field.Label>From location</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field value={fromLocationId} onChange={(e) => setFromLocationId(e.target.value)}>
+                  <option value="">—</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </NativeSelect.Field>
+              </NativeSelect.Root>
+            </Field.Root>
+            <Field.Root flex="1" minW="10rem">
+              <Field.Label>To location</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field value={toLocationId} onChange={(e) => setToLocationId(e.target.value)}>
+                  <option value="">—</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </NativeSelect.Field>
+              </NativeSelect.Root>
+            </Field.Root>
+          </HStack>
+          <HStack>
+            <Button size="xs" colorPalette="brand" onClick={() => void save()}>Save link</Button>
+            <Button size="xs" variant="outline" onClick={onRemove}>Remove</Button>
+          </HStack>
+        </>
+      ) : (
+        <Text fontSize="sm" color="fg.muted">
+          {duration !== '' ? `${duration} min` : ''}
+          {fromLocationId !== '' ? ` · ${locName(fromLocationId)}` : ''}
+          {toLocationId !== '' ? ` → ${locName(toLocationId)}` : ''}
+        </Text>
+      )}
     </Stack>
   );
 }

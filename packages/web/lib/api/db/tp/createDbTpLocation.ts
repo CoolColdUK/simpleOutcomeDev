@@ -9,6 +9,11 @@ export interface CreateDbTpLocationInput {
   readonly address?: string;
   readonly mapsUrl?: string;
   readonly notes?: string;
+  readonly openTime?: string;
+  readonly closeTime?: string;
+  readonly website?: string;
+  readonly email?: string;
+  readonly phone?: string;
   readonly sortOrder?: number;
 }
 
@@ -24,6 +29,11 @@ export async function createDbTpLocationForAgent(
       address: input.address ?? null,
       maps_url: input.mapsUrl ?? null,
       notes: input.notes ?? null,
+      open_time: input.openTime ?? null,
+      close_time: input.closeTime ?? null,
+      website: input.website ?? null,
+      email: input.email ?? null,
+      phone: input.phone ?? null,
       sort_order: input.sortOrder ?? 0,
     })
     .select('*')

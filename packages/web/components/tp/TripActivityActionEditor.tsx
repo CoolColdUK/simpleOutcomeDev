@@ -1,7 +1,7 @@
 'use client';
 
 import {useMemo, useState} from 'react';
-import {Button, Field, HStack, Input, NativeSelect, Stack, Text} from '@chakra-ui/react';
+import {Button, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
 import type {DbTpAction, DbTpActionLocation, DbTpLocation} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import createDbTpActionLocation from '@/lib/api/db/tp/createDbTpActionLocation';
@@ -124,7 +124,7 @@ export default function TripActivityActionEditor({
       </HStack>
       <Field.Root>
         <Field.Label>Notes</Field.Label>
-        <Input value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!canWrite} />
+        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!canWrite} rows={3} />
       </Field.Root>
       <Stack gap={2}>
         <Text fontWeight="medium">Locations</Text>

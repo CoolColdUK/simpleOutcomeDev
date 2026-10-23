@@ -1,18 +1,30 @@
-import {ApiKeyAction} from '@so/model';
-import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
+import {ApiKeyAction, CreateLocationSchema, UpdateLocationSchema, safeParseSchema} from '@so/model';
+import {agentErr, agentOk, agentValidation, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
+import {mapAgentTpLocationRow} from '@/lib/api/agent/tpAgentResourceMaps';
 import {tpCall, ownedTpRow, requireExistingTpTripId} from '@/lib/api/agent/tpAgentCall';
 import {createDbTpLocationForAgent} from '@/lib/api/db/tp/createDbTpLocation';
 import {updateDbTpLocationForAgent} from '@/lib/api/db/tp/updateDbTpLocation';
 import {deleteDbTpLocationForAgent} from '@/lib/api/db/tp/deleteDbTpLocation';
 
 export async function createAgentTpLocation(request: Request, input: unknown): Promise<AgentResult<unknown>> {
-  const args = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
-  const podId = typeof args.podId === 'string' ? args.podId : '';
-  const name = typeof args.name === 'string' ? args.name : '';
-  if (!podId || !name) {
-    return agentErr(400, 'validation_error', 'podId and name are required');
+  const parsed = safeParseSchema(CreateLocationSchema, input);
+  if (!parsed.ok) {
+    return agentValidation(parsed.message);
   }
+  const {
+    podId,
+    name,
+    address,
+    mapsUrl,
+    notes,
+    openTime,
+    closeTime,
+    website,
+    email,
+    phone,
+    sortOrder,
+  } = parsed.value;
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
   if (!ctx.ok) {
     return ctx;
@@ -24,10 +36,15 @@ export async function createAgentTpLocation(request: Request, input: unknown): P
   const result = await createDbTpLocationForAgent(ctx.data.supabase, {
     tripId: tripId.data,
     name,
-    address: typeof args.address === 'string' ? args.address : undefined,
-    mapsUrl: typeof args.mapsUrl === 'string' ? args.mapsUrl : undefined,
-    notes: typeof args.notes === 'string' ? args.notes : undefined,
-    sortOrder: typeof args.sortOrder === 'number' ? args.sortOrder : 0,
+    address,
+    mapsUrl,
+    notes,
+    openTime,
+    closeTime,
+    website,
+    email,
+    phone,
+    sortOrder: sortOrder ?? 0,
   });
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) {
@@ -36,16 +53,16 @@ export async function createAgentTpLocation(request: Request, input: unknown): P
   if (result.data === null) {
     return agentErr(500, 'internal_error', 'Failed to create location');
   }
-  return agentOk(result.data);
+  return agentOk(mapAgentTpLocationRow(result.data));
 }
 
 export async function updateAgentTpLocation(request: Request, input: unknown): Promise<AgentResult<unknown>> {
-  const args = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
-  const podId = typeof args.podId === 'string' ? args.podId : '';
-  const locationId = typeof args.locationId === 'string' ? args.locationId : '';
-  if (!podId || !locationId) {
-    return agentErr(400, 'validation_error', 'podId and locationId are required');
+  const parsed = safeParseSchema(UpdateLocationSchema, input);
+  if (!parsed.ok) {
+    return agentValidation(parsed.message);
   }
+  const {podId, locationId, name, address, mapsUrl, notes, openTime, closeTime, website, email, phone, sortOrder} =
+    parsed.value;
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.UPDATE));
   if (!ctx.ok) {
     return ctx;
@@ -54,12 +71,18 @@ export async function updateAgentTpLocation(request: Request, input: unknown): P
   if (!owned.ok) {
     return owned;
   }
+  const args = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
   const result = await updateDbTpLocationForAgent(ctx.data.supabase, locationId, {
-    name: typeof args.name === 'string' ? args.name : undefined,
-    address: 'address' in args ? (typeof args.address === 'string' ? args.address : null) : undefined,
-    mapsUrl: 'mapsUrl' in args ? (typeof args.mapsUrl === 'string' ? args.mapsUrl : null) : undefined,
-    notes: 'notes' in args ? (typeof args.notes === 'string' ? args.notes : null) : undefined,
-    sortOrder: typeof args.sortOrder === 'number' ? args.sortOrder : undefined,
+    name,
+    address: 'address' in args ? (address ?? null) : undefined,
+    mapsUrl: 'mapsUrl' in args ? (mapsUrl ?? null) : undefined,
+    notes: 'notes' in args ? (notes ?? null) : undefined,
+    openTime: 'openTime' in args ? (openTime ?? null) : undefined,
+    closeTime: 'closeTime' in args ? (closeTime ?? null) : undefined,
+    website: 'website' in args ? (website ?? null) : undefined,
+    email: 'email' in args ? (email ?? null) : undefined,
+    phone: 'phone' in args ? (phone ?? null) : undefined,
+    sortOrder,
   });
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) {
@@ -68,7 +91,7 @@ export async function updateAgentTpLocation(request: Request, input: unknown): P
   if (result.data === null) {
     return agentErr(404, 'not_found', 'Location not found');
   }
-  return agentOk(result.data);
+  return agentOk(mapAgentTpLocationRow(result.data));
 }
 
 export async function deleteAgentTpLocation(request: Request, input: unknown): Promise<AgentResult<unknown>> {

@@ -8,6 +8,8 @@ import * as v from 'valibot';
 const podId = v.pipe(v.string(), v.minLength(1));
 const optionalString = v.optional(v.string());
 const optionalNumber = v.optional(v.number());
+const optionalNullString = v.optional(v.union([v.string(), v.null()]));
+const optionalNullNumber = v.optional(v.union([v.number(), v.null()]));
 
 // Trip
 export const CreateTripSchema = v.object({
@@ -243,6 +245,11 @@ export const CreateLocationSchema = v.object({
   address: optionalString,
   mapsUrl: optionalString,
   notes: optionalString,
+  openTime: optionalString,
+  closeTime: optionalString,
+  website: optionalString,
+  email: optionalString,
+  phone: optionalString,
   sortOrder: optionalNumber,
 });
 
@@ -250,9 +257,14 @@ export const UpdateLocationSchema = v.object({
   podId,
   locationId: v.pipe(v.string(), v.minLength(1)),
   name: optionalString,
-  address: optionalString,
-  mapsUrl: optionalString,
-  notes: optionalString,
+  address: optionalNullString,
+  mapsUrl: optionalNullString,
+  notes: optionalNullString,
+  openTime: optionalNullString,
+  closeTime: optionalNullString,
+  website: optionalNullString,
+  email: optionalNullString,
+  phone: optionalNullString,
   sortOrder: optionalNumber,
 });
 
@@ -290,13 +302,13 @@ export const UpdateTransportLibSchema = v.object({
   podId,
   transportLibId: v.pipe(v.string(), v.minLength(1)),
   label: optionalString,
-  mode: optionalString,
-  durationMinutes: optionalNumber,
-  costAmount: optionalNumber,
-  costCurrency: optionalString,
-  fromLocationId: optionalString,
-  toLocationId: optionalString,
-  notes: optionalString,
+  mode: optionalNullString,
+  durationMinutes: optionalNullNumber,
+  costAmount: optionalNullNumber,
+  costCurrency: optionalNullString,
+  fromLocationId: optionalNullString,
+  toLocationId: optionalNullString,
+  notes: optionalNullString,
   sortOrder: optionalNumber,
 });
 
@@ -310,6 +322,22 @@ export const LinkActionTransportSchema = v.object({
   actionId: v.pipe(v.string(), v.minLength(1)),
   transportLibId: v.pipe(v.string(), v.minLength(1)),
   sortOrder: optionalNumber,
+  durationMinutes: optionalNumber,
+  costAmount: optionalNumber,
+  costCurrency: optionalString,
+  fromLocationId: optionalString,
+  toLocationId: optionalString,
+});
+
+export const UpdateActionTransportSchema = v.object({
+  podId,
+  linkId: v.pipe(v.string(), v.minLength(1)),
+  sortOrder: optionalNumber,
+  durationMinutes: optionalNullNumber,
+  costAmount: optionalNullNumber,
+  costCurrency: optionalNullString,
+  fromLocationId: optionalNullString,
+  toLocationId: optionalNullString,
 });
 
 export const UnlinkActionTransportSchema = v.object({
