@@ -34,16 +34,18 @@ export async function createAgentTpTransport(request: Request, input: unknown): 
   if (typeof args.departLocalTime === 'string' && typeof args.departTimezone === 'string') {
     try {
       departAt = localTimeToUtc(args.departLocalTime, args.departTimezone);
-    } catch (e) {
-      return agentErr(400, 'validation_error', `Invalid departure time: ${e.message}`);
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : String(e);
+      return agentErr(400, 'validation_error', `Invalid departure time: ${detail}`);
     }
   }
   
   if (typeof args.arriveLocalTime === 'string' && typeof args.arriveTimezone === 'string') {
     try {
       arriveAt = localTimeToUtc(args.arriveLocalTime, args.arriveTimezone);
-    } catch (e) {
-      return agentErr(400, 'validation_error', `Invalid arrival time: ${e.message}`);
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : String(e);
+      return agentErr(400, 'validation_error', `Invalid arrival time: ${detail}`);
     }
   }
   
@@ -103,8 +105,9 @@ export async function updateAgentTpTransport(request: Request, input: unknown): 
     try {
       updates.depart_at = localTimeToUtc(String(args.departLocalTime), String(args.departTimezone));
       updates.depart_timezone = args.departTimezone;
-    } catch (e) {
-      return agentErr(400, 'validation_error', `Invalid departure time: ${e.message}`);
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : String(e);
+      return agentErr(400, 'validation_error', `Invalid departure time: ${detail}`);
     }
   }
   
@@ -112,8 +115,9 @@ export async function updateAgentTpTransport(request: Request, input: unknown): 
     try {
       updates.arrive_at = localTimeToUtc(String(args.arriveLocalTime), String(args.arriveTimezone));
       updates.arrive_timezone = args.arriveTimezone;
-    } catch (e) {
-      return agentErr(400, 'validation_error', `Invalid arrival time: ${e.message}`);
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : String(e);
+      return agentErr(400, 'validation_error', `Invalid arrival time: ${detail}`);
     }
   }
   

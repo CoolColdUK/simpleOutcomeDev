@@ -56,21 +56,22 @@ export async function updateAgentTpTrip(request: Request, input: unknown): Promi
     return ctx;
   }
   
-  const updates: UpdateTpTripInput = {podId};
-  
-  if ('title' in args && typeof args.title === 'string') updates.title = args.title;
-  if ('timezone' in args && typeof args.timezone === 'string') updates.timezone = args.timezone;
-  if ('startDate' in args && typeof args.startDate === 'string') updates.startDate = args.startDate;
-  if ('endDate' in args && typeof args.endDate === 'string') updates.endDate = args.endDate;
-  if ('status' in args && typeof args.status === 'string') updates.status = args.status;
-  if ('budgetAmount' in args && typeof args.budgetAmount === 'number') updates.budgetAmount = args.budgetAmount;
-  if ('budgetCurrency' in args && typeof args.budgetCurrency === 'string') updates.budgetCurrency = args.budgetCurrency;
-  if ('defaultCurrency' in args && typeof args.defaultCurrency === 'string') updates.defaultCurrency = args.defaultCurrency;
-  if ('mapsUrl' in args && typeof args.mapsUrl === 'string') updates.mapsUrl = args.mapsUrl;
-  if ('notes' in args && typeof args.notes === 'string') updates.notes = args.notes;
-  
+  const tripInput: UpdateTpTripInput = {
+    podId,
+    ...(typeof args.title === 'string' ? {title: args.title} : {}),
+    ...(typeof args.timezone === 'string' ? {timezone: args.timezone} : {}),
+    ...(typeof args.startDate === 'string' ? {startDate: args.startDate} : {}),
+    ...(typeof args.endDate === 'string' ? {endDate: args.endDate} : {}),
+    ...(typeof args.status === 'string' ? {status: args.status} : {}),
+    ...(typeof args.budgetAmount === 'number' ? {budgetAmount: args.budgetAmount} : {}),
+    ...(typeof args.budgetCurrency === 'string' ? {budgetCurrency: args.budgetCurrency} : {}),
+    ...(typeof args.defaultCurrency === 'string' ? {defaultCurrency: args.defaultCurrency} : {}),
+    ...(typeof args.mapsUrl === 'string' ? {mapsUrl: args.mapsUrl} : {}),
+    ...(typeof args.notes === 'string' ? {notes: args.notes} : {}),
+  };
+
   const {default: updateDbTpTrip} = await import('@/lib/api/db/tp/updateDbTpTrip');
-  const result = await updateDbTpTrip(ctx.data.supabase, updates);
+  const result = await updateDbTpTrip(ctx.data.supabase, tripInput);
   
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) {
