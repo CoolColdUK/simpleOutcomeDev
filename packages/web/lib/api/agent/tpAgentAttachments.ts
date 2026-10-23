@@ -5,7 +5,7 @@
 import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
-import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
+import {tpCall, ownedTpRow, requireTpTripId} from '@/lib/api/agent/tpAgentCall';
 import listDbTpAttachments from '@/lib/api/db/tp/listDbTpAttachments';
 import uploadDbTpAttachment from '@/lib/api/db/tp/uploadDbTpAttachment';
 import {deleteDbTpAttachmentForAgent} from '@/lib/api/db/tp/deleteDbTpAttachment';
@@ -62,12 +62,9 @@ export async function uploadAgentTpAttachment(request: Request, input: unknown):
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
   if (!ctx.ok) return ctx;
   
-  // Get trip ID
-  const trip = await ctx.data.supabase.from('tp_trip').select('id').eq('pod_id', podId).single();
-  const tripErr = dbErr(trip.error);
-  if (tripErr !== undefined) return tripErr;
-  if (trip.data === null) return agentErr(404, 'not_found', 'Trip not found');
-  
+  const tripId = await requireTpTripId(ctx.data, podId);
+  if (!tripId.ok) return tripId;
+
   // Verify parent ownership
   if (typeof args.transportId === 'string') {
     const owned = await ownedTpRow(ctx.data, 'tp_transport', args.transportId, podId);
@@ -81,7 +78,7 @@ export async function uploadAgentTpAttachment(request: Request, input: unknown):
   
   const result = await uploadDbTpAttachment(ctx.data.supabase, {
     podId,
-    tripId: trip.data.id,
+    tripId: tripId.data,
     transportId: typeof args.transportId === 'string' ? args.transportId : undefined,
     destinationId: typeof args.destinationId === 'string' ? args.destinationId : undefined,
     fileName,

@@ -5,7 +5,7 @@
 import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
-import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
+import {tpCall, ownedTpRow, requireTpTripId} from '@/lib/api/agent/tpAgentCall';
 import createDbTpDestination from '@/lib/api/db/tp/createDbTpDestination';
 import {updateDbTpDestinationForAgent} from '@/lib/api/db/tp/updateDbTpDestination';
 import deleteDbTpDestination from '@/lib/api/db/tp/deleteDbTpDestination';
@@ -22,14 +22,11 @@ export async function createAgentTpDestination(request: Request, input: unknown)
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
   if (!ctx.ok) return ctx;
   
-  // Get trip ID
-  const trip = await ctx.data.supabase.from('tp_trip').select('id').eq('pod_id', podId).single();
-  const tripErr = dbErr(trip.error);
-  if (tripErr !== undefined) return tripErr;
-  if (trip.data === null) return agentErr(404, 'not_found', 'Trip not found');
-  
+  const tripId = await requireTpTripId(ctx.data, podId);
+  if (!tripId.ok) return tripId;
+
   const result = await createDbTpDestination(ctx.data.supabase, {
-    tripId: trip.data.id,
+    tripId: tripId.data,
     name,
     sortOrder: typeof args.sortOrder === 'number' ? args.sortOrder : 0,
     mapsUrl: typeof args.mapsUrl === 'string' ? args.mapsUrl : undefined,

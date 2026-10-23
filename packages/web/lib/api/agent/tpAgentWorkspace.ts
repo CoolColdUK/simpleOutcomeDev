@@ -6,6 +6,7 @@ import {ApiKeyAction} from '@so/model';
 import {agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall} from '@/lib/api/agent/tpAgentCall';
+import ensureDbTpTrip from '@/lib/api/db/tp/ensureDbTpTrip';
 import {
   loadDbTpWorkspace,
   type DbTpAction,
@@ -30,10 +31,20 @@ export async function getAgentTpWorkspace(request: Request, input: unknown): Pro
     return ctx;
   }
   
+  const ensured = await ensureDbTpTrip(ctx.data.supabase, podId);
+  const ensuredErr = dbErr(ensured.error);
+  if (ensuredErr !== undefined) {
+    return ensuredErr;
+  }
+
   const workspace = await loadDbTpWorkspace(ctx.data.supabase, podId);
   const workspaceErr = dbErr(workspace.error);
   if (workspaceErr !== undefined) {
     return workspaceErr;
+  }
+
+  if (workspace.data?.trip === undefined) {
+    return {ok: false, status: 500, code: 'internal_error', message: 'Trip workspace is missing after ensure'};
   }
   
   return agentOk(workspace.data);
@@ -82,8 +93,6 @@ export async function updateAgentTpTrip(request: Request, input: unknown): Promi
     return {ok: false, status: 404, code: 'not_found', message: 'Trip not found'};
   }
   
-  // TODO: If dates changed, sync tp_day rows (syncTpDaysForTrip)
-  
   return agentOk(result.data);
 }
 
@@ -104,6 +113,12 @@ export async function getAgentTpBudgetRollup(request: Request, input: unknown): 
   }
   
   // Load workspace to compute budget
+  const ensured = await ensureDbTpTrip(ctx.data.supabase, podId);
+  const ensuredErr = dbErr(ensured.error);
+  if (ensuredErr !== undefined) {
+    return ensuredErr;
+  }
+
   const workspace = await loadDbTpWorkspace(ctx.data.supabase, podId);
   const workspaceErr = dbErr(workspace.error);
   if (workspaceErr !== undefined) {

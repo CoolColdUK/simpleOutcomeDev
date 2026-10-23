@@ -5,9 +5,22 @@
 import {ApiKeyAction, ApiKeyResource} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import type {AgentContext} from '@/lib/api/agent/loadAgentContext';
+import resolveDbTpTripId from '@/lib/api/db/tp/resolveDbTpTripId';
 
 export function tpCall(podId: string, action: ApiKeyAction) {
   return {podId, resource: ApiKeyResource.TRIP, action};
+}
+
+export async function requireTpTripId(ctx: AgentContext, podId: string): Promise<AgentResult<string>> {
+  const resolved = await resolveDbTpTripId(ctx.supabase, podId);
+  const resolvedErr = dbErr(resolved.error);
+  if (resolvedErr !== undefined) {
+    return resolvedErr;
+  }
+  if (resolved.tripId === null) {
+    return agentErr(500, 'internal_error', 'Trip id is missing');
+  }
+  return agentOk(resolved.tripId);
 }
 
 export async function ownedTpRow(
