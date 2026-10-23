@@ -65,7 +65,7 @@ export async function updateDbTpActionForAgent(
 
   return supabase
     .from('tp_action')
-    .update(updates)
+    .update(updates as Database['public']['Tables']['tp_action']['Update'])
     .eq('id', actionId)
     .select('*')
     .single();

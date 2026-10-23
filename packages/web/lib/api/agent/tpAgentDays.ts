@@ -24,17 +24,14 @@ export async function updateAgentTpDay(request: Request, input: unknown): Promis
   const owned = await ownedTpRow(ctx.data, 'tp_day', dayId, podId);
   if (!owned.ok) return owned;
   
-  const updates: Omit<UpdateTpDayInput, 'dayId'> = {};
-  if ('dayTitle' in args && typeof args.dayTitle === 'string') updates.day_title = args.dayTitle;
-  if ('dayNotes' in args && typeof args.dayNotes === 'string') updates.day_notes = args.dayNotes;
-  if ('primaryDestinationId' in args && typeof args.primaryDestinationId === 'string') {
-    updates.primary_destination_id = args.primaryDestinationId;
-  }
-  
-  const result = await updateDbTpDayForAgent(ctx.data.supabase, {
+  const dayInput: UpdateTpDayInput = {
     dayId,
-    ...updates,
-  });
+    ...(typeof args.dayTitle === 'string' ? {day_title: args.dayTitle} : {}),
+    ...(typeof args.dayNotes === 'string' ? {day_notes: args.dayNotes} : {}),
+    ...(typeof args.primaryDestinationId === 'string' ? {primary_destination_id: args.primaryDestinationId} : {}),
+  };
+
+  const result = await updateDbTpDayForAgent(ctx.data.supabase, dayInput);
   
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;

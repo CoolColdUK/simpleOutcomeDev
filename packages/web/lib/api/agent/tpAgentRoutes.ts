@@ -6,6 +6,7 @@ import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
+import type {Database} from '@/lib/supabase/database';
 import {createDbTpRouteForAgent} from '@/lib/api/db/tp/createDbTpRoute';
 import {deleteDbTpRouteForAgent} from '@/lib/api/db/tp/deleteDbTpRoute';
 import {selectDbTpRouteForAgent} from '@/lib/api/db/tp/selectDbTpRoute';
@@ -64,7 +65,7 @@ export async function updateAgentTpRoute(request: Request, input: unknown): Prom
   
   const result = await ctx.data.supabase
     .from('tp_route')
-    .update(updates)
+    .update(updates as Database['public']['Tables']['tp_route']['Update'])
     .eq('id', routeId)
     .select('*')
     .single();

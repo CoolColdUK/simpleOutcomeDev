@@ -39,14 +39,14 @@ export async function createAgentTpAction(request: Request, input: unknown): Pro
       try {
         checkInAt = localTimeToUtc(args.checkInLocalTime, args.checkInTimezone);
       } catch (e) {
-        return agentErr(400, 'validation_error', `Invalid check-in time: ${e.message}`);
+        return agentErr(400, 'validation_error', `Invalid check-in time: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
     if (typeof args.checkOutLocalTime === 'string' && typeof args.checkOutTimezone === 'string') {
       try {
         checkOutAt = localTimeToUtc(args.checkOutLocalTime, args.checkOutTimezone);
       } catch (e) {
-        return agentErr(400, 'validation_error', `Invalid check-out time: ${e.message}`);
+        return agentErr(400, 'validation_error', `Invalid check-out time: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   }
@@ -130,7 +130,7 @@ export async function updateAgentTpAction(request: Request, input: unknown): Pro
       updates.check_in_at = localTimeToUtc(String(args.checkInLocalTime), String(args.checkInTimezone));
       updates.check_in_timezone = args.checkInTimezone;
     } catch (e) {
-      return agentErr(400, 'validation_error', `Invalid check-in time: ${e.message}`);
+      return agentErr(400, 'validation_error', `Invalid check-in time: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
   if ('checkOutLocalTime' in args && 'checkOutTimezone' in args) {
@@ -138,7 +138,7 @@ export async function updateAgentTpAction(request: Request, input: unknown): Pro
       updates.check_out_at = localTimeToUtc(String(args.checkOutLocalTime), String(args.checkOutTimezone));
       updates.check_out_timezone = args.checkOutTimezone;
     } catch (e) {
-      return agentErr(400, 'validation_error', `Invalid check-out time: ${e.message}`);
+      return agentErr(400, 'validation_error', `Invalid check-out time: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
   

@@ -75,7 +75,7 @@ export async function handleMcpPost(request: Request): Promise<Response> {
   if (body.method === 'tools/call') {
     const params = typeof body.params === 'object' && body.params !== null ? (body.params as {name?: unknown; arguments?: unknown}) : undefined;
     const name = typeof params?.name === 'string' ? params.name : '';
-    const tool = findMcpTool(name);
+    const tool = findMcpTool(name, MCP_TOOLS);
     if (tool === undefined) {
       return rpcError(body.id, -32602, 'Unknown tool');
     }

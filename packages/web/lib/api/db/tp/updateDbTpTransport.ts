@@ -55,7 +55,7 @@ export async function updateDbTpTransportForAgent(
 
   return supabase
     .from('tp_transport')
-    .update(updates)
+    .update(updates as Database['public']['Tables']['tp_transport']['Update'])
     .eq('id', transportId)
     .select('*')
     .single();

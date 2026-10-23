@@ -87,7 +87,7 @@ export async function uploadAgentTpAttachment(request: Request, input: unknown):
     fileName,
     mimeType,
     contentBase64,
-    uploadedBy: ctx.data.pod.created_by ?? 'unknown',
+    uploadedBy: ctx.data.record.ownerUserId,
   });
   
   const resultErr = dbErr(result.error);

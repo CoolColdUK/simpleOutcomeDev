@@ -34,7 +34,7 @@ export async function updateDbTpDestinationForAgent(
 ) {
   return supabase
     .from('tp_destination')
-    .update(updates)
+    .update(updates as Database['public']['Tables']['tp_destination']['Update'])
     .eq('id', destinationId)
     .select('*')
     .single();

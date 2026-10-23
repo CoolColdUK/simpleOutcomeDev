@@ -16,9 +16,21 @@ export interface UpdateTpTripInput {
 }
 
 export default async function updateDbTpTrip(supabase: SupabaseClient<Database>, input: UpdateTpTripInput) {
-  const {podId, defaultCurrency, ...tripUpdates} = input;
-  
-  // Update trip
+  const {podId, defaultCurrency, title, timezone, startDate, endDate, status, budgetAmount, budgetCurrency, mapsUrl, notes} =
+    input;
+
+  const tripUpdates: Database['public']['Tables']['tp_trip']['Update'] = {
+    ...(title !== undefined ? {title} : {}),
+    ...(timezone !== undefined ? {timezone} : {}),
+    ...(startDate !== undefined ? {start_date: startDate} : {}),
+    ...(endDate !== undefined ? {end_date: endDate} : {}),
+    ...(status !== undefined ? {status} : {}),
+    ...(budgetAmount !== undefined ? {budget_amount: budgetAmount} : {}),
+    ...(budgetCurrency !== undefined ? {budget_currency: budgetCurrency} : {}),
+    ...(mapsUrl !== undefined ? {maps_url: mapsUrl} : {}),
+    ...(notes !== undefined ? {notes} : {}),
+  };
+
   const trip = await supabase
     .from('tp_trip')
     .update(tripUpdates)
