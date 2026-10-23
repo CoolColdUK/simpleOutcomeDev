@@ -4,11 +4,35 @@ import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 
 // Client-side UI helper (from PR #14)
-export default async function createDbTpTransport(routeId: string, sortOrder: number): Promise<string> {
+export interface CreateDbTpTransportFromLib {
+  readonly id: string;
+  readonly mode: string;
+  readonly durationMinutes?: number;
+  readonly costAmount?: number;
+  readonly costCurrency?: string;
+  readonly fromLocationId?: string;
+  readonly toLocationId?: string;
+}
+
+export default async function createDbTpTransport(
+  routeId: string,
+  sortOrder: number,
+  lib?: CreateDbTpTransportFromLib,
+): Promise<string> {
   const supabase = getSupabaseBrowserClient();
   const {data, error} = await supabase
     .from('tp_transport')
-    .insert({route_id: routeId, mode: 'other', sort_order: sortOrder})
+    .insert({
+      route_id: routeId,
+      mode: lib?.mode ?? 'other',
+      sort_order: sortOrder,
+      transport_lib_id: lib?.id ?? null,
+      duration_minutes: lib?.durationMinutes ?? null,
+      cost_amount: lib?.costAmount ?? null,
+      cost_currency: lib?.costCurrency ?? null,
+      from_location_id: lib?.fromLocationId ?? null,
+      to_location_id: lib?.toLocationId ?? null,
+    })
     .select('id')
     .single();
   throwIfSupabaseError(error);

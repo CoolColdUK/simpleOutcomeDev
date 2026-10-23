@@ -65,14 +65,46 @@ export interface DbTpAction {
   readonly selectedRouteId?: string;
   readonly startTime?: string;
   readonly endTime?: string;
+  readonly fromLocationId?: string;
+  readonly toLocationId?: string;
+  readonly durationMinutes?: number;
 }
 
-export interface DbTpActivityPlace {
+export interface DbTpLocation {
   readonly id: string;
-  readonly actionId: string;
-  readonly placeText: string;
+  readonly tripId: string;
+  readonly name: string;
+  readonly address?: string;
   readonly mapsUrl?: string;
   readonly notes?: string;
+  readonly sortOrder: number;
+}
+
+export interface DbTpActionLocation {
+  readonly id: string;
+  readonly actionId: string;
+  readonly locationId: string;
+  readonly sortOrder: number;
+}
+
+export interface DbTpTransportLib {
+  readonly id: string;
+  readonly tripId: string;
+  readonly label: string;
+  readonly mode: string;
+  readonly durationMinutes?: number;
+  readonly costAmount?: number;
+  readonly costCurrency?: string;
+  readonly fromLocationId?: string;
+  readonly toLocationId?: string;
+  readonly notes?: string;
+  readonly sortOrder: number;
+}
+
+export interface DbTpActionTransport {
+  readonly id: string;
+  readonly actionId: string;
+  readonly transportLibId: string;
   readonly sortOrder: number;
 }
 
@@ -99,6 +131,10 @@ export interface DbTpTransport {
   readonly bookingRef?: string;
   readonly notes?: string;
   readonly sortOrder: number;
+  readonly transportLibId?: string;
+  readonly fromLocationId?: string;
+  readonly toLocationId?: string;
+  readonly durationMinutes?: number;
 }
 
 export interface DbTpAttachment {
@@ -124,7 +160,10 @@ export interface DbTpWorkspace {
   readonly routes: readonly DbTpRoute[];
   readonly transports: readonly DbTpTransport[];
   readonly attachments: readonly DbTpAttachment[];
-  readonly activityPlaces: readonly DbTpActivityPlace[];
+  readonly locations: readonly DbTpLocation[];
+  readonly actionLocations: readonly DbTpActionLocation[];
+  readonly transportLib: readonly DbTpTransportLib[];
+  readonly actionTransports: readonly DbTpActionTransport[];
 }
 
 export interface LoadDbTpWorkspaceResult {
@@ -140,7 +179,10 @@ const emptyWorkspace: DbTpWorkspace = {
   routes: [],
   transports: [],
   attachments: [],
-  activityPlaces: [],
+  locations: [],
+  actionLocations: [],
+  transportLib: [],
+  actionTransports: [],
 };
 
 function num(value: string | null | undefined): number | undefined {
@@ -176,14 +218,22 @@ export async function loadDbTpWorkspace(
 
   const tripId = tripRow.id;
 
-  const [daysRes, destRes, actionsRes, attachRes] = await Promise.all([
+  const [daysRes, destRes, actionsRes, attachRes, locationsRes, transportLibRes] = await Promise.all([
     supabase.from('tp_day').select('*').eq('trip_id', tripId).order('day_index'),
     supabase.from('tp_destination').select('*').eq('trip_id', tripId).order('sort_order'),
     supabase.from('tp_action').select('*').eq('trip_id', tripId).order('sort_order'),
     supabase.from('tp_attachment').select('*').eq('trip_id', tripId),
+    supabase.from('tp_location').select('*').eq('trip_id', tripId).order('sort_order'),
+    supabase.from('tp_transport_lib').select('*').eq('trip_id', tripId).order('sort_order'),
   ]);
 
-  const firstError = daysRes.error ?? destRes.error ?? actionsRes.error ?? attachRes.error;
+  const firstError =
+    daysRes.error ??
+    destRes.error ??
+    actionsRes.error ??
+    attachRes.error ??
+    locationsRes.error ??
+    transportLibRes.error;
   if (firstError !== null) {
     return {data: null, error: firstError};
   }
@@ -215,12 +265,20 @@ export async function loadDbTpWorkspace(
     return {data: null, error: transportRes.error};
   }
 
-  const activityPlaceRes =
+  const actionLocationRes =
     actionIds.length === 0
       ? {data: [], error: null}
-      : await supabase.from('tp_activity_place').select('*').in('action_id', actionIds).order('sort_order');
-  if (activityPlaceRes.error !== null) {
-    return {data: null, error: activityPlaceRes.error};
+      : await supabase.from('tp_action_location').select('*').in('action_id', actionIds).order('sort_order');
+  if (actionLocationRes.error !== null) {
+    return {data: null, error: actionLocationRes.error};
+  }
+
+  const actionTransportRes =
+    actionIds.length === 0
+      ? {data: [], error: null}
+      : await supabase.from('tp_action_transport').select('*').in('action_id', actionIds).order('sort_order');
+  if (actionTransportRes.error !== null) {
+    return {data: null, error: actionTransportRes.error};
   }
 
   const actionRows = actionsRes.data ?? [];
@@ -292,6 +350,9 @@ export async function loadDbTpWorkspace(
         selectedRouteId: a.selected_route_id ?? undefined,
         startTime: a.start_time ?? undefined,
         endTime: a.end_time ?? undefined,
+        fromLocationId: a.from_location_id ?? undefined,
+        toLocationId: a.to_location_id ?? undefined,
+        durationMinutes: a.duration_minutes ?? undefined,
       })),
       routes: (routesRes.data ?? []).map((r) => ({
         id: r.id,
@@ -315,6 +376,10 @@ export async function loadDbTpWorkspace(
         bookingRef: t.booking_ref ?? undefined,
         notes: t.notes ?? undefined,
         sortOrder: t.sort_order,
+        transportLibId: t.transport_lib_id ?? undefined,
+        fromLocationId: t.from_location_id ?? undefined,
+        toLocationId: t.to_location_id ?? undefined,
+        durationMinutes: t.duration_minutes ?? undefined,
       })),
       attachments: (attachRes.data ?? []).map((a) => ({
         id: a.id,
@@ -324,13 +389,39 @@ export async function loadDbTpWorkspace(
         mimeType: a.mime_type,
         storagePath: a.storage_path,
       })),
-      activityPlaces: (activityPlaceRes.data ?? []).map((p) => ({
-        id: p.id,
-        actionId: p.action_id,
-        placeText: p.place_text,
-        mapsUrl: p.maps_url ?? undefined,
-        notes: p.notes ?? undefined,
-        sortOrder: p.sort_order,
+      locations: (locationsRes.data ?? []).map((l) => ({
+        id: l.id,
+        tripId: l.trip_id,
+        name: l.name,
+        address: l.address ?? undefined,
+        mapsUrl: l.maps_url ?? undefined,
+        notes: l.notes ?? undefined,
+        sortOrder: l.sort_order,
+      })),
+      actionLocations: (actionLocationRes.data ?? []).map((l) => ({
+        id: l.id,
+        actionId: l.action_id,
+        locationId: l.location_id,
+        sortOrder: l.sort_order,
+      })),
+      transportLib: (transportLibRes.data ?? []).map((t) => ({
+        id: t.id,
+        tripId: t.trip_id,
+        label: t.label,
+        mode: t.mode,
+        durationMinutes: t.duration_minutes ?? undefined,
+        costAmount: num(t.cost_amount),
+        costCurrency: t.cost_currency ?? undefined,
+        fromLocationId: t.from_location_id ?? undefined,
+        toLocationId: t.to_location_id ?? undefined,
+        notes: t.notes ?? undefined,
+        sortOrder: t.sort_order,
+      })),
+      actionTransports: (actionTransportRes.data ?? []).map((l) => ({
+        id: l.id,
+        actionId: l.action_id,
+        transportLibId: l.transport_lib_id,
+        sortOrder: l.sort_order,
       })),
     },
     error: null,

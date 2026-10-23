@@ -32,7 +32,10 @@ export async function ownedTpRow(
     | 'tp_route'
     | 'tp_transport'
     | 'tp_attachment'
-    | 'tp_activity_place',
+    | 'tp_location'
+    | 'tp_action_location'
+    | 'tp_transport_lib'
+    | 'tp_action_transport',
   id: string,
   _podId: string,
 ): Promise<AgentResult<true>> {

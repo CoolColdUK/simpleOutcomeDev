@@ -44,11 +44,14 @@ import {createAgentTpAction, deleteAgentTpAction, updateAgentTpAction} from '@/l
 import {createAgentTpRoute, deleteAgentTpRoute, selectAgentTpRoute, updateAgentTpRoute} from '@/lib/api/agent/tpAgentRoutes';
 import {createAgentTpTransport, deleteAgentTpTransport, updateAgentTpTransport} from '@/lib/api/agent/tpAgentTransports';
 import {deleteAgentTpAttachment, listAgentTpAttachments, uploadAgentTpAttachment} from '@/lib/api/agent/tpAgentAttachments';
+import {createAgentTpLocation, deleteAgentTpLocation, updateAgentTpLocation} from '@/lib/api/agent/tpAgentLocations';
+import {linkAgentTpActionLocation, unlinkAgentTpActionLocation} from '@/lib/api/agent/tpAgentActionLocations';
 import {
-  createAgentTpActivityPlace,
-  deleteAgentTpActivityPlace,
-  updateAgentTpActivityPlace,
-} from '@/lib/api/agent/tpAgentActivityPlaces';
+  createAgentTpTransportLib,
+  deleteAgentTpTransportLib,
+  updateAgentTpTransportLib,
+} from '@/lib/api/agent/tpAgentTransportLib';
+import {linkAgentTpActionTransport, unlinkAgentTpActionTransport} from '@/lib/api/agent/tpAgentActionTransports';
 import {
   createAgentPod,
   createAgentPodJoinRequest,
@@ -254,21 +257,55 @@ async function dispatchTp(method: string, request: Request, path: readonly strin
     }
     return methodNotAllowed();
   }
-  if (fourth === 'activity-places' && fifth === undefined) {
+  if (fourth === 'locations' && fifth === undefined) {
     return method === 'POST'
-      ? agentResultResponse(await createAgentTpActivityPlace(request, await bodyWith(request, {podId})))
+      ? agentResultResponse(await createAgentTpLocation(request, await bodyWith(request, {podId})))
       : methodNotAllowed();
   }
-  if (fourth === 'activity-places' && isUuid(fifth) && sixth === undefined) {
+  if (fourth === 'locations' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpLocation(request, await bodyWith(request, {podId, locationId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpLocation(request, {podId, locationId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (fourth === 'action-locations' && fifth === undefined) {
+    return method === 'POST'
+      ? agentResultResponse(await linkAgentTpActionLocation(request, await bodyWith(request, {podId})))
+      : methodNotAllowed();
+  }
+  if (fourth === 'action-locations' && isUuid(fifth) && sixth === undefined) {
+    return method === 'DELETE'
+      ? agentResultResponse(await unlinkAgentTpActionLocation(request, {podId, linkId: fifth}))
+      : methodNotAllowed();
+  }
+  if (fourth === 'transport-library' && fifth === undefined) {
+    return method === 'POST'
+      ? agentResultResponse(await createAgentTpTransportLib(request, await bodyWith(request, {podId})))
+      : methodNotAllowed();
+  }
+  if (fourth === 'transport-library' && isUuid(fifth) && sixth === undefined) {
     if (method === 'PATCH') {
       return agentResultResponse(
-        await updateAgentTpActivityPlace(request, await bodyWith(request, {podId, placeId: fifth})),
+        await updateAgentTpTransportLib(request, await bodyWith(request, {podId, transportLibId: fifth})),
       );
     }
     if (method === 'DELETE') {
-      return agentResultResponse(await deleteAgentTpActivityPlace(request, {podId, placeId: fifth}));
+      return agentResultResponse(await deleteAgentTpTransportLib(request, {podId, transportLibId: fifth}));
     }
     return methodNotAllowed();
+  }
+  if (fourth === 'action-transports' && fifth === undefined) {
+    return method === 'POST'
+      ? agentResultResponse(await linkAgentTpActionTransport(request, await bodyWith(request, {podId})))
+      : methodNotAllowed();
+  }
+  if (fourth === 'action-transports' && isUuid(fifth) && sixth === undefined) {
+    return method === 'DELETE'
+      ? agentResultResponse(await unlinkAgentTpActionTransport(request, {podId, linkId: fifth}))
+      : methodNotAllowed();
   }
   if (fourth === 'routes' && fifth === undefined) {
     return method === 'POST' ? agentResultResponse(await createAgentTpRoute(request, await bodyWith(request, {podId}))) : methodNotAllowed();

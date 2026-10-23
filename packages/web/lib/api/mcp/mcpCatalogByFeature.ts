@@ -41,11 +41,14 @@ import {
   deleteAgentTpTransport,
   updateAgentTpTransport,
 } from '@/lib/api/agent/tpAgentTransports';
+import {createAgentTpLocation, deleteAgentTpLocation, updateAgentTpLocation} from '@/lib/api/agent/tpAgentLocations';
+import {linkAgentTpActionLocation, unlinkAgentTpActionLocation} from '@/lib/api/agent/tpAgentActionLocations';
 import {
-  createAgentTpActivityPlace,
-  deleteAgentTpActivityPlace,
-  updateAgentTpActivityPlace,
-} from '@/lib/api/agent/tpAgentActivityPlaces';
+  createAgentTpTransportLib,
+  deleteAgentTpTransportLib,
+  updateAgentTpTransportLib,
+} from '@/lib/api/agent/tpAgentTransportLib';
+import {linkAgentTpActionTransport, unlinkAgentTpActionTransport} from '@/lib/api/agent/tpAgentActionTransports';
 import {
   deleteAgentTpAttachment,
   listAgentTpAttachments,
@@ -317,24 +320,88 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
 
   tool(
-    'create_tp_activity_place',
-    'Add a place to an activity (time window stays on the activity).',
-    {podId, actionId: {type: 'string'}, placeText: {type: 'string'}, mapsUrl: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
-    ['podId', 'actionId', 'placeText'],
-    (request, args) => createAgentTpActivityPlace(request, args),
+    'create_tp_location',
+    'Create a reusable trip location (name, address, maps URL).',
+    {podId, name: {type: 'string'}, address: {type: 'string'}, mapsUrl: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
+    ['podId', 'name'],
+    (request, args) => createAgentTpLocation(request, args),
   ),
   tool(
-    'update_tp_activity_place',
-    'Update an activity place.',
-    {podId, placeId: {type: 'string'}, placeText: {type: 'string'}, mapsUrl: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
-    ['podId', 'placeId'],
-    (request, args) => updateAgentTpActivityPlace(request, args),
+    'update_tp_location',
+    'Update a trip location.',
+    {podId, locationId: {type: 'string'}, name: {type: 'string'}, address: {type: 'string'}, mapsUrl: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
+    ['podId', 'locationId'],
+    (request, args) => updateAgentTpLocation(request, args),
   ),
-  tool('delete_tp_activity_place', 'Delete an activity place.', {podId, placeId: {type: 'string'}}, ['podId', 'placeId'], (request, args) =>
-    deleteAgentTpActivityPlace(request, args),
+  tool('delete_tp_location', 'Delete a trip location.', {podId, locationId: {type: 'string'}}, ['podId', 'locationId'], (request, args) =>
+    deleteAgentTpLocation(request, args),
   ),
-  
-  // 18-20. Attachments
+  tool(
+    'link_tp_action_location',
+    'Link a location to an activity (cost stays on the activity).',
+    {podId, actionId: {type: 'string'}, locationId: {type: 'string'}, sortOrder: {type: 'number'}},
+    ['podId', 'actionId', 'locationId'],
+    (request, args) => linkAgentTpActionLocation(request, args),
+  ),
+  tool('unlink_tp_action_location', 'Remove a location link from an activity.', {podId, linkId: {type: 'string'}}, ['podId', 'linkId'], (request, args) =>
+    unlinkAgentTpActionLocation(request, args),
+  ),
+  tool(
+    'create_tp_transport_lib',
+    'Create a reusable transport template (duration and price on the transport).',
+    {
+      podId,
+      label: {type: 'string'},
+      mode: {type: 'string'},
+      durationMinutes: {type: 'number'},
+      costAmount: {type: 'number'},
+      costCurrency: {type: 'string'},
+      fromLocationId: {type: 'string'},
+      toLocationId: {type: 'string'},
+      notes: {type: 'string'},
+      sortOrder: {type: 'number'},
+    },
+    ['podId', 'label'],
+    (request, args) => createAgentTpTransportLib(request, args),
+  ),
+  tool(
+    'update_tp_transport_lib',
+    'Update a reusable transport template.',
+    {
+      podId,
+      transportLibId: {type: 'string'},
+      label: {type: 'string'},
+      mode: {type: 'string'},
+      durationMinutes: {type: 'number'},
+      costAmount: {type: 'number'},
+      costCurrency: {type: 'string'},
+      fromLocationId: {type: 'string'},
+      toLocationId: {type: 'string'},
+      notes: {type: 'string'},
+      sortOrder: {type: 'number'},
+    },
+    ['podId', 'transportLibId'],
+    (request, args) => updateAgentTpTransportLib(request, args),
+  ),
+  tool(
+    'delete_tp_transport_lib',
+    'Delete a reusable transport template.',
+    {podId, transportLibId: {type: 'string'}},
+    ['podId', 'transportLibId'],
+    (request, args) => deleteAgentTpTransportLib(request, args),
+  ),
+  tool(
+    'link_tp_action_transport',
+    'Link reusable transport(s) to a travel action.',
+    {podId, actionId: {type: 'string'}, transportLibId: {type: 'string'}, sortOrder: {type: 'number'}},
+    ['podId', 'actionId', 'transportLibId'],
+    (request, args) => linkAgentTpActionTransport(request, args),
+  ),
+  tool('unlink_tp_action_transport', 'Remove a transport link from a travel action.', {podId, linkId: {type: 'string'}}, ['podId', 'linkId'], (request, args) =>
+    unlinkAgentTpActionTransport(request, args),
+  ),
+
+  // Attachments
   tool(
     'list_tp_attachments',
     'List attachments (filter by transportId or destinationId).',

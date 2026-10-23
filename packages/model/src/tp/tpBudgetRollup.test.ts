@@ -17,4 +17,12 @@ describe('tpBudgetRollup', () => {
     );
     expect(total).toBe(120);
   });
+
+  it('uses travel action cost when set instead of route legs', () => {
+    const total = tpBudgetRollup(
+      [{kind: TpActionKind.TRAVEL, selectedRouteId: 'r1', costAmount: 50}],
+      [{routeId: 'r1', costAmount: 100}],
+    );
+    expect(total).toBe(50);
+  });
 });

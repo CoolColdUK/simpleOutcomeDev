@@ -1,8 +1,8 @@
 import {TpActionKind} from './tpActionKind';
 import formatTpInstant from './formatTpInstant';
 
-export interface TpActivityPlaceRef {
-  readonly placeText: string;
+export interface TpLocationNameRef {
+  readonly name: string;
 }
 
 export interface TpActionDayCardSummaryInput {
@@ -18,7 +18,9 @@ export interface TpActionDayCardSummaryInput {
   readonly startTime?: string;
   readonly endTime?: string;
   readonly notes?: string;
-  readonly activityPlaces?: readonly TpActivityPlaceRef[];
+  readonly locationNames?: readonly TpLocationNameRef[];
+  readonly travelTransportLabels?: readonly string[];
+  readonly durationMinutes?: number;
   readonly selectedRouteName?: string;
   readonly travelDepartAt?: string;
   readonly travelArriveAt?: string;
@@ -34,9 +36,9 @@ function formatLocalTime(t: string | undefined): string | undefined {
 }
 
 function placeLabels(input: TpActionDayCardSummaryInput): readonly string[] {
-  const children = input.activityPlaces ?? [];
+  const children = input.locationNames ?? [];
   if (children.length > 0) {
-    return children.map((p) => p.placeText);
+    return children.map((p) => p.name);
   }
   if (input.placeText !== undefined && input.placeText !== '') {
     return [input.placeText];
@@ -89,6 +91,18 @@ export default function tpActionDayCardSummary(input: TpActionDayCardSummaryInpu
     if (endpoints !== undefined) {
       parts.push(endpoints);
     }
+    const transportLabels = input.travelTransportLabels ?? [];
+    if (transportLabels.length > 0) {
+      const preview = transportLabels.slice(0, 2).join(', ');
+      parts.push(transportLabels.length > 2 ? `${preview}…` : preview);
+    }
+    const start = formatLocalTime(input.startTime);
+    const end = formatLocalTime(input.endTime);
+    if (start !== undefined && end !== undefined) {
+      parts.push(`${start}–${end}`);
+    } else if (input.durationMinutes !== undefined) {
+      parts.push(`${input.durationMinutes} min`);
+    }
     if (input.selectedRouteName !== undefined && input.selectedRouteName !== '') {
       parts.push(input.selectedRouteName);
     }
@@ -96,7 +110,11 @@ export default function tpActionDayCardSummary(input: TpActionDayCardSummaryInpu
       const depTz = input.travelDepartTimezone ?? 'UTC';
       const arrTz = input.travelArriveTimezone ?? depTz;
       parts.push(`${formatTpInstant(input.travelDepartAt, depTz)} → ${formatTpInstant(input.travelArriveAt, arrTz)}`);
-    } else if (endpoints === undefined && (input.selectedRouteName === undefined || input.selectedRouteName === '')) {
+    } else if (
+      endpoints === undefined &&
+      transportLabels.length === 0 &&
+      (input.selectedRouteName === undefined || input.selectedRouteName === '')
+    ) {
       parts.push('Route not set');
     }
     return parts.join(' · ');

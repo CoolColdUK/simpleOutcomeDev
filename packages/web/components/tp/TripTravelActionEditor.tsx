@@ -3,7 +3,17 @@
 import {useMemo, useState} from 'react';
 import {Alert, Button, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
 import {formatTpInstant} from '@so/model';
-import type {DbTpAction, DbTpDestination, DbTpRoute, DbTpTransport} from '@/lib/api/db/tp/loadDbTpWorkspace';
+import type {
+  DbTpAction,
+  DbTpActionTransport,
+  DbTpDestination,
+  DbTpLocation,
+  DbTpRoute,
+  DbTpTransport,
+  DbTpTransportLib,
+} from '@/lib/api/db/tp/loadDbTpWorkspace';
+import createDbTpActionTransport from '@/lib/api/db/tp/createDbTpActionTransport';
+import deleteDbTpActionTransport from '@/lib/api/db/tp/deleteDbTpActionTransport';
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import createDbTpRoute from '@/lib/api/db/tp/createDbTpRoute';
 import deleteDbTpRoute from '@/lib/api/db/tp/deleteDbTpRoute';
@@ -26,6 +36,9 @@ export interface TripTravelActionEditorProps {
   readonly transports: readonly DbTpTransport[];
   readonly attachments: readonly DbTpAttachment[];
   readonly destinations: readonly DbTpDestination[];
+  readonly locations: readonly DbTpLocation[];
+  readonly transportLib: readonly DbTpTransportLib[];
+  readonly actionTransports: readonly DbTpActionTransport[];
   readonly tripTimezone: string;
   readonly defaultCurrency?: string;
   readonly canWrite: boolean;
@@ -42,6 +55,9 @@ export default function TripTravelActionEditor({
   transports,
   attachments,
   destinations,
+  locations,
+  transportLib,
+  actionTransports,
   tripTimezone,
   defaultCurrency,
   canWrite,
@@ -60,6 +76,14 @@ export default function TripTravelActionEditor({
   const [fromDestinationId, setFromDestinationId] = useState(action.fromDestinationId ?? '');
   const [toDestinationId, setToDestinationId] = useState(action.toDestinationId ?? '');
   const [notes, setNotes] = useState(action.notes ?? '');
+  const [startTime, setStartTime] = useState(action.startTime?.slice(0, 5) ?? '');
+  const [endTime, setEndTime] = useState(action.endTime?.slice(0, 5) ?? '');
+  const [durationMinutes, setDurationMinutes] = useState(action.durationMinutes?.toString() ?? '');
+  const [journeyCost, setJourneyCost] = useState(action.costAmount?.toString() ?? '');
+  const [journeyCurrency, setJourneyCurrency] = useState(action.costCurrency ?? defaultCurrency ?? '');
+  const [fromLocationId, setFromLocationId] = useState(action.fromLocationId ?? '');
+  const [toLocationId, setToLocationId] = useState(action.toLocationId ?? '');
+  const travelLinks = actionTransports.filter((l) => l.actionId === action.id).sort((a, b) => a.sortOrder - b.sortOrder);
 
   const multimodalWarning = useMemo(() => {
     if (selectedRouteTransports.length <= 1) {
@@ -87,6 +111,13 @@ export default function TripTravelActionEditor({
         fromDestinationId: fromDestinationId === '' ? null : fromDestinationId,
         toDestinationId: toDestinationId === '' ? null : toDestinationId,
         notes,
+        startTime: startTime === '' ? null : startTime,
+        endTime: endTime === '' ? null : endTime,
+        durationMinutes: durationMinutes === '' ? null : Number(durationMinutes),
+        costAmount: journeyCost === '' ? null : Number(journeyCost),
+        costCurrency: journeyCurrency === '' ? null : journeyCurrency,
+        fromLocationId: fromLocationId === '' ? null : fromLocationId,
+        toLocationId: toLocationId === '' ? null : toLocationId,
       });
       if (selectedRouteId !== undefined && selectedRouteTransports.length === 1) {
         const only = selectedRouteTransports[0];
@@ -132,6 +163,45 @@ export default function TripTravelActionEditor({
     try {
       const count = transports.filter((t) => t.routeId === routeId).length;
       await createDbTpTransport(routeId, count);
+      onSaved();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const linkTransportLib = async (transportLibId: string): Promise<void> => {
+    if (transportLibId === '') {
+      return;
+    }
+    try {
+      const lib = transportLib.find((t) => t.id === transportLibId);
+      await createDbTpActionTransport({
+        actionId: action.id,
+        transportLibId,
+        sortOrder: travelLinks.length,
+      });
+      const routeId = selectedRouteId ?? actionRoutes[0]?.id;
+      if (routeId !== undefined && lib !== undefined) {
+        const count = transports.filter((t) => t.routeId === routeId).length;
+        await createDbTpTransport(routeId, count, {
+          id: lib.id,
+          mode: lib.mode,
+          durationMinutes: lib.durationMinutes,
+          costAmount: lib.costAmount,
+          costCurrency: lib.costCurrency,
+          fromLocationId: lib.fromLocationId,
+          toLocationId: lib.toLocationId,
+        });
+      }
+      onSaved();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const unlinkTransportLib = async (linkId: string): Promise<void> => {
+    try {
+      await deleteDbTpActionTransport(linkId);
       onSaved();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
@@ -188,6 +258,14 @@ export default function TripTravelActionEditor({
               ))}
             </NativeSelect.Field>
           </NativeSelect.Root>
+          <NativeSelect.Root>
+            <NativeSelect.Field value={fromLocationId} onChange={(e) => setFromLocationId(e.target.value)}>
+              <option value="">From location</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </NativeSelect.Field>
+          </NativeSelect.Root>
         </Stack>
         <Stack flex="1" minW="12rem">
           <Field.Root>
@@ -203,8 +281,63 @@ export default function TripTravelActionEditor({
               ))}
             </NativeSelect.Field>
           </NativeSelect.Root>
+          <NativeSelect.Root>
+            <NativeSelect.Field value={toLocationId} onChange={(e) => setToLocationId(e.target.value)}>
+              <option value="">To location</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </NativeSelect.Field>
+          </NativeSelect.Root>
         </Stack>
       </HStack>
+      <HStack wrap="wrap">
+        <Field.Root>
+          <Field.Label>Start time</Field.Label>
+          <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>End time</Field.Label>
+          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>Duration (min)</Field.Label>
+          <Input value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} />
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>Journey price</Field.Label>
+          <Input value={journeyCost} onChange={(e) => setJourneyCost(e.target.value)} />
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>Currency</Field.Label>
+          <Input value={journeyCurrency} onChange={(e) => setJourneyCurrency(e.target.value)} />
+        </Field.Root>
+      </HStack>
+      <Stack gap={2}>
+        <Text fontWeight="medium">Linked transports</Text>
+        {travelLinks.map((link) => {
+          const lib = transportLib.find((t) => t.id === link.transportLibId);
+          return (
+            <HStack key={link.id} justify="space-between">
+              <Text>
+                {lib?.label ?? 'Transport'}
+                {lib?.durationMinutes !== undefined ? ` · ${lib.durationMinutes} min` : ''}
+              </Text>
+              <Button size="xs" variant="outline" onClick={() => void unlinkTransportLib(link.id)}>Remove</Button>
+            </HStack>
+          );
+        })}
+        <NativeSelect.Root>
+          <NativeSelect.Field value="" onChange={(e) => void linkTransportLib(e.target.value)}>
+            <option value="">Add from library…</option>
+            {transportLib
+              .filter((t) => !travelLinks.some((l) => l.transportLibId === t.id))
+              .map((t) => (
+                <option key={t.id} value={t.id}>{t.label}</option>
+              ))}
+          </NativeSelect.Field>
+        </NativeSelect.Root>
+      </Stack>
       <Field.Root>
         <Field.Label>Notes</Field.Label>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
