@@ -60,6 +60,7 @@ export async function getAgentTpWorkspace(request: Request, input: unknown): Pro
     routes: [],
     transports: [],
     attachments: [],
+    activityPlaces: [],
   };
 
   if (base.trip === undefined) {

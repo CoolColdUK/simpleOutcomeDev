@@ -233,3 +233,26 @@ export const DeleteAttachmentSchema = v.object({
   podId,
   attachmentId: v.pipe(v.string(), v.minLength(1)),
 });
+
+export const CreateActivityPlaceSchema = v.object({
+  podId,
+  actionId: v.pipe(v.string(), v.minLength(1)),
+  placeText: v.pipe(v.string(), v.minLength(1)),
+  mapsUrl: optionalString,
+  notes: optionalString,
+  sortOrder: optionalNumber,
+});
+
+export const UpdateActivityPlaceSchema = v.object({
+  podId,
+  placeId: v.pipe(v.string(), v.minLength(1)),
+  placeText: optionalString,
+  mapsUrl: optionalString,
+  notes: optionalString,
+  sortOrder: optionalNumber,
+});
+
+export const DeleteActivityPlaceSchema = v.object({
+  podId,
+  placeId: v.pipe(v.string(), v.minLength(1)),
+});

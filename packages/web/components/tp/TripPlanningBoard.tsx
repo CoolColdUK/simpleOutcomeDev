@@ -18,13 +18,16 @@ import {
 import {
   canWriteTpPod,
   TpActionKind,
+  tpActionDayCardSummary,
   tpActiveDestinationsForDay,
   tpBudgetRollup,
   tpDayTimelineEntries,
+  tpDefaultSelectedDayId,
   TpTripStatus,
   type PodRole,
 } from '@so/model';
-import loadDbTpWorkspace, {type DbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWorkspace';
+import loadDbTpWorkspace, {type DbTpAction, type DbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWorkspace';
+import {deleteDbTpActionForBrowser} from '@/lib/api/db/tp/deleteDbTpAction';
 import createDbTpTripBundle from '@/lib/api/db/tp/createDbTpTripBundle';
 import updateDbTpDay from '@/lib/api/db/tp/updateDbTpDay';
 import createDbTpAction from '@/lib/api/db/tp/createDbTpAction';
@@ -38,7 +41,9 @@ import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import TripStayActionEditor from '@/components/tp/TripStayActionEditor';
 import TripTravelActionEditor from '@/components/tp/TripTravelActionEditor';
 import TripSimpleActionEditor from '@/components/tp/TripSimpleActionEditor';
+import TripActivityActionEditor from '@/components/tp/TripActivityActionEditor';
 import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
+import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
 
 export interface TripPlanningBoardProps {
   readonly podId: string;
@@ -63,7 +68,16 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
   const reload = useCallback(async (): Promise<void> => {
     const next = await loadDbTpWorkspace(podId);
     setData(next);
-    setSelectedDayId((current) => current ?? next.days[0]?.id);
+    setSelectedDayId((current) => {
+      if (current !== undefined && next.days.some((d) => d.id === current)) {
+        return current;
+      }
+      const tripTz = next.trip?.timezone ?? 'UTC';
+      return tpDefaultSelectedDayId(
+        next.days.map((d) => ({id: d.id, calendarDate: d.calendarDate})),
+        tripTz,
+      ) ?? next.days[0]?.id;
+    });
   }, [podId]);
 
   useEffect(() => {
@@ -138,9 +152,6 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
         const routeTransports = data.transports.filter((t) => t.routeId === routeId);
         const dep = routeTransports.map((t) => t.departAt).filter((x): x is string => x !== undefined).sort()[0];
         const arr = routeTransports.map((t) => t.arriveAt).filter((x): x is string => x !== undefined).sort().reverse()[0];
-        if (dep === undefined || arr === undefined) {
-          return undefined;
-        }
         return {
           actionId: a.id,
           anchorDayId: a.anchorDayId,
@@ -149,8 +160,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
           spanStartIso: dep,
           spanEndIso: arr,
         };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== undefined);
+      });
     return tpDayTimelineEntries({
       dayId: selectedDay.id,
       calendarDate: selectedDay.calendarDate,
@@ -163,11 +173,11 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
         title: a.title,
       })),
       stays: data.actions
-        .filter((a) => a.kind === TpActionKind.STAY && a.checkInAt !== undefined && a.checkOutAt !== undefined)
+        .filter((a) => a.kind === TpActionKind.STAY)
         .map((a) => ({
           actionId: a.id,
-          checkInAt: a.checkInAt as string,
-          checkOutAt: a.checkOutAt as string,
+          checkInAt: a.checkInAt ?? '',
+          checkOutAt: a.checkOutAt ?? '',
         })),
       travels,
     });
@@ -258,19 +268,84 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
     }
     const title =
       kind === TpActionKind.NOTE ? 'Note' : kind === TpActionKind.ACTIVITY ? 'Activity' : kind === TpActionKind.STAY ? 'Stay' : 'Travel';
-    const actionId = await createDbTpAction({
-      tripId: trip.id,
-      anchorDayId: selectedDay.id,
-      kind,
-      title,
-      sortOrder: data?.actions.filter((a) => a.anchorDayId === selectedDay.id).length ?? 0,
-    });
-    if (kind === TpActionKind.TRAVEL) {
-      const routeId = await createDbTpRoute(actionId, 'Option A', 0);
-      await selectDbTpRoute(actionId, routeId);
+    try {
+      const actionId = await createDbTpAction({
+        tripId: trip.id,
+        anchorDayId: selectedDay.id,
+        kind,
+        title,
+        sortOrder: data?.actions.filter((a) => a.anchorDayId === selectedDay.id).length ?? 0,
+      });
+      if (kind === TpActionKind.TRAVEL) {
+        const routeId = await createDbTpRoute(actionId, 'Option A', 0);
+        await selectDbTpRoute(actionId, routeId);
+      }
+      setExpandedActionId(actionId);
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     }
-    setExpandedActionId(actionId);
-    await reload();
+  };
+
+  const deleteAction = async (actionId: string): Promise<void> => {
+    if (!canWrite) {
+      return;
+    }
+    const action = data?.actions.find((a) => a.id === actionId);
+    if (action === undefined) {
+      return;
+    }
+    const ok = window.confirm(
+      `Delete this ${action.kind} (“${action.title}”)? It will be removed from every day on the trip.`,
+    );
+    if (!ok) {
+      return;
+    }
+    try {
+      await deleteDbTpActionForBrowser(actionId);
+      setExpandedActionId((current) => (current === actionId ? undefined : current));
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const actionCardSummary = (action: DbTpAction): string => {
+    if (data === undefined) {
+      return action.title;
+    }
+    const routeId = action.selectedRouteId ?? data.routes.find((r) => r.actionId === action.id && r.isSelected)?.id;
+    const selectedRoute = routeId !== undefined ? data.routes.find((r) => r.id === routeId) : undefined;
+    const routeTransports = data.transports.filter((t) => t.routeId === routeId);
+    const dep = routeTransports.map((t) => t.departAt).filter((x): x is string => x !== undefined).sort()[0];
+    const arr = routeTransports.map((t) => t.arriveAt).filter((x): x is string => x !== undefined).sort().reverse()[0];
+    const depTz = routeTransports.find((t) => t.departAt === dep)?.departTimezone;
+    const arrTz = routeTransports.find((t) => t.arriveAt === arr)?.arriveTimezone;
+    const summary = tpActionDayCardSummary({
+      kind: action.kind,
+      title: action.title,
+      placeText: action.placeText,
+      fromPlace: action.fromPlace,
+      toPlace: action.toPlace,
+      checkInAt: action.checkInAt,
+      checkOutAt: action.checkOutAt,
+      checkInTimezone: action.checkInTimezone,
+      checkOutTimezone: action.checkOutTimezone,
+      startTime: action.startTime,
+      endTime: action.endTime,
+      notes: action.notes,
+      activityPlaces: data.activityPlaces.filter((p) => p.actionId === action.id),
+      selectedRouteName: selectedRoute?.name,
+      travelDepartAt: dep,
+      travelArriveAt: arr,
+      travelDepartTimezone: depTz,
+      travelArriveTimezone: arrTz,
+    });
+    if (summary === action.title) {
+      return '';
+    }
+    const prefix = `${action.title} · `;
+    return summary.startsWith(prefix) ? summary.slice(prefix.length) : summary;
   };
 
   const updateTripStatus = async (status: TpTripStatus): Promise<void> => {
@@ -438,21 +513,26 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             </Stack>
           </Box>
           {activeDestinationIds.length > 0 ? (
-            <Stack gap={2}>
-              <Heading size="sm">Important info</Heading>
+            <TripTpCollapsible
+              title={
+                activeDestinationIds.length === 1
+                  ? `Important info · ${data.destinations.find((d) => d.id === activeDestinationIds[0])?.name ?? ''}`
+                  : `Important info · ${activeDestinationIds.map((id) => data.destinations.find((d) => d.id === id)?.name).filter(Boolean).join(', ')}`
+              }
+            >
               {activeDestinationIds.map((destId) => {
                 const dest = data.destinations.find((d) => d.id === destId);
                 if (dest === undefined) {
                   return null;
                 }
                 return (
-                  <Box key={dest.id} borderWidth="1px" borderRadius="md" p={3}>
+                  <Box key={dest.id}>
                     <Text fontWeight="semibold">{dest.name}</Text>
                     <Text whiteSpace="pre-wrap">{dest.importantInfo ?? 'No details yet.'}</Text>
                   </Box>
                 );
               })}
-            </Stack>
+            </TripTpCollapsible>
           ) : null}
           <Stack gap={2}>
             <HStack justify="space-between">
@@ -477,7 +557,12 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                     <HStack>
                       <Badge>{entry.kind}</Badge>
                       {entry.displayMode === 'mirror' ? <Badge variant="outline">mirror</Badge> : null}
-                      <Text fontWeight="medium">{entry.title}</Text>
+                      <Stack gap={0}>
+                        <Text fontWeight="medium">{entry.title}</Text>
+                        {action !== undefined && actionCardSummary(action) !== '' ? (
+                          <Text fontSize="sm" color="fg.muted">{actionCardSummary(action)}</Text>
+                        ) : null}
+                      </Stack>
                     </HStack>
                     <HStack>
                       {entry.displayMode === 'mirror' && action?.anchorDayId !== undefined ? (
@@ -512,6 +597,16 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                           </Button>
                         </>
                       ) : null}
+                      {canWrite ? (
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          colorPalette="red"
+                          onClick={() => void deleteAction(entry.actionId)}
+                        >
+                          Delete
+                        </Button>
+                      ) : null}
                       <Button
                         size="xs"
                         variant={expanded ? 'solid' : 'outline'}
@@ -529,7 +624,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                           destinations={data.destinations}
                           tripTimezone={trip.timezone}
                           defaultCurrency={trip.budgetCurrency}
-                          canWrite={canWrite}
+                          canWrite={canWrite && entry.displayMode === 'canonical'}
                           onSaved={onEditorSaved}
                           onError={onEditorError}
                         />
@@ -546,31 +641,39 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                           destinations={data.destinations}
                           tripTimezone={trip.timezone}
                           defaultCurrency={trip.budgetCurrency}
-                          canWrite={canWrite}
+                          canWrite={canWrite && entry.displayMode === 'canonical'}
                           onSaved={onEditorSaved}
                           onError={onEditorError}
                         />
                       ) : null}
-                      {action.kind === TpActionKind.ACTIVITY || action.kind === TpActionKind.NOTE ? (
+                      {action.kind === TpActionKind.ACTIVITY ? (
+                        <TripActivityActionEditor
+                          action={action}
+                          places={data.activityPlaces.filter((p) => p.actionId === action.id)}
+                          defaultCurrency={trip.budgetCurrency}
+                          canWrite={canWrite && entry.displayMode === 'canonical'}
+                          onSaved={onEditorSaved}
+                          onError={onEditorError}
+                        />
+                      ) : null}
+                      {action.kind === TpActionKind.NOTE ? (
                         <TripSimpleActionEditor
                           action={action}
                           defaultCurrency={trip.budgetCurrency}
-                          canWrite={canWrite}
+                          canWrite={canWrite && entry.displayMode === 'canonical'}
                           onSaved={onEditorSaved}
                           onError={onEditorError}
                         />
                       ) : null}
                     </Box>
                   ) : null}
-                  {!expanded && action?.notes !== undefined ? <Text fontSize="sm" mt={2}>{action.notes}</Text> : null}
                 </Box>
               );
             })}
           </Stack>
         </Stack>
       ) : null}
-      <Box borderWidth="1px" borderRadius="md" p={4}>
-        <Heading size="sm" mb={2}>Destinations (trip)</Heading>
+      <TripTpCollapsible title="Destinations (trip)">
         <Stack gap={4}>
           {data.destinations.map((d) => (
             <Stack key={d.id} gap={2}>
@@ -627,7 +730,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             </Stack>
           ))}
         </Stack>
-      </Box>
+      </TripTpCollapsible>
     </Stack>
   );
 }

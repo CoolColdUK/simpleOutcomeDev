@@ -767,6 +767,33 @@ export interface Database {
         Update: Record<string, unknown>;
         Relationships: [];
       };
+      tp_activity_place: {
+        Row: {
+          id: string;
+          action_id: string;
+          place_text: string;
+          maps_url: string | null;
+          notes: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          action_id: string;
+          place_text: string;
+          maps_url?: string | null;
+          notes?: string | null;
+          sort_order?: number;
+        };
+        Update: {
+          place_text?: string;
+          maps_url?: string | null;
+          notes?: string | null;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       tp_attachment: {
         Row: {
           id: string;

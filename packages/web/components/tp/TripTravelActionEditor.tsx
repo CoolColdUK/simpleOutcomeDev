@@ -14,6 +14,7 @@ import deleteDbTpTransport from '@/lib/api/db/tp/deleteDbTpTransport';
 import {tpInstantFromParts, tpPartsFromInstant} from '@/lib/tp/tpDateTimeParts';
 import {TP_TRANSPORT_MODES} from '@/components/tp/tpTransportModes';
 import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
+import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
 import type {DbTpAttachment} from '@/lib/api/db/tp/loadDbTpWorkspace';
 
 export interface TripTravelActionEditorProps {
@@ -218,27 +219,38 @@ export default function TripTravelActionEditor({
         <Text fontWeight="medium">Routes</Text>
         <Button size="xs" onClick={() => void addRoute()}>+ Route</Button>
       </HStack>
-      {actionRoutes.map((route) => (
-        <BoxRoute
-          key={route.id}
-          route={route}
-          selected={route.id === selectedRouteId}
-          transports={transports.filter((t) => t.routeId === route.id)}
-          tripTimezone={tripTimezone}
-          defaultCurrency={defaultCurrency}
-          podId={podId}
-          tripId={tripId}
-          userId={userId}
-          attachments={attachments}
-          onPick={() => void pickRoute(route.id)}
-          onDelete={() => void removeRoute(route.id)}
-          onAddTransport={() => void addTransport(route.id)}
-          onSaveTransport={saveTransport}
-          onRemoveTransport={(id) => void deleteDbTpTransport(id).then(onSaved).catch((e) => onError(String(e)))}
-          onChanged={onSaved}
-          onError={onError}
-        />
-      ))}
+      {actionRoutes.map((route) => {
+        const routeTransports = transports.filter((t) => t.routeId === route.id);
+        const legHint =
+          routeTransports.length === 0
+            ? 'No legs'
+            : `${routeTransports.length} leg${routeTransports.length === 1 ? '' : 's'}`;
+        return (
+          <TripTpCollapsible
+            key={route.id}
+            title={`${route.name}${route.id === selectedRouteId ? ' (selected)' : ''} · ${legHint}`}
+          >
+            <BoxRoute
+              route={route}
+              selected={route.id === selectedRouteId}
+              transports={routeTransports}
+              tripTimezone={tripTimezone}
+              defaultCurrency={defaultCurrency}
+              podId={podId}
+              tripId={tripId}
+              userId={userId}
+              attachments={attachments}
+              onPick={() => void pickRoute(route.id)}
+              onDelete={() => void removeRoute(route.id)}
+              onAddTransport={() => void addTransport(route.id)}
+              onSaveTransport={saveTransport}
+              onRemoveTransport={(id) => void deleteDbTpTransport(id).then(onSaved).catch((e) => onError(String(e)))}
+              onChanged={onSaved}
+              onError={onError}
+            />
+          </TripTpCollapsible>
+        );
+      })}
     </Stack>
   );
 }
@@ -319,12 +331,12 @@ function BoxRoute({
   onError,
 }: BoxRouteProps) {
   return (
-    <Stack borderWidth="1px" borderRadius="md" p={3} gap={2} opacity={selected ? 1 : 0.85}>
+    <Stack gap={2} opacity={selected ? 1 : 0.85}>
       <HStack justify="space-between">
-        <Text fontWeight="medium">{route.name}{selected ? ' (selected)' : ''}</Text>
+        <Text fontWeight="medium">Route options</Text>
         <HStack>
           {!selected ? <Button size="xs" onClick={onPick}>Select</Button> : null}
-          <Button size="xs" variant="outline" colorPalette="red" onClick={onDelete}>Delete</Button>
+          <Button size="xs" variant="outline" colorPalette="red" onClick={onDelete}>Delete route</Button>
         </HStack>
       </HStack>
       <Button size="xs" alignSelf="flex-start" onClick={onAddTransport}>+ Transport</Button>

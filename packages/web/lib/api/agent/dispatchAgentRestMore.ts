@@ -45,6 +45,11 @@ import {createAgentTpRoute, deleteAgentTpRoute, selectAgentTpRoute, updateAgentT
 import {createAgentTpTransport, deleteAgentTpTransport, updateAgentTpTransport} from '@/lib/api/agent/tpAgentTransports';
 import {deleteAgentTpAttachment, listAgentTpAttachments, uploadAgentTpAttachment} from '@/lib/api/agent/tpAgentAttachments';
 import {
+  createAgentTpActivityPlace,
+  deleteAgentTpActivityPlace,
+  updateAgentTpActivityPlace,
+} from '@/lib/api/agent/tpAgentActivityPlaces';
+import {
   createAgentPod,
   createAgentPodJoinRequest,
   createAgentSpace,
@@ -246,6 +251,22 @@ async function dispatchTp(method: string, request: Request, path: readonly strin
     }
     if (method === 'DELETE') {
       return agentResultResponse(await deleteAgentTpAction(request, {podId, actionId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (fourth === 'activity-places' && fifth === undefined) {
+    return method === 'POST'
+      ? agentResultResponse(await createAgentTpActivityPlace(request, await bodyWith(request, {podId})))
+      : methodNotAllowed();
+  }
+  if (fourth === 'activity-places' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(
+        await updateAgentTpActivityPlace(request, await bodyWith(request, {podId, placeId: fifth})),
+      );
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpActivityPlace(request, {podId, placeId: fifth}));
     }
     return methodNotAllowed();
   }
