@@ -25,7 +25,14 @@ export async function requireExistingTpTripId(ctx: AgentContext, podId: string):
 
 export async function ownedTpRow(
   ctx: AgentContext,
-  table: 'tp_destination' | 'tp_day' | 'tp_action' | 'tp_route' | 'tp_transport' | 'tp_attachment',
+  table:
+    | 'tp_destination'
+    | 'tp_day'
+    | 'tp_action'
+    | 'tp_route'
+    | 'tp_transport'
+    | 'tp_attachment'
+    | 'tp_activity_place',
   id: string,
   _podId: string,
 ): Promise<AgentResult<true>> {

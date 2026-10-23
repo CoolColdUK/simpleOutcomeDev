@@ -6,7 +6,7 @@ The day view should show **what is on for that day at a glance**. Details (desti
 **Requirements:** [trip-planning.md](./trip-planning.md) (locked model — this plan does not reopen it)  
 **Agent surface:** [trip-planning-api-mcp.md](./trip-planning-api-mcp.md) (already shipped; this plan adds a small activity-place delta)
 
-**Status:** Draft plan only. **No feature code in the plan commit.** After Matthew approves, implement **on this same branch** in one follow-up pass. Agents do not merge. The PR stays **draft** until Matthew says otherwise.
+**Status:** Implemented on branch `cursor/trip-day-ui-polish-af96` (PR #19). Agents do not merge. The PR stays **draft** until Matthew says otherwise.
 
 **Out of scope:** Telegram bot (queued on its own track). No map SDK, no booking, no new trip-level journey compare. Do not bulk-delete live itinerary content while Matthew is on the 2026 HK–JP trip (see [QA](#qa-checklist)).
 

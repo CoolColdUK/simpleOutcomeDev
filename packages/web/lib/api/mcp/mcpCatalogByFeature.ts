@@ -42,6 +42,11 @@ import {
   updateAgentTpTransport,
 } from '@/lib/api/agent/tpAgentTransports';
 import {
+  createAgentTpActivityPlace,
+  deleteAgentTpActivityPlace,
+  updateAgentTpActivityPlace,
+} from '@/lib/api/agent/tpAgentActivityPlaces';
+import {
   deleteAgentTpAttachment,
   listAgentTpAttachments,
   uploadAgentTpAttachment,
@@ -309,6 +314,24 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool('delete_tp_transport', 'Delete a transport leg.', {podId, transportId: {type: 'string'}}, ['podId', 'transportId'], (request, args) =>
     deleteAgentTpTransport(request, args),
+  ),
+
+  tool(
+    'create_tp_activity_place',
+    'Add a place to an activity (time window stays on the activity).',
+    {podId, actionId: {type: 'string'}, placeText: {type: 'string'}, mapsUrl: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
+    ['podId', 'actionId', 'placeText'],
+    (request, args) => createAgentTpActivityPlace(request, args),
+  ),
+  tool(
+    'update_tp_activity_place',
+    'Update an activity place.',
+    {podId, placeId: {type: 'string'}, placeText: {type: 'string'}, mapsUrl: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
+    ['podId', 'placeId'],
+    (request, args) => updateAgentTpActivityPlace(request, args),
+  ),
+  tool('delete_tp_activity_place', 'Delete an activity place.', {podId, placeId: {type: 'string'}}, ['podId', 'placeId'], (request, args) =>
+    deleteAgentTpActivityPlace(request, args),
   ),
   
   // 18-20. Attachments

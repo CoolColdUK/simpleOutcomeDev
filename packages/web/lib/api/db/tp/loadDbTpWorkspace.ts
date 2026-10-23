@@ -1,4 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
+import {tpRouteIsSelected} from '@so/model';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
@@ -62,6 +63,17 @@ export interface DbTpAction {
   readonly costCurrency?: string;
   readonly notes?: string;
   readonly selectedRouteId?: string;
+  readonly startTime?: string;
+  readonly endTime?: string;
+}
+
+export interface DbTpActivityPlace {
+  readonly id: string;
+  readonly actionId: string;
+  readonly placeText: string;
+  readonly mapsUrl?: string;
+  readonly notes?: string;
+  readonly sortOrder: number;
 }
 
 export interface DbTpRoute {
@@ -112,6 +124,7 @@ export interface DbTpWorkspace {
   readonly routes: readonly DbTpRoute[];
   readonly transports: readonly DbTpTransport[];
   readonly attachments: readonly DbTpAttachment[];
+  readonly activityPlaces: readonly DbTpActivityPlace[];
 }
 
 export interface LoadDbTpWorkspaceResult {
@@ -127,6 +140,7 @@ const emptyWorkspace: DbTpWorkspace = {
   routes: [],
   transports: [],
   attachments: [],
+  activityPlaces: [],
 };
 
 function num(value: string | null | undefined): number | undefined {
@@ -201,6 +215,19 @@ export async function loadDbTpWorkspace(
     return {data: null, error: transportRes.error};
   }
 
+  const activityPlaceRes =
+    actionIds.length === 0
+      ? {data: [], error: null}
+      : await supabase.from('tp_activity_place').select('*').in('action_id', actionIds).order('sort_order');
+  if (activityPlaceRes.error !== null) {
+    return {data: null, error: activityPlaceRes.error};
+  }
+
+  const actionRows = actionsRes.data ?? [];
+  const selectedRouteByAction = new Map(
+    actionRows.map((a) => [a.id, a.selected_route_id ?? undefined] as const),
+  );
+
   const trip: DbTpTrip = {
     id: tripRow.id,
     podId: tripRow.pod_id,
@@ -263,12 +290,14 @@ export async function loadDbTpWorkspace(
         costCurrency: a.cost_currency ?? undefined,
         notes: a.notes ?? undefined,
         selectedRouteId: a.selected_route_id ?? undefined,
+        startTime: a.start_time ?? undefined,
+        endTime: a.end_time ?? undefined,
       })),
       routes: (routesRes.data ?? []).map((r) => ({
         id: r.id,
         actionId: r.action_id,
         name: r.name,
-        isSelected: r.is_selected,
+        isSelected: tpRouteIsSelected(r.id, selectedRouteByAction.get(r.action_id), r.is_selected),
         sortOrder: r.sort_order,
       })),
       transports: (transportRes.data ?? []).map((t) => ({
@@ -294,6 +323,14 @@ export async function loadDbTpWorkspace(
         fileName: a.file_name,
         mimeType: a.mime_type,
         storagePath: a.storage_path,
+      })),
+      activityPlaces: (activityPlaceRes.data ?? []).map((p) => ({
+        id: p.id,
+        actionId: p.action_id,
+        placeText: p.place_text,
+        mapsUrl: p.maps_url ?? undefined,
+        notes: p.notes ?? undefined,
+        sortOrder: p.sort_order,
       })),
     },
     error: null,
