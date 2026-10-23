@@ -622,6 +622,8 @@ export interface Database {
           primary_destination_id?: string | null;
         };
         Update: {
+          day_index?: number;
+          calendar_date?: string;
           day_title?: string | null;
           day_notes?: string | null;
           primary_destination_id?: string | null;

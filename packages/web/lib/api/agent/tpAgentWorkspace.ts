@@ -98,7 +98,10 @@ export async function createAgentTpTrip(request: Request, input: unknown): Promi
   }
 
   const destinationNames =
-    parsed.value.destinationNames ?? destinationNamesFromInput(typeof input === 'object' && input !== null ? input : {});
+    parsed.value.destinationNames ??
+    (typeof input === 'object' && input !== null && !Array.isArray(input)
+      ? destinationNamesFromInput(input as Record<string, unknown>)
+      : []);
 
   try {
     const tripId = await createDbTpTripBundleWithClient(ctx.data.supabase, {
