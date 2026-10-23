@@ -865,7 +865,7 @@ export interface Database {
           id?: string;
           trip_id: string;
           label: string;
-          mode?: string;
+          mode?: string | null;
           duration_minutes?: number | null;
           cost_amount?: string | number | null;
           cost_currency?: string | null;
