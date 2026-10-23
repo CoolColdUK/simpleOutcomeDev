@@ -15,6 +15,7 @@ import {
   DialogTitle,
   Field,
   Input,
+  NativeSelect,
   Stack,
   Textarea,
 } from '@chakra-ui/react';
@@ -63,19 +64,18 @@ export default function SpaceCreatePodDialog({open, spaceId, onClose, onCreated}
           </DialogHeader>
           <DialogBody>
             <Stack gap={4}>
-              <Stack direction="row" gap={2} flexWrap="wrap">
-                {Object.values(FeatureKind).map((kind) => (
-                  <Button
-                    key={kind}
-                    size="sm"
-                    variant={feature === kind ? 'solid' : 'outline'}
-                    colorPalette="brand"
-                    onClick={() => setFeature(kind)}
-                  >
-                    {featureKindLabel(kind)}
-                  </Button>
-                ))}
-              </Stack>
+              <Field.Root>
+                <Field.Label>Pod type</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field value={feature} onChange={(e) => setFeature(e.target.value as FeatureKind)}>
+                    {Object.values(FeatureKind).map((kind) => (
+                      <option key={kind} value={kind}>
+                        {featureKindLabel(kind)}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                </NativeSelect.Root>
+              </Field.Root>
               <Stack direction="row" gap={2} flexWrap="wrap">
                 {Object.values(PodVisibility).map((item) => (
                   <Button

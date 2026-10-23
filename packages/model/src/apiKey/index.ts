@@ -9,6 +9,7 @@ export {
   apiKeyMatrixColumnCheck,
   apiKeyMatrixForPreset,
   createApiKeyMatrix,
+  apiKeyMatrixFromPermissions,
   permissionsForPreset,
   permissionsFromApiKeyMatrix,
   toggleApiKeyMatrixDeleteAll,

@@ -6,6 +6,7 @@ import {
   apiKeyMatrixCellsCheck,
   apiKeyMatrixColumnCheck,
   apiKeyMatrixForPreset,
+  apiKeyMatrixFromPermissions,
   createApiKeyMatrix,
   permissionsFromApiKeyMatrix,
   toggleApiKeyMatrixDeleteAll,
@@ -116,5 +117,15 @@ describe('api key permission matrix', () => {
     expect(permissions.spaces?.[space]).toEqual({space: read, group: read});
     expect(permissions.spaces?.[spaceB]).toBeUndefined();
     expect(permissions.pods).toBeUndefined();
+  });
+
+  it('serializes trip planning pods as trip grants and round-trips through permissions', () => {
+    const podTrip = '99999999-9999-4999-8999-999999999999';
+    const tripPods = [{podId: podTrip, spaceId: space, spaceName: 'Family', podName: 'Summer', feature: FeatureKind.TRIP_PLANNING}];
+    const matrix = toggleApiKeyMatrixPodCell(createApiKeyMatrix(tripPods, spaces), podTrip, ApiKeyAction.READ);
+    const permissions = permissionsFromApiKeyMatrix(matrix);
+    expect(permissions.pods?.[podTrip]).toEqual({trip: read});
+    const restored = apiKeyMatrixFromPermissions(permissions, tripPods, spaces);
+    expect(restored.pods[0]?.cells).toEqual({create: false, read: true, update: false, delete: false});
   });
 });

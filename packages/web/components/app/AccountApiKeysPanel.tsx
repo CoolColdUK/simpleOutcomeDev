@@ -1,14 +1,12 @@
 'use client';
 
-import {useCallback, useEffect, useState} from 'react';
-import {Alert, Button, Field, Heading, HStack, Input, Stack, Text, Textarea} from '@chakra-ui/react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
+import {Alert, Button, Heading, HStack, Input, Stack, Text, Textarea} from '@chakra-ui/react';
 import {
-  API_KEY_PRESET_OPTIONS,
-  ApiKeyPresetId,
   ApiKeyStatus,
   FeatureKind,
   PodStatus,
-  apiKeyMatrixForPreset,
+  apiKeyMatrixFromPermissions,
   buildApiKeyAiSetupPrompt,
   createApiKeyMatrix,
   filterAccessiblePods,
@@ -17,15 +15,17 @@ import {
   type ApiKeyMatrixPodInput,
   type ApiKeyMatrixSpaceInput,
   type ApiKeyPermissionMatrix,
+  type ApiKeyPermissions,
 } from '@so/model';
+import AccountApiKeysKeyDialog from '@/components/app/AccountApiKeysKeyDialog';
 import createDbApiKey from '@/lib/api/db/createDbApiKey';
 import listDbApiKeys, {type DbApiKey} from '@/lib/api/db/listDbApiKeys';
 import listDbPods from '@/lib/api/db/listDbPods';
 import listDbSpaces from '@/lib/api/db/listDbSpaces';
 import revokeDbApiKey from '@/lib/api/db/revokeDbApiKey';
+import updateDbApiKey from '@/lib/api/db/updateDbApiKey';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
-import AccountApiKeysPanelMatrix from '@/components/app/AccountApiKeysPanelMatrix';
 
 export interface AccountApiKeysPanelProps {
   readonly userId: string;
@@ -52,6 +52,9 @@ function podName(feature: FeatureKind, name: string | undefined): string {
   }
   if (feature === FeatureKind.FINANCIAL_PLANNING) {
     return 'Financial planning';
+  }
+  if (feature === FeatureKind.TRIP_PLANNING) {
+    return 'Trip planning';
   }
   return 'Todo list';
 }
@@ -87,62 +90,71 @@ async function loadInputs(userId: string): Promise<MatrixInputs> {
   };
 }
 
+function matrixForKey(permissions: ApiKeyPermissions, inputs: MatrixInputs): ApiKeyPermissionMatrix {
+  return apiKeyMatrixFromPermissions(permissions, inputs.pods, inputs.spaces);
+}
+
 export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) {
   const [keys, setKeys] = useState<readonly DbApiKey[]>([]);
   const [inputs, setInputs] = useState<MatrixInputs>({pods: [], spaces: []});
-  const [matrix, setMatrix] = useState<ApiKeyPermissionMatrix>(createApiKeyMatrix([], []));
-  const [name, setName] = useState('');
   const [secret, setSecret] = useState<string | undefined>(undefined);
   const [prompt, setPrompt] = useState<string | undefined>(undefined);
   const [error, setError] = useState('');
+  const [dialogError, setDialogError] = useState('');
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingKey, setEditingKey] = useState<DbApiKey | undefined>(undefined);
 
-  const refresh = useCallback(async (resetMatrix: boolean): Promise<void> => {
+  const createMatrix = useMemo(() => createApiKeyMatrix(inputs.pods, inputs.spaces), [inputs]);
+  const editMatrix = useMemo(
+    () => (editingKey === undefined ? createMatrix : matrixForKey(editingKey.permissions, inputs)),
+    [createMatrix, editingKey, inputs],
+  );
+
+  const refresh = useCallback(async (): Promise<void> => {
     const [listed, nextInputs] = await Promise.all([listDbApiKeys(), loadInputs(userId)]);
     setKeys(listed);
     setInputs(nextInputs);
-    if (resetMatrix) {
-      setMatrix(createApiKeyMatrix(nextInputs.pods, nextInputs.spaces));
-    }
     setReady(true);
   }, [userId]);
 
   useEffect(() => {
     void Promise.resolve()
-      .then(() => refresh(true))
+      .then(() => refresh())
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : String(e));
         setReady(true);
       });
   }, [refresh]);
 
-  const applyPreset = (preset: ApiKeyPresetId): void => {
-    setMatrix(apiKeyMatrixForPreset(preset, inputs.pods, inputs.spaces));
-  };
-
-  const create = async (): Promise<void> => {
+  const saveKey = async (name: string, matrix: ApiKeyPermissionMatrix, mode: 'create' | 'edit', keyId?: string): Promise<void> => {
     const trimmed = name.trim();
     if (trimmed === '') {
-      setError('Name is required');
+      setDialogError('Name is required');
       return;
     }
     const permissions = permissionsFromApiKeyMatrix(matrix);
     const parsed = safeParseApiKeyPermissions(permissions);
     if (!parsed.ok) {
-      setError(parsed.message);
+      setDialogError(parsed.message);
       return;
     }
-    setError('');
+    setDialogError('');
     setSaving(true);
     try {
-      const created = await createDbApiKey(trimmed, parsed.value);
-      setSecret(created.secret);
-      setPrompt(buildApiKeyAiSetupPrompt(window.location.origin));
-      setName('');
-      await refresh(true);
+      if (mode === 'create') {
+        const created = await createDbApiKey(trimmed, parsed.value);
+        setSecret(created.secret);
+        setPrompt(buildApiKeyAiSetupPrompt(window.location.origin));
+        setCreateOpen(false);
+      } else if (keyId !== undefined) {
+        await updateDbApiKey(keyId, trimmed, parsed.value);
+        setEditingKey(undefined);
+      }
+      await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setDialogError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
@@ -152,7 +164,7 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
     setError('');
     try {
       await revokeDbApiKey(id);
-      await refresh(false);
+      await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -160,6 +172,16 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
 
   const copy = async (value: string): Promise<void> => {
     await navigator.clipboard.writeText(value);
+  };
+
+  const closeCreate = (): void => {
+    setCreateOpen(false);
+    setDialogError('');
+  };
+
+  const closeEdit = (): void => {
+    setEditingKey(undefined);
+    setDialogError('');
   };
 
   return (
@@ -171,26 +193,47 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
         Keys act as you and can cover pods in more than one space. Nothing is granted until you turn it on. The secret is shown once.
       </Text>
       {ready ? (
-        <Stack gap={3}>
-          <Field.Root required>
-            <Field.Label>Name</Field.Label>
-            <Input value={name} onChange={(event) => setName(event.target.value)} maxW="lg" />
-          </Field.Root>
-          <HStack gap={2} flexWrap="wrap">
-            {API_KEY_PRESET_OPTIONS.map((option) => (
-              <Button key={option.id} size="sm" variant="outline" colorPalette="brand" onClick={() => applyPreset(option.id)}>
-                {option.label}
-              </Button>
-            ))}
-          </HStack>
-          <AccountApiKeysPanelMatrix matrix={matrix} onChange={setMatrix} />
-          <Button colorPalette="brand" alignSelf="start" loading={saving} onClick={() => void create()}>
-            Create key
-          </Button>
-        </Stack>
+        <Button
+          colorPalette="brand"
+          alignSelf="start"
+          onClick={() => {
+            setDialogError('');
+            setCreateOpen(true);
+          }}
+        >
+          Create key
+        </Button>
       ) : (
         <Text color="fg.muted">Loading API keys…</Text>
       )}
+      <AccountApiKeysKeyDialog
+        open={createOpen}
+        formKey="create"
+        title="Create API key"
+        submitLabel="Create key"
+        initialName=""
+        initialMatrix={createMatrix}
+        pods={inputs.pods}
+        spaces={inputs.spaces}
+        saving={saving}
+        error={dialogError}
+        onClose={closeCreate}
+        onSubmit={(name, matrix) => void saveKey(name, matrix, 'create')}
+      />
+      <AccountApiKeysKeyDialog
+        open={editingKey !== undefined}
+        formKey={editingKey?.id ?? 'edit'}
+        title="Edit API key"
+        submitLabel="Save"
+        initialName={editingKey?.name ?? ''}
+        initialMatrix={editMatrix}
+        pods={inputs.pods}
+        spaces={inputs.spaces}
+        saving={saving}
+        error={dialogError}
+        onClose={closeEdit}
+        onSubmit={(name, matrix) => void saveKey(name, matrix, 'edit', editingKey?.id)}
+      />
       {error !== '' ? (
         <Alert.Root status="error">
           <Alert.Description>{error}</Alert.Description>
@@ -218,9 +261,22 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
               {key.name} · {key.prefix} · {key.status} · last used {formatWhen(key.lastUsedAt)}
             </Text>
             {key.status === ApiKeyStatus.ACTIVE ? (
-              <Button size="xs" variant="outline" colorPalette="brand" onClick={() => void revoke(key.id)}>
-                Revoke
-              </Button>
+              <HStack gap={2}>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  colorPalette="brand"
+                  onClick={() => {
+                    setDialogError('');
+                    setEditingKey(key);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button size="xs" variant="outline" colorPalette="brand" onClick={() => void revoke(key.id)}>
+                  Revoke
+                </Button>
+              </HStack>
             ) : null}
           </HStack>
         ))}

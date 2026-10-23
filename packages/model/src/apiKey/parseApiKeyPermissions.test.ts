@@ -17,6 +17,16 @@ describe('safeParseApiKeyPermissions', () => {
     expect(safeParseApiKeyPermissions({})).toEqual({ok: true, value: {}});
   });
 
+  it('accepts trip planning pod grants', () => {
+    const result = safeParseApiKeyPermissions({
+      pods: {[podA]: {trip: ['read', 'create']}},
+    });
+    expect(result).toEqual({
+      ok: true,
+      value: {pods: {[podA]: {trip: [ApiKeyAction.READ, ApiKeyAction.CREATE]}}},
+    });
+  });
+
   it('accepts per-pod and per-space grants', () => {
     const result = safeParseApiKeyPermissions({
       pods: {[podA]: {todo: ['read']}},
