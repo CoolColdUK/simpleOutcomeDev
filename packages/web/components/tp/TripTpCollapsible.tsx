@@ -16,13 +16,19 @@ export default function TripTpCollapsible({title, children, defaultOpen = false}
       <Button
         variant="ghost"
         width="full"
+        minW={0}
+        height="auto"
+        py={2}
         justifyContent="space-between"
+        alignItems="flex-start"
         fontWeight="medium"
         borderRadius="md"
         onClick={() => setOpen((v) => !v)}
       >
-        {title}
-        <Text as="span" color="fg.muted" fontSize="sm">{open ? '−' : '+'}</Text>
+        <Text flex="1" minW={0} textAlign="left" lineClamp={3} overflow="hidden" textOverflow="ellipsis">
+          {title}
+        </Text>
+        <Text as="span" color="fg.muted" fontSize="sm" flexShrink={0}>{open ? '−' : '+'}</Text>
       </Button>
       {open ? (
         <Stack gap={2} p={3} pt={0} borderTopWidth="1px">

@@ -42,6 +42,30 @@ describe('tpRouteOptionSummary', () => {
     ).toBe('Option A · selected · 3 steps · HKD 180');
   });
 
+  it('uses route price over step sum', () => {
+    expect(
+      tpRouteOptionSummary({
+        name: 'Metro',
+        isSelected: false,
+        routeCostAmount: 200,
+        routeCostCurrency: 'JPY',
+        steps: [{costAmount: 50, costCurrency: 'JPY'}],
+      }),
+    ).toBe('Metro · 1 step · JPY 200');
+  });
+
+  it('includes transport library label and mode', () => {
+    expect(
+      tpRouteOptionSummary({
+        name: 'Walk',
+        isSelected: true,
+        transportLibLabel: 'Metro pass',
+        transportLibMode: 'train',
+        steps: [],
+      }),
+    ).toBe('Walk · selected · Metro pass (train) · No steps');
+  });
+
   it('omits price when currencies differ', () => {
     expect(
       tpRouteOptionSummary({

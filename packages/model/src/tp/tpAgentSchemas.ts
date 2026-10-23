@@ -3,6 +3,8 @@
  */
 
 import * as v from 'valibot';
+import {isTpIsoCountryCode} from './tpIsoCountries';
+import {isTpLocationType} from './tpLocationType';
 
 // Common
 const podId = v.pipe(v.string(), v.minLength(1));
@@ -166,6 +168,10 @@ export const UpdateRouteSchema = v.object({
   name: optionalString,
   notes: optionalString,
   sortOrder: optionalNumber,
+  costAmount: optionalNullNumber,
+  costCurrency: optionalNullString,
+  durationMinutes: optionalNullNumber,
+  transportLibId: optionalNullString,
 });
 
 export const DeleteRouteSchema = v.object({
@@ -250,6 +256,29 @@ export const DeleteAttachmentSchema = v.object({
   attachmentId: v.pipe(v.string(), v.minLength(1)),
 });
 
+const optionalCountryCode = v.optional(
+  v.pipe(
+    v.string(),
+    v.regex(/^[A-Z]{2}$/),
+    v.custom((c) => isTpIsoCountryCode(c as string)),
+  ),
+);
+
+const optionalNullCountryCode = v.optional(
+  v.union([
+    v.null(),
+    v.pipe(
+      v.string(),
+      v.regex(/^[A-Z]{2}$/),
+      v.custom((c) => isTpIsoCountryCode(c as string)),
+    ),
+  ]),
+);
+
+const optionalLocationType = v.optional(
+  v.pipe(v.string(), v.custom((t) => isTpLocationType(t as string))),
+);
+
 export const CreateLocationSchema = v.object({
   podId,
   name: v.pipe(v.string(), v.minLength(1)),
@@ -261,6 +290,8 @@ export const CreateLocationSchema = v.object({
   website: optionalString,
   email: optionalString,
   phone: optionalString,
+  country: optionalCountryCode,
+  locationType: optionalLocationType,
   sortOrder: optionalNumber,
 });
 
@@ -276,6 +307,8 @@ export const UpdateLocationSchema = v.object({
   website: optionalNullString,
   email: optionalNullString,
   phone: optionalNullString,
+  country: optionalNullCountryCode,
+  locationType: optionalLocationType,
   sortOrder: optionalNumber,
 });
 

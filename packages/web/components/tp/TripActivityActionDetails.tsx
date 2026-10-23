@@ -5,6 +5,8 @@ import {Box, Button, Link, Stack, Text} from '@chakra-ui/react';
 import {tpLocationNotesWithoutTagLines, tpTagsFromLocationNotes} from '@so/model';
 import type {DbTpAction, DbTpActionLocation, DbTpLocation} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import TripDayCardTags from '@/components/tp/TripDayCardTags';
+import TripTpTruncateText from '@/components/tp/TripTpTruncateText';
+import {tpIsoCountryName} from '@so/model';
 import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
 import tpFormatLocationTime from '@/components/tp/tpFormatLocationTime';
 import updateDbTpActionLocation from '@/lib/api/db/tp/updateDbTpActionLocation';
@@ -130,16 +132,19 @@ export default function TripActivityActionDetails({
                       onCheckedChange={(v) => void toggleLinkDone(link.id, v)}
                     />
                   ) : null}
-                  <Text fontWeight="medium">{loc.name}</Text>
+                  <TripTpTruncateText fontWeight="medium" lineClamp={2}>{loc.name}</TripTpTruncateText>
                 </Box>
-                {loc.address !== undefined && loc.address !== '' ? <Text>{loc.address}</Text> : null}
+                {loc.country !== undefined ? (
+                  <TripTpTruncateText lineClamp={1}>{tpIsoCountryName(loc.country) ?? loc.country}</TripTpTruncateText>
+                ) : null}
+                {loc.address !== undefined && loc.address !== '' ? <TripTpTruncateText lineClamp={3}>{loc.address}</TripTpTruncateText> : null}
                 {hours !== undefined ? <Text>{hours}</Text> : null}
                 {loc.website !== undefined && loc.website !== '' ? (
                   <Link href={loc.website} target="_blank" rel="noopener noreferrer">{loc.website}</Link>
                 ) : null}
                 {loc.email !== undefined && loc.email !== '' ? <Text>{loc.email}</Text> : null}
                 {loc.phone !== undefined && loc.phone !== '' ? <Text>{loc.phone}</Text> : null}
-                {bodyNotes !== undefined ? <Text whiteSpace="pre-wrap">{bodyNotes}</Text> : null}
+                {bodyNotes !== undefined ? <TripTpTruncateText lineClamp={4}>{bodyNotes}</TripTpTruncateText> : null}
                 {loc.mapsUrl !== undefined && loc.mapsUrl !== '' ? (
                   <Link href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">Map</Link>
                 ) : null}
@@ -160,7 +165,7 @@ export default function TripActivityActionDetails({
               {action.costAmount ?? ''}
             </Text>
           ) : null}
-          {hasNotes ? <Text whiteSpace="pre-wrap">{action.notes}</Text> : null}
+          {hasNotes ? <TripTpTruncateText lineClamp={4}>{action.notes}</TripTpTruncateText> : null}
         </Stack>
       ) : null}
     </Box>

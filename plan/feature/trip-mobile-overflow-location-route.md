@@ -6,7 +6,7 @@ A phone day view should not scroll sideways when a tag, a destination note, or a
 **Base:** `develop` after [#19](https://github.com/CoolColdUK/simpleOutcomeDev/pull/19) (glance, selected route), [#20](https://github.com/CoolColdUK/simpleOutcomeDev/pull/20) (`tp_location`, `tp_transport_lib`, `from_location_id` / `to_location_id`), [#21](https://github.com/CoolColdUK/simpleOutcomeDev/pull/21) (activity Details, tag chips, location contact, transport-instance overrides, optional library mode), and [#22](https://github.com/CoolColdUK/simpleOutcomeDev/pull/22) (done flags, travel Details, route accordions, step duration and locations).  
 **Earlier plans:** [trip-planning.md](./trip-planning.md) (locked travel → route → step model and zoned instants), [trip-day-ui-polish.md](./trip-day-ui-polish.md), [trip-day-card-icons-activity-accordion.md](./trip-day-card-icons-activity-accordion.md), [trip-done-travel-routes.md](./trip-done-travel-routes.md). This plan evolves those tables. It does not replace them.
 
-**Status:** Plan only. Not implemented. Agents do not merge. After Matthew approves, implement on **this same branch**.
+**Status:** Implemented on branch `cursor/trip-tag-overflow-route-fields-d7c7` (PR #23). Agents do not merge.
 
 **Screenshot (Matthew, 2026-10-24):** phone day view, status bar `07:07`. Long text leaves a narrow left column and paints across the rest of the screen. Visible pieces include a clipped chip like `nts 5F/6F/1F; MUJI 3F`, left-cut destination lines (`kihabara`, `(akodon)`, `abu-shabu`, `onigiri`, `22:00`), and an unwrapped note `Akihabara Stn. International parcels. Sat main counter 09:00–17:00; weekend`. Those strings are the acceptance examples for the layout fix.
 

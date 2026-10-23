@@ -25,6 +25,8 @@ export function mapAgentTpLocationRow(row: TpLocationRow) {
     website: row.website ?? undefined,
     email: row.email ?? undefined,
     phone: row.phone ?? undefined,
+    country: row.country ?? undefined,
+    locationType: row.location_type,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

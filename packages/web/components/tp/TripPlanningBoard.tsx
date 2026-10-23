@@ -32,6 +32,7 @@ import {
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import TripActivityActionDetails from '@/components/tp/TripActivityActionDetails';
 import TripDayCardTags from '@/components/tp/TripDayCardTags';
+import TripTpTruncateText from '@/components/tp/TripTpTruncateText';
 import TripTravelActionDetails from '@/components/tp/TripTravelActionDetails';
 import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
 import loadDbTpWorkspace, {type DbTpAction, type DbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWorkspace';
@@ -204,6 +205,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
         costAmount: a.costAmount,
         selectedRouteId: a.selectedRouteId,
       })),
+      data.routes.map((r) => ({id: r.id, costAmount: r.costAmount})),
       data.transports.map((t) => ({routeId: t.routeId, costAmount: t.costAmount})),
     );
   }, [data]);
@@ -564,7 +566,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                 return (
                   <Box key={dest.id}>
                     <Text fontWeight="semibold">{dest.name}</Text>
-                    <Text whiteSpace="pre-wrap">{dest.importantInfo ?? 'No details yet.'}</Text>
+                    <TripTpTruncateText lineClamp={4}>{dest.importantInfo ?? 'No details yet.'}</TripTpTruncateText>
                   </Box>
                 );
               })}
@@ -609,9 +611,9 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                   entry.kind === TpActionKind.STAY ||
                   entry.kind === TpActionKind.TRAVEL);
               return (
-                <Box key={`${entry.actionId}-${entry.displayMode}`} borderWidth="1px" borderRadius="md" p={3}>
-                  <HStack justify="space-between" wrap="wrap" gap={2} align="flex-start">
-                    <HStack align="flex-start">
+                <Box key={`${entry.actionId}-${entry.displayMode}`} borderWidth="1px" borderRadius="md" p={3} minW={0} maxW="100%" overflowX="clip">
+                  <HStack justify="space-between" wrap="wrap" gap={2} align="flex-start" minW={0} maxW="100%">
+                    <HStack align="flex-start" flex="1" minW={0}>
                       {showActionDone ? (
                         <TripTpDoneCheckbox
                           checked={action.done}
@@ -628,10 +630,10 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                       ) : null}
                       <Badge>{entry.kind}</Badge>
                       {entry.displayMode === 'mirror' ? <Badge variant="outline">mirror</Badge> : null}
-                      <Stack gap={1}>
-                        <Text fontWeight="medium">{entry.title}</Text>
+                      <Stack gap={1} flex="1" minW={0} maxW="100%">
+                        <TripTpTruncateText fontWeight="medium" lineClamp={2}>{entry.title}</TripTpTruncateText>
                         {action !== undefined && actionCardSummary(action) !== '' ? (
-                          <Text fontSize="sm" color="fg.muted">{actionCardSummary(action)}</Text>
+                          <TripTpTruncateText fontSize="sm" color="fg.muted" lineClamp={3}>{actionCardSummary(action)}</TripTpTruncateText>
                         ) : null}
                         {activityTags.length > 0 ? <TripDayCardTags tags={activityTags} max={4} /> : null}
                       </Stack>
@@ -822,7 +824,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                   rows={3}
                 />
               ) : (
-                <Text whiteSpace="pre-wrap">{d.importantInfo ?? ''}</Text>
+                <TripTpTruncateText lineClamp={6}>{d.importantInfo ?? ''}</TripTpTruncateText>
               )}
               {canWrite ? (
                 <Button

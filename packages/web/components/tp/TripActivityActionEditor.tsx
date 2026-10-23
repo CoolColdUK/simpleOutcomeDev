@@ -2,6 +2,7 @@
 
 import {useMemo, useState} from 'react';
 import {Button, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
+import {TP_LOCATION_TYPES, tpLocationTypeLabel} from '@so/model';
 import type {DbTpAction, DbTpActionLocation, DbTpLocation} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import createDbTpActionLocation from '@/lib/api/db/tp/createDbTpActionLocation';

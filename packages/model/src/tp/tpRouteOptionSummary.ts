@@ -17,6 +17,10 @@ export interface TpRouteOptionSummaryInput {
   readonly name: string;
   readonly isSelected: boolean;
   readonly steps: readonly TpRouteOptionStepInput[];
+  readonly routeCostAmount?: number;
+  readonly routeCostCurrency?: string;
+  readonly transportLibLabel?: string;
+  readonly transportLibMode?: string;
 }
 
 function stepStartLabel(step: TpRouteOptionStepInput): string | undefined {
@@ -47,7 +51,7 @@ function stepCountLabel(count: number): string {
   return `${count} steps`;
 }
 
-function pricePart(steps: readonly TpRouteOptionStepInput[]): string | undefined {
+function stepPricePart(steps: readonly TpRouteOptionStepInput[]): string | undefined {
   const priced = steps.filter((s) => s.costAmount !== undefined && s.costCurrency !== undefined && s.costCurrency !== '');
   if (priced.length === 0) {
     return undefined;
@@ -61,6 +65,17 @@ function pricePart(steps: readonly TpRouteOptionStepInput[]): string | undefined
   }
   const sum = priced.reduce((acc, s) => acc + (s.costAmount ?? 0), 0);
   return `${currency} ${sum}`;
+}
+
+function routePricePart(input: TpRouteOptionSummaryInput): string | undefined {
+  if (input.routeCostAmount !== undefined && input.routeCostCurrency !== undefined && input.routeCostCurrency !== '') {
+    return `${input.routeCostCurrency} ${input.routeCostAmount}`;
+  }
+  return undefined;
+}
+
+function pricePart(input: TpRouteOptionSummaryInput, steps: readonly TpRouteOptionStepInput[]): string | undefined {
+  return routePricePart(input) ?? stepPricePart(steps);
 }
 
 function timePart(steps: readonly TpRouteOptionStepInput[]): string | undefined {
@@ -85,6 +100,11 @@ export default function tpRouteOptionSummary(input: TpRouteOptionSummaryInput): 
   if (input.isSelected) {
     parts.push('selected');
   }
+  const label = input.transportLibLabel?.trim();
+  if (label !== undefined && label !== '') {
+    const mode = input.transportLibMode?.trim();
+    parts.push(mode !== undefined && mode !== '' ? `${label} (${mode})` : label);
+  }
   const steps = input.steps;
   if (steps.length > 0) {
     const first = steps[0];
@@ -98,7 +118,7 @@ export default function tpRouteOptionSummary(input: TpRouteOptionSummaryInput): 
     }
   }
   parts.push(stepCountLabel(steps.length));
-  const price = pricePart(steps);
+  const price = pricePart(input, steps);
   if (price !== undefined) {
     parts.push(price);
   }

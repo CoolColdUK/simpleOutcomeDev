@@ -2,7 +2,7 @@
  * Trip planning agent: workspace operations
  */
 
-import {ApiKeyAction, CreateTripSchema, safeParseSchema} from '@so/model';
+import {ApiKeyAction, CreateTripSchema, safeParseSchema, TpActionKind, tpBudgetRollup} from '@so/model';
 import {agentOk, agentValidation, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall} from '@/lib/api/agent/tpAgentCall';
@@ -202,34 +202,19 @@ export async function getAgentTpBudgetRollup(request: Request, input: unknown): 
     return agentTripNotSetup();
   }
 
-  // Compute total costs
-  let totalCost = 0;
-
-  // Actions (stay/activity/note): count cost once per action
   const actions: readonly DbTpAction[] = workspace.data.actions;
-  actions.forEach((action) => {
-    if (action.costAmount !== undefined) {
-      totalCost += action.costAmount;
-    }
-  });
-
-  // Transports: sum costs of transports on selected routes
   const routes: readonly DbTpRoute[] = workspace.data.routes;
   const transports: readonly DbTpTransport[] = workspace.data.transports;
 
-  actions.forEach((action) => {
-    if (action.kind === 'travel' && action.selectedRouteId !== undefined) {
-      const selectedRoute = routes.find((route) => route.id === action.selectedRouteId);
-      if (selectedRoute !== undefined) {
-        const routeTransports = transports.filter((transport) => transport.routeId === selectedRoute.id);
-        routeTransports.forEach((transport) => {
-          if (transport.costAmount !== undefined) {
-            totalCost += transport.costAmount;
-          }
-        });
-      }
-    }
-  });
+  const totalCost = tpBudgetRollup(
+    actions.map((action) => ({
+      kind: action.kind as TpActionKind,
+      costAmount: action.costAmount,
+      selectedRouteId: action.selectedRouteId,
+    })),
+    routes.map((route) => ({id: route.id, costAmount: route.costAmount})),
+    transports.map((transport) => ({routeId: transport.routeId, costAmount: transport.costAmount})),
+  );
 
   const trip = workspace.data.trip;
   const budgetAmount = trip.budgetAmount ?? 0;
