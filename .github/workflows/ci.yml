@@ -2,6 +2,11 @@
 name: CI
 'on':
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
 
 jobs:
   lint_and_test:
@@ -52,3 +57,18 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Build model (CI)
+        run: npm run build:model
+
+      - name: Build component (CI)
+        run: npm run build:component
+
+      - name: Build web (CI type check)
+        env:
+          NEXT_PUBLIC_WEB_URL: https://ci-build-test.example.com
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkdW1teSIsInJvbGUiOiJhbm9uIn0.dummy
+          NEXT_PUBLIC_APP_VERSION: 0.0.0-ci
+          NEXT_PUBLIC_GIT_COMMIT: ${{ github.sha }}
+        run: npm run build:web
