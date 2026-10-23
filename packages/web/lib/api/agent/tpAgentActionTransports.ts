@@ -12,7 +12,7 @@ export async function linkAgentTpActionTransport(request: Request, input: unknow
   if (!parsed.ok) {
     return agentValidation(parsed.message);
   }
-  const {podId, actionId, transportLibId, sortOrder, durationMinutes, costAmount, costCurrency, fromLocationId, toLocationId} =
+  const {podId, actionId, transportLibId, sortOrder, durationMinutes, costAmount, costCurrency, fromLocationId, toLocationId, done} =
     parsed.value;
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
   if (!ctx.ok) {
@@ -35,6 +35,7 @@ export async function linkAgentTpActionTransport(request: Request, input: unknow
     costCurrency,
     fromLocationId,
     toLocationId,
+    done,
   });
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) {
@@ -51,7 +52,7 @@ export async function updateAgentTpActionTransport(request: Request, input: unkn
   if (!parsed.ok) {
     return agentValidation(parsed.message);
   }
-  const {podId, linkId, sortOrder, durationMinutes, costAmount, costCurrency, fromLocationId, toLocationId} = parsed.value;
+  const {podId, linkId, sortOrder, durationMinutes, costAmount, costCurrency, fromLocationId, toLocationId, done} = parsed.value;
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.UPDATE));
   if (!ctx.ok) {
     return ctx;
@@ -68,6 +69,7 @@ export async function updateAgentTpActionTransport(request: Request, input: unkn
     costCurrency: 'costCurrency' in args ? costCurrency ?? null : undefined,
     fromLocationId: 'fromLocationId' in args ? fromLocationId ?? null : undefined,
     toLocationId: 'toLocationId' in args ? toLocationId ?? null : undefined,
+    done: 'done' in args ? done : undefined,
   });
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) {

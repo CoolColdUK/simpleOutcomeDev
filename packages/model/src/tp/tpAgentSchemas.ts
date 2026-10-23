@@ -10,6 +10,7 @@ const optionalString = v.optional(v.string());
 const optionalNumber = v.optional(v.number());
 const optionalNullString = v.optional(v.union([v.string(), v.null()]));
 const optionalNullNumber = v.optional(v.union([v.number(), v.null()]));
+const optionalBoolean = v.optional(v.boolean());
 
 // Trip
 export const CreateTripSchema = v.object({
@@ -109,6 +110,7 @@ export const CreateActionSchema = v.object({
   url: optionalString,
   notes: optionalString,
   sortOrder: optionalNumber,
+  done: optionalBoolean,
 });
 
 export const UpdateActionSchema = v.object({
@@ -141,6 +143,7 @@ export const UpdateActionSchema = v.object({
   toLocationId: optionalString,
   durationMinutes: optionalNumber,
   sortOrder: optionalNumber,
+  done: optionalBoolean,
 });
 
 export const DeleteActionSchema = v.object({
@@ -193,6 +196,10 @@ export const CreateTransportSchema = v.object({
   url: optionalString,
   notes: optionalString,
   sortOrder: optionalNumber,
+  durationMinutes: optionalNumber,
+  fromLocationId: optionalString,
+  toLocationId: optionalString,
+  done: optionalBoolean,
 });
 
 export const UpdateTransportSchema = v.object({
@@ -211,6 +218,10 @@ export const UpdateTransportSchema = v.object({
   url: optionalString,
   notes: optionalString,
   sortOrder: optionalNumber,
+  durationMinutes: optionalNullNumber,
+  fromLocationId: optionalNullString,
+  toLocationId: optionalNullString,
+  done: optionalBoolean,
 });
 
 export const DeleteTransportSchema = v.object({
@@ -278,6 +289,14 @@ export const LinkActionLocationSchema = v.object({
   actionId: v.pipe(v.string(), v.minLength(1)),
   locationId: v.pipe(v.string(), v.minLength(1)),
   sortOrder: optionalNumber,
+  done: optionalBoolean,
+});
+
+export const UpdateActionLocationSchema = v.object({
+  podId,
+  linkId: v.pipe(v.string(), v.minLength(1)),
+  sortOrder: optionalNumber,
+  done: optionalBoolean,
 });
 
 export const UnlinkActionLocationSchema = v.object({
@@ -327,6 +346,7 @@ export const LinkActionTransportSchema = v.object({
   costCurrency: optionalString,
   fromLocationId: optionalString,
   toLocationId: optionalString,
+  done: optionalBoolean,
 });
 
 export const UpdateActionTransportSchema = v.object({
@@ -338,6 +358,7 @@ export const UpdateActionTransportSchema = v.object({
   costCurrency: optionalNullString,
   fromLocationId: optionalNullString,
   toLocationId: optionalNullString,
+  done: optionalBoolean,
 });
 
 export const UnlinkActionTransportSchema = v.object({

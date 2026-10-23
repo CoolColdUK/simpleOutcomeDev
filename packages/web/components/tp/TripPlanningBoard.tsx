@@ -32,12 +32,15 @@ import {
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import TripActivityActionDetails from '@/components/tp/TripActivityActionDetails';
 import TripDayCardTags from '@/components/tp/TripDayCardTags';
+import TripTravelActionDetails from '@/components/tp/TripTravelActionDetails';
+import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
 import loadDbTpWorkspace, {type DbTpAction, type DbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import {deleteDbTpActionForBrowser} from '@/lib/api/db/tp/deleteDbTpAction';
 import createDbTpTripBundle from '@/lib/api/db/tp/createDbTpTripBundle';
 import updateDbTpDay from '@/lib/api/db/tp/updateDbTpDay';
 import createDbTpAction from '@/lib/api/db/tp/createDbTpAction';
 import updateDbTpDestination from '@/lib/api/db/tp/updateDbTpDestination';
+import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import updateDbTpActionSortOrders from '@/lib/api/db/tp/updateDbTpActionSortOrders';
 import createDbTpRoute from '@/lib/api/db/tp/createDbTpRoute';
 import selectDbTpRoute from '@/lib/api/db/tp/selectDbTpRoute';
@@ -65,6 +68,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
   const [data, setData] = useState<DbTpWorkspace | undefined>(undefined);
   const [selectedDayId, setSelectedDayId] = useState<string | undefined>(undefined);
   const [expandedActionId, setExpandedActionId] = useState<string | undefined>(undefined);
+  const [busyActionDoneId, setBusyActionDoneId] = useState<string | undefined>(undefined);
   const [error, setError] = useState('');
   const [wizardTitle, setWizardTitle] = useState('');
   const [wizardStart, setWizardStart] = useState('');
@@ -263,11 +267,24 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
     }
   };
 
-  const onEditorSaved = (): void => {
-    void reload().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  };
+  const onEditorSaved = (): Promise<void> =>
+    reload().catch((e: unknown) => {
+      setError(e instanceof Error ? e.message : String(e));
+    });
 
   const onEditorError = (message: string): void => setError(message);
+
+  const toggleActionDone = async (actionId: string, done: boolean): Promise<void> => {
+    setBusyActionDoneId(actionId);
+    try {
+      await updateDbTpAction(actionId, {done});
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyActionDoneId(undefined);
+    }
+  };
 
   const addAction = async (kind: TpActionKind): Promise<void> => {
     if (trip === undefined || selectedDay === undefined || !canWrite) {
@@ -580,16 +597,35 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                         .map((l) => data.locations.find((loc) => loc.id === l.locationId)?.notes),
                     )
                   : [];
-              const showActivityEdit =
+              const showCardEdit =
                 action === undefined
                   ? false
-                  : entry.kind === TpActionKind.ACTIVITY
+                  : entry.kind === TpActionKind.ACTIVITY || entry.kind === TpActionKind.TRAVEL
                     ? canWrite && entry.displayMode === 'canonical'
                     : true;
+              const showActionDone =
+                action !== undefined &&
+                (entry.kind === TpActionKind.ACTIVITY ||
+                  entry.kind === TpActionKind.STAY ||
+                  entry.kind === TpActionKind.TRAVEL);
               return (
                 <Box key={`${entry.actionId}-${entry.displayMode}`} borderWidth="1px" borderRadius="md" p={3}>
                   <HStack justify="space-between" wrap="wrap" gap={2} align="flex-start">
                     <HStack align="flex-start">
+                      {showActionDone ? (
+                        <TripTpDoneCheckbox
+                          checked={action.done}
+                          disabled={!canWrite}
+                          busy={busyActionDoneId === action.id}
+                          ariaLabel={
+                            action.done
+                              ? `Mark ${entry.kind} ${title} not done`
+                              : `Mark ${entry.kind} ${title} done`
+                          }
+                          tooltip="Done for this day card only."
+                          onCheckedChange={(v) => void toggleActionDone(action.id, v)}
+                        />
+                      ) : null}
                       <Badge>{entry.kind}</Badge>
                       {entry.displayMode === 'mirror' ? <Badge variant="outline">mirror</Badge> : null}
                       <Stack gap={1}>
@@ -649,7 +685,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                           </IconButton>
                         </AppIconTooltip>
                       ) : null}
-                      {showActivityEdit ? (
+                      {showCardEdit ? (
                         <AppIconTooltip label={expanded ? `Close editor ${title}` : `Edit ${entry.kind} ${title}`}>
                           <IconButton
                             aria-label={expanded ? `Close editor ${title}` : `Edit ${entry.kind} ${title}`}
@@ -668,6 +704,22 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                       action={action}
                       locations={data.locations}
                       actionLocations={data.actionLocations}
+                      canWrite={canWrite}
+                      onReload={reload}
+                      onError={onEditorError}
+                    />
+                  ) : null}
+                  {action !== undefined && entry.kind === TpActionKind.TRAVEL && !expanded && trip !== undefined ? (
+                    <TripTravelActionDetails
+                      action={action}
+                      routes={data.routes}
+                      transports={data.transports}
+                      locations={data.locations}
+                      transportLib={data.transportLib}
+                      actionTransports={data.actionTransports}
+                      canWrite={canWrite}
+                      onReload={reload}
+                      onError={onEditorError}
                     />
                   ) : null}
                   {expanded && action !== undefined && trip !== undefined ? (

@@ -12,6 +12,7 @@ export interface CreateDbTpActionTransportInput {
   readonly costCurrency?: string;
   readonly fromLocationId?: string;
   readonly toLocationId?: string;
+  readonly done?: boolean;
 }
 
 export async function createDbTpActionTransportForAgent(
@@ -29,6 +30,7 @@ export async function createDbTpActionTransportForAgent(
       cost_currency: input.costCurrency ?? null,
       from_location_id: input.fromLocationId ?? null,
       to_location_id: input.toLocationId ?? null,
+      done: input.done ?? false,
     })
     .select('*')
     .single();

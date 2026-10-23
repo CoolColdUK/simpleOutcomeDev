@@ -27,6 +27,7 @@ export interface UpdateDbTpActionInput {
   readonly fromLocationId?: string | null;
   readonly toLocationId?: string | null;
   readonly durationMinutes?: number | null;
+  readonly done?: boolean;
 }
 
 function buildTpActionPatch(input: UpdateDbTpActionInput): Database['public']['Tables']['tp_action']['Update'] {
@@ -99,6 +100,9 @@ function buildTpActionPatch(input: UpdateDbTpActionInput): Database['public']['T
   }
   if (input.durationMinutes !== undefined) {
     patch.duration_minutes = input.durationMinutes;
+  }
+  if (input.done !== undefined) {
+    patch.done = input.done;
   }
   return patch;
 }

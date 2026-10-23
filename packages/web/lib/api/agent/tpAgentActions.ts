@@ -76,6 +76,7 @@ export async function createAgentTpAction(request: Request, input: unknown): Pro
     url: typeof args.url === 'string' ? args.url : undefined,
     notes: typeof args.notes === 'string' ? args.notes : undefined,
     sortOrder: typeof args.sortOrder === 'number' ? args.sortOrder : 0,
+    done: typeof args.done === 'boolean' ? args.done : undefined,
   });
   
   const resultErr = dbErr(result.error);
@@ -125,6 +126,7 @@ export async function updateAgentTpAction(request: Request, input: unknown): Pro
   if ('toLocationId' in args) updates.to_location_id = args.toLocationId;
   if ('durationMinutes' in args) updates.duration_minutes = args.durationMinutes;
   if ('sortOrder' in args) updates.sort_order = args.sortOrder;
+  if ('done' in args) updates.done = args.done;
   
   // Handle timezone conversions for check-in/check-out
   if ('checkInLocalTime' in args && 'checkInTimezone' in args) {

@@ -10,6 +10,7 @@ export interface UpdateDbTpActionTransportInput {
   readonly costCurrency?: string | null;
   readonly fromLocationId?: string | null;
   readonly toLocationId?: string | null;
+  readonly done?: boolean;
 }
 
 export async function updateDbTpActionTransportForAgent(
@@ -35,6 +36,9 @@ export async function updateDbTpActionTransportForAgent(
   }
   if (input.toLocationId !== undefined) {
     patch.to_location_id = input.toLocationId;
+  }
+  if (input.done !== undefined) {
+    patch.done = input.done;
   }
   return supabase.from('tp_action_transport').update(patch).eq('id', linkId).select('*').single();
 }

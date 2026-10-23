@@ -60,6 +60,7 @@ export interface CreateTpActionInputForAgent {
   readonly url?: string;
   readonly notes?: string;
   readonly sortOrder: number;
+  readonly done?: boolean;
 }
 
 export async function createDbTpActionForAgent(
@@ -94,6 +95,7 @@ export async function createDbTpActionForAgent(
       url: input.url ?? null,
       notes: input.notes ?? null,
       sort_order: input.sortOrder,
+      done: input.done ?? false,
     })
     .select('*')
     .single();
