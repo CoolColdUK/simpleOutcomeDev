@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@so/web",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "type": "module",
   "scripts": {
     "build:prod": "next build",
@@ -19,8 +19,8 @@
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
     "@fontsource-variable/roboto": "^5.3.0",
-    "@so/component": "^0.30.0",
-    "@so/model": "^0.30.0",
+    "@so/component": "^0.31.0",
+    "@so/model": "^0.31.0",
     "@supabase/supabase-js": "^2.112.3",
     "dayjs": "^1.11.22",
     "framer-motion": "^13.1.0",
