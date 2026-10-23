@@ -48,7 +48,11 @@ import {
   deleteAgentTpTransportLib,
   updateAgentTpTransportLib,
 } from '@/lib/api/agent/tpAgentTransportLib';
-import {linkAgentTpActionTransport, unlinkAgentTpActionTransport} from '@/lib/api/agent/tpAgentActionTransports';
+import {
+  linkAgentTpActionTransport,
+  unlinkAgentTpActionTransport,
+  updateAgentTpActionTransport,
+} from '@/lib/api/agent/tpAgentActionTransports';
 import {
   deleteAgentTpAttachment,
   listAgentTpAttachments,
@@ -321,15 +325,40 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
 
   tool(
     'create_tp_location',
-    'Create a reusable trip location (name, address, maps URL).',
-    {podId, name: {type: 'string'}, address: {type: 'string'}, mapsUrl: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
+    'Create a reusable trip location (name, address, maps URL, optional hours and contact).',
+    {
+      podId,
+      name: {type: 'string'},
+      address: {type: 'string'},
+      mapsUrl: {type: 'string'},
+      notes: {type: 'string'},
+      openTime: {type: 'string', description: 'Local open time HH:MM'},
+      closeTime: {type: 'string', description: 'Local close time HH:MM'},
+      website: {type: 'string'},
+      email: {type: 'string'},
+      phone: {type: 'string'},
+      sortOrder: {type: 'number'},
+    },
     ['podId', 'name'],
     (request, args) => createAgentTpLocation(request, args),
   ),
   tool(
     'update_tp_location',
     'Update a trip location.',
-    {podId, locationId: {type: 'string'}, name: {type: 'string'}, address: {type: 'string'}, mapsUrl: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
+    {
+      podId,
+      locationId: {type: 'string'},
+      name: {type: 'string'},
+      address: {type: 'string'},
+      mapsUrl: {type: 'string'},
+      notes: {type: 'string'},
+      openTime: {type: 'string'},
+      closeTime: {type: 'string'},
+      website: {type: 'string'},
+      email: {type: 'string'},
+      phone: {type: 'string'},
+      sortOrder: {type: 'number'},
+    },
     ['podId', 'locationId'],
     (request, args) => updateAgentTpLocation(request, args),
   ),
@@ -348,7 +377,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'create_tp_transport_lib',
-    'Create a reusable transport template (duration and price on the transport).',
+    'Create a reusable transport template (label is the name, e.g. bus 123; mode is optional).',
     {
       podId,
       label: {type: 'string'},
@@ -392,10 +421,36 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'link_tp_action_transport',
-    'Link reusable transport(s) to a travel action.',
-    {podId, actionId: {type: 'string'}, transportLibId: {type: 'string'}, sortOrder: {type: 'number'}},
+    'Link a transport library entry to a travel action with optional instance duration, price, and from/to locations.',
+    {
+      podId,
+      actionId: {type: 'string'},
+      transportLibId: {type: 'string'},
+      sortOrder: {type: 'number'},
+      durationMinutes: {type: 'number'},
+      costAmount: {type: 'number'},
+      costCurrency: {type: 'string'},
+      fromLocationId: {type: 'string'},
+      toLocationId: {type: 'string'},
+    },
     ['podId', 'actionId', 'transportLibId'],
     (request, args) => linkAgentTpActionTransport(request, args),
+  ),
+  tool(
+    'update_tp_action_transport',
+    'Update a travel action transport link (duration, price, from/to locations).',
+    {
+      podId,
+      linkId: {type: 'string'},
+      sortOrder: {type: 'number'},
+      durationMinutes: {type: 'number'},
+      costAmount: {type: 'number'},
+      costCurrency: {type: 'string'},
+      fromLocationId: {type: 'string'},
+      toLocationId: {type: 'string'},
+    },
+    ['podId', 'linkId'],
+    (request, args) => updateAgentTpActionTransport(request, args),
   ),
   tool('unlink_tp_action_transport', 'Remove a transport link from a travel action.', {podId, linkId: {type: 'string'}}, ['podId', 'linkId'], (request, args) =>
     unlinkAgentTpActionTransport(request, args),

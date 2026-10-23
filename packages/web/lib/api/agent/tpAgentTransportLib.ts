@@ -24,7 +24,7 @@ export async function createAgentTpTransportLib(request: Request, input: unknown
   const result = await createDbTpTransportLibForAgent(ctx.data.supabase, {
     tripId: tripId.data,
     label,
-    mode: typeof args.mode === 'string' ? args.mode : undefined,
+    mode: 'mode' in args ? (typeof args.mode === 'string' ? args.mode : null) : undefined,
     durationMinutes: typeof args.durationMinutes === 'number' ? args.durationMinutes : undefined,
     costAmount: typeof args.costAmount === 'number' ? args.costAmount : undefined,
     costCurrency: typeof args.costCurrency === 'string' ? args.costCurrency : undefined,
@@ -60,7 +60,7 @@ export async function updateAgentTpTransportLib(request: Request, input: unknown
   }
   const result = await updateDbTpTransportLibForAgent(ctx.data.supabase, transportLibId, {
     label: typeof args.label === 'string' ? args.label : undefined,
-    mode: typeof args.mode === 'string' ? args.mode : undefined,
+    mode: 'mode' in args ? (typeof args.mode === 'string' ? args.mode : null) : undefined,
     durationMinutes: typeof args.durationMinutes === 'number' ? args.durationMinutes : args.durationMinutes === null ? null : undefined,
     costAmount: typeof args.costAmount === 'number' ? args.costAmount : args.costAmount === null ? null : undefined,
     costCurrency: 'costCurrency' in args ? (typeof args.costCurrency === 'string' ? args.costCurrency : null) : undefined,

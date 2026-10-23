@@ -789,6 +789,11 @@ export interface Database {
           address: string | null;
           maps_url: string | null;
           notes: string | null;
+          open_time: string | null;
+          close_time: string | null;
+          website: string | null;
+          email: string | null;
+          phone: string | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -800,6 +805,11 @@ export interface Database {
           address?: string | null;
           maps_url?: string | null;
           notes?: string | null;
+          open_time?: string | null;
+          close_time?: string | null;
+          website?: string | null;
+          email?: string | null;
+          phone?: string | null;
           sort_order?: number;
         };
         Update: {
@@ -807,6 +817,11 @@ export interface Database {
           address?: string | null;
           maps_url?: string | null;
           notes?: string | null;
+          open_time?: string | null;
+          close_time?: string | null;
+          website?: string | null;
+          email?: string | null;
+          phone?: string | null;
           sort_order?: number;
         };
         Relationships: [];
@@ -835,7 +850,7 @@ export interface Database {
           id: string;
           trip_id: string;
           label: string;
-          mode: string;
+          mode: string | null;
           duration_minutes: number | null;
           cost_amount: string | null;
           cost_currency: string | null;
@@ -868,6 +883,11 @@ export interface Database {
           action_id: string;
           transport_lib_id: string;
           sort_order: number;
+          duration_minutes: number | null;
+          cost_amount: string | null;
+          cost_currency: string | null;
+          from_location_id: string | null;
+          to_location_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -875,9 +895,19 @@ export interface Database {
           action_id: string;
           transport_lib_id: string;
           sort_order?: number;
+          duration_minutes?: number | null;
+          cost_amount?: string | number | null;
+          cost_currency?: string | null;
+          from_location_id?: string | null;
+          to_location_id?: string | null;
         };
         Update: {
           sort_order?: number;
+          duration_minutes?: number | null;
+          cost_amount?: string | number | null;
+          cost_currency?: string | null;
+          from_location_id?: string | null;
+          to_location_id?: string | null;
         };
         Relationships: [];
       };

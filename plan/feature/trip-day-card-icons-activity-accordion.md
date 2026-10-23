@@ -6,7 +6,7 @@ Reading an activity should not mean opening the edit form. The day list stays a 
 **Base:** `develop` after [#19](https://github.com/CoolColdUK/simpleOutcomeDev/pull/19) (glance, stay/travel cards, delete) and [#20](https://github.com/CoolColdUK/simpleOutcomeDev/pull/20) (`tp_location`, `tp_transport_lib`, activity/travel linking).  
 **Earlier day-UI plan:** [trip-day-ui-polish.md](./trip-day-ui-polish.md) (shipped). This plan does not reopen that model.
 
-**Status:** Plan only. No product code on this branch until Matthew replies **Implement the plan** (or otherwise approves). Implementation continues on **this same branch and draft PR**. Agents do not merge.
+**Status:** Implemented on this branch (PR #21). Agents do not merge.
 
 **Out of scope:** Telegram. Schema, migrations, MCP, REST, including any real `tags` column. New npm packages. Reworking stay/travel/note editors. Nested form buttons (`Save`, `Remove`, `Delete route`, attachment `Delete`, catalog `Delete`). Bulk edits to the live HK–JP trip. Writing tags back into notes from the day card.
 
@@ -279,8 +279,26 @@ Use the web day view. The live HK–JP trip is fine to **look at**. Do not delet
 | Anchor day | Navigates only. Does not open the editor. |
 | Reorder | Arrow icons and accessible names, same behaviour. |
 | Nested Delete / Remove / Save | Unchanged text buttons. |
-| Data | UI only, plus two pure `@so/model` helpers and their tests. No schema, migration, or MCP. |
-| Where the code lands | Follow-up commits on **this** branch after Matthew approves. Draft until he says otherwise. |
+| Data | UI plus two pure `@so/model` tag helpers and tests. |
+| Where the code lands | **This** branch / PR #21. |
+
+## Transport library and travel instance (Matthew scope expansion)
+
+**Migration:** [`20261023210000_trip_location_contact_action_transport_instance.sql`](../../supabase/migrations/20261023210000_trip_location_contact_action_transport_instance.sql) (Production `db push`).
+
+| Change | Shape |
+| --- | --- |
+| `tp_location` | Optional `open_time`, `close_time`, `website`, `email`, `phone` (`time` / `text`). |
+| `tp_transport_lib.mode` | Nullable. No default. Enum check only when non-null. Label is the user-facing name (e.g. `bus 123`). |
+| `tp_action_transport` | Instance overrides: `duration_minutes`, `cost_amount`, `cost_currency`, `from_location_id`, `to_location_id`. Link row is no longer sort-order only. |
+
+**MCP / REST**
+
+- `create_tp_location` / `update_tp_location`: `openTime`, `closeTime`, `website`, `email`, `phone` (optional). Workspace `locations[]` includes them.
+- `link_tp_action_transport`: optional instance fields on create. **`update_tp_action_transport`** (new) and `PATCH …/action-transports/{linkId}` for updates. Workspace `actionTransports[]` includes instance fields.
+- `create_tp_transport_lib` / `update_tp_transport_lib`: `mode` optional (omit or null).
+
+Web: location catalog editor, activity Details, travel “Linked transports” rows edit and save instance fields. Route `tp_transport` legs unchanged in this pass.
 
 ## Left for Matthew
 

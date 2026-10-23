@@ -27,6 +27,11 @@ export async function createAgentTpLocation(request: Request, input: unknown): P
     address: typeof args.address === 'string' ? args.address : undefined,
     mapsUrl: typeof args.mapsUrl === 'string' ? args.mapsUrl : undefined,
     notes: typeof args.notes === 'string' ? args.notes : undefined,
+    openTime: typeof args.openTime === 'string' ? args.openTime : undefined,
+    closeTime: typeof args.closeTime === 'string' ? args.closeTime : undefined,
+    website: typeof args.website === 'string' ? args.website : undefined,
+    email: typeof args.email === 'string' ? args.email : undefined,
+    phone: typeof args.phone === 'string' ? args.phone : undefined,
     sortOrder: typeof args.sortOrder === 'number' ? args.sortOrder : 0,
   });
   const resultErr = dbErr(result.error);
@@ -59,6 +64,11 @@ export async function updateAgentTpLocation(request: Request, input: unknown): P
     address: 'address' in args ? (typeof args.address === 'string' ? args.address : null) : undefined,
     mapsUrl: 'mapsUrl' in args ? (typeof args.mapsUrl === 'string' ? args.mapsUrl : null) : undefined,
     notes: 'notes' in args ? (typeof args.notes === 'string' ? args.notes : null) : undefined,
+    openTime: 'openTime' in args ? (typeof args.openTime === 'string' ? args.openTime : null) : undefined,
+    closeTime: 'closeTime' in args ? (typeof args.closeTime === 'string' ? args.closeTime : null) : undefined,
+    website: 'website' in args ? (typeof args.website === 'string' ? args.website : null) : undefined,
+    email: 'email' in args ? (typeof args.email === 'string' ? args.email : null) : undefined,
+    phone: 'phone' in args ? (typeof args.phone === 'string' ? args.phone : null) : undefined,
     sortOrder: typeof args.sortOrder === 'number' ? args.sortOrder : undefined,
   });
   const resultErr = dbErr(result.error);

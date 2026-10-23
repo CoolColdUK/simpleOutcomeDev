@@ -243,6 +243,11 @@ export const CreateLocationSchema = v.object({
   address: optionalString,
   mapsUrl: optionalString,
   notes: optionalString,
+  openTime: optionalString,
+  closeTime: optionalString,
+  website: optionalString,
+  email: optionalString,
+  phone: optionalString,
   sortOrder: optionalNumber,
 });
 
@@ -253,6 +258,11 @@ export const UpdateLocationSchema = v.object({
   address: optionalString,
   mapsUrl: optionalString,
   notes: optionalString,
+  openTime: optionalString,
+  closeTime: optionalString,
+  website: optionalString,
+  email: optionalString,
+  phone: optionalString,
   sortOrder: optionalNumber,
 });
 
@@ -310,6 +320,22 @@ export const LinkActionTransportSchema = v.object({
   actionId: v.pipe(v.string(), v.minLength(1)),
   transportLibId: v.pipe(v.string(), v.minLength(1)),
   sortOrder: optionalNumber,
+  durationMinutes: optionalNumber,
+  costAmount: optionalNumber,
+  costCurrency: optionalString,
+  fromLocationId: optionalString,
+  toLocationId: optionalString,
+});
+
+export const UpdateActionTransportSchema = v.object({
+  podId,
+  linkId: v.pipe(v.string(), v.minLength(1)),
+  sortOrder: optionalNumber,
+  durationMinutes: optionalNumber,
+  costAmount: optionalNumber,
+  costCurrency: optionalString,
+  fromLocationId: optionalString,
+  toLocationId: optionalString,
 });
 
 export const UnlinkActionTransportSchema = v.object({

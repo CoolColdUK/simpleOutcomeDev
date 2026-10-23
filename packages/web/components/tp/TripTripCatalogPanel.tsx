@@ -47,9 +47,7 @@ export default function TripTripCatalogPanel({
     try {
       await createDbTpTransportLib({
         tripId,
-        label: 'Walk 5 min',
-        mode: 'walk',
-        durationMinutes: 5,
+        label: 'New transport',
         sortOrder: sortedTransports.length,
         costCurrency: defaultCurrency,
       });
@@ -114,12 +112,24 @@ function LocationRow({location, canWrite, onSaved, onError}: LocationRowProps) {
   const [name, setName] = useState(location.name);
   const [address, setAddress] = useState(location.address ?? '');
   const [mapsUrl, setMapsUrl] = useState(location.mapsUrl ?? '');
+  const [notes, setNotes] = useState(location.notes ?? '');
+  const [openTime, setOpenTime] = useState(location.openTime?.slice(0, 5) ?? '');
+  const [closeTime, setCloseTime] = useState(location.closeTime?.slice(0, 5) ?? '');
+  const [website, setWebsite] = useState(location.website ?? '');
+  const [email, setEmail] = useState(location.email ?? '');
+  const [phone, setPhone] = useState(location.phone ?? '');
   const save = async (): Promise<void> => {
     try {
       await updateDbTpLocation(location.id, {
         name,
         address: address === '' ? null : address,
         mapsUrl: mapsUrl === '' ? null : mapsUrl,
+        notes: notes === '' ? null : notes,
+        openTime: openTime === '' ? null : openTime,
+        closeTime: closeTime === '' ? null : closeTime,
+        website: website === '' ? null : website,
+        email: email === '' ? null : email,
+        phone: phone === '' ? null : phone,
       });
       onSaved();
     } catch (e) {
@@ -148,6 +158,34 @@ function LocationRow({location, canWrite, onSaved, onError}: LocationRowProps) {
         <Field.Label>Maps URL</Field.Label>
         <Input value={mapsUrl} onChange={(e) => setMapsUrl(e.target.value)} disabled={!canWrite} />
       </Field.Root>
+      <Field.Root>
+        <Field.Label>Notes (e.g. Tags: food, walk)</Field.Label>
+        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!canWrite} rows={2} />
+      </Field.Root>
+      <HStack wrap="wrap">
+        <Field.Root>
+          <Field.Label>Open</Field.Label>
+          <Input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} disabled={!canWrite} />
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>Close</Field.Label>
+          <Input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} disabled={!canWrite} />
+        </Field.Root>
+      </HStack>
+      <Field.Root>
+        <Field.Label>Website</Field.Label>
+        <Input value={website} onChange={(e) => setWebsite(e.target.value)} disabled={!canWrite} />
+      </Field.Root>
+      <HStack wrap="wrap">
+        <Field.Root flex="1">
+          <Field.Label>Email</Field.Label>
+          <Input value={email} onChange={(e) => setEmail(e.target.value)} disabled={!canWrite} />
+        </Field.Root>
+        <Field.Root flex="1">
+          <Field.Label>Phone</Field.Label>
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} disabled={!canWrite} />
+        </Field.Root>
+      </HStack>
       {canWrite ? (
         <HStack>
           <Button size="sm" onClick={() => void save()}>Save</Button>
@@ -169,7 +207,7 @@ interface TransportLibRowProps {
 
 function TransportLibRow({transport, locations, defaultCurrency, canWrite, onSaved, onError}: TransportLibRowProps) {
   const [label, setLabel] = useState(transport.label);
-  const [mode, setMode] = useState(transport.mode);
+  const [mode, setMode] = useState(transport.mode ?? '');
   const [duration, setDuration] = useState(transport.durationMinutes?.toString() ?? '');
   const [cost, setCost] = useState(transport.costAmount?.toString() ?? '');
   const [currency, setCurrency] = useState(transport.costCurrency ?? defaultCurrency ?? '');
@@ -179,7 +217,7 @@ function TransportLibRow({transport, locations, defaultCurrency, canWrite, onSav
     try {
       await updateDbTpTransportLib(transport.id, {
         label,
-        mode,
+        mode: mode === '' ? null : mode,
         durationMinutes: duration === '' ? null : Number(duration),
         costAmount: cost === '' ? null : Number(cost),
         costCurrency: currency === '' ? null : currency,
@@ -207,9 +245,10 @@ function TransportLibRow({transport, locations, defaultCurrency, canWrite, onSav
       </Field.Root>
       <HStack align="flex-end" wrap="wrap">
         <Field.Root flex="1" minW="8rem">
-          <Field.Label>Mode</Field.Label>
+          <Field.Label>Mode (optional)</Field.Label>
           <NativeSelect.Root disabled={!canWrite}>
             <NativeSelect.Field value={mode} onChange={(e) => setMode(e.target.value)}>
+              <option value="">—</option>
               {TP_TRANSPORT_MODES.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}

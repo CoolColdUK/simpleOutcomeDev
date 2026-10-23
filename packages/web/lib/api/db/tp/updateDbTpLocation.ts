@@ -8,6 +8,11 @@ export interface UpdateDbTpLocationInput {
   readonly address?: string | null;
   readonly mapsUrl?: string | null;
   readonly notes?: string | null;
+  readonly openTime?: string | null;
+  readonly closeTime?: string | null;
+  readonly website?: string | null;
+  readonly email?: string | null;
+  readonly phone?: string | null;
   readonly sortOrder?: number;
 }
 
@@ -28,6 +33,21 @@ export async function updateDbTpLocationForAgent(
   }
   if (input.notes !== undefined) {
     patch.notes = input.notes;
+  }
+  if (input.openTime !== undefined) {
+    patch.open_time = input.openTime;
+  }
+  if (input.closeTime !== undefined) {
+    patch.close_time = input.closeTime;
+  }
+  if (input.website !== undefined) {
+    patch.website = input.website;
+  }
+  if (input.email !== undefined) {
+    patch.email = input.email;
+  }
+  if (input.phone !== undefined) {
+    patch.phone = input.phone;
   }
   if (input.sortOrder !== undefined) {
     patch.sort_order = input.sortOrder;

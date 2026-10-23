@@ -6,7 +6,7 @@ import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 // Client-side UI helper (from PR #14)
 export interface CreateDbTpTransportFromLib {
   readonly id: string;
-  readonly mode: string;
+  readonly mode?: string;
   readonly durationMinutes?: number;
   readonly costAmount?: number;
   readonly costCurrency?: string;
@@ -45,7 +45,7 @@ export default async function createDbTpTransport(
 // Server-side agent helper (for REST/MCP API)
 export interface CreateTpTransportInputForAgent {
   readonly routeId: string;
-  readonly mode: string;
+  readonly mode?: string;
   readonly fromPlace?: string;
   readonly toPlace?: string;
   readonly departAt?: string;

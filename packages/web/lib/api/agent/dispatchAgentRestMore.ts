@@ -51,7 +51,11 @@ import {
   deleteAgentTpTransportLib,
   updateAgentTpTransportLib,
 } from '@/lib/api/agent/tpAgentTransportLib';
-import {linkAgentTpActionTransport, unlinkAgentTpActionTransport} from '@/lib/api/agent/tpAgentActionTransports';
+import {
+  linkAgentTpActionTransport,
+  unlinkAgentTpActionTransport,
+  updateAgentTpActionTransport,
+} from '@/lib/api/agent/tpAgentActionTransports';
 import {
   createAgentPod,
   createAgentPodJoinRequest,
@@ -303,9 +307,15 @@ async function dispatchTp(method: string, request: Request, path: readonly strin
       : methodNotAllowed();
   }
   if (fourth === 'action-transports' && isUuid(fifth) && sixth === undefined) {
-    return method === 'DELETE'
-      ? agentResultResponse(await unlinkAgentTpActionTransport(request, {podId, linkId: fifth}))
-      : methodNotAllowed();
+    if (method === 'PATCH') {
+      return agentResultResponse(
+        await updateAgentTpActionTransport(request, await bodyWith(request, {podId, linkId: fifth})),
+      );
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await unlinkAgentTpActionTransport(request, {podId, linkId: fifth}));
+    }
+    return methodNotAllowed();
   }
   if (fourth === 'routes' && fifth === undefined) {
     return method === 'POST' ? agentResultResponse(await createAgentTpRoute(request, await bodyWith(request, {podId}))) : methodNotAllowed();

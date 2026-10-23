@@ -7,6 +7,11 @@ export interface CreateDbTpActionTransportInput {
   readonly actionId: string;
   readonly transportLibId: string;
   readonly sortOrder?: number;
+  readonly durationMinutes?: number;
+  readonly costAmount?: number;
+  readonly costCurrency?: string;
+  readonly fromLocationId?: string;
+  readonly toLocationId?: string;
 }
 
 export async function createDbTpActionTransportForAgent(
@@ -19,6 +24,11 @@ export async function createDbTpActionTransportForAgent(
       action_id: input.actionId,
       transport_lib_id: input.transportLibId,
       sort_order: input.sortOrder ?? 0,
+      duration_minutes: input.durationMinutes ?? null,
+      cost_amount: input.costAmount ?? null,
+      cost_currency: input.costCurrency ?? null,
+      from_location_id: input.fromLocationId ?? null,
+      to_location_id: input.toLocationId ?? null,
     })
     .select('*')
     .single();
