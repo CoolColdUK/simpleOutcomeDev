@@ -11,5 +11,8 @@ export default function featureKindForApiResource(resource: ApiKeyResource): Fea
   if (resource === ApiKeyResource.FP) {
     return FeatureKind.FINANCIAL_PLANNING;
   }
+  if (resource === ApiKeyResource.TRIP) {
+    return FeatureKind.TRIP_PLANNING;
+  }
   return undefined;
 }

@@ -1,0 +1,169 @@
+/**
+ * Timezone conversion helpers for trip planning
+ *
+ * Inputs: local wall time + IANA timezone
+ * Storage: UTC instant (timestamptz) + IANA timezone (text)
+ * Outputs: both local time + zone and UTC instant
+ */
+
+interface WallTimeParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+}
+
+function assertValidIanaZone(ianaZone: string): void {
+  try {
+    new Intl.DateTimeFormat('en-US', {timeZone: ianaZone});
+  } catch {
+    throw new Error(`Invalid IANA timezone: ${ianaZone}`);
+  }
+}
+
+function parseLocalWallTime(localTime: string): WallTimeParts {
+  const match = localTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) {
+    throw new Error(`Invalid local time format: ${localTime}`);
+  }
+
+  const year = match[1]!;
+  const month = match[2]!;
+  const day = match[3]!;
+  const hour = match[4]!;
+  const minute = match[5]!;
+  const second = match[6] ?? '00';
+
+  return {
+    year: Number.parseInt(year, 10),
+    month: Number.parseInt(month, 10),
+    day: Number.parseInt(day, 10),
+    hour: Number.parseInt(hour, 10),
+    minute: Number.parseInt(minute, 10),
+    second: Number.parseInt(second, 10),
+  };
+}
+
+function formatUtcInZone(utcDate: Date, ianaZone: string): string {
+  return utcDate.toLocaleString('en-US', {
+    timeZone: ianaZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+}
+
+function parseUsLocaleDateTime(formatted: string): WallTimeParts {
+  const tzMatch = formatted.match(/(\d+)\/(\d+)\/(\d+),\s*(\d+):(\d+):(\d+)/);
+  if (!tzMatch) {
+    throw new Error(`Failed to parse formatted date: ${formatted}`);
+  }
+
+  const month = tzMatch[1]!;
+  const day = tzMatch[2]!;
+  const year = tzMatch[3]!;
+  const hour = tzMatch[4]!;
+  const minute = tzMatch[5]!;
+  const second = tzMatch[6]!;
+
+  return {
+    year: Number.parseInt(year, 10),
+    month: Number.parseInt(month, 10),
+    day: Number.parseInt(day, 10),
+    hour: Number.parseInt(hour, 10),
+    minute: Number.parseInt(minute, 10),
+    second: Number.parseInt(second, 10),
+  };
+}
+
+function wallTimeToUtcMillis(parts: WallTimeParts): number {
+  return Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  );
+}
+
+function sameWallTime(a: WallTimeParts, b: WallTimeParts): boolean {
+  return (
+    a.year === b.year &&
+    a.month === b.month &&
+    a.day === b.day &&
+    a.hour === b.hour &&
+    a.minute === b.minute &&
+    a.second === b.second
+  );
+}
+
+function wallTimeInZone(utcMs: number, ianaZone: string): WallTimeParts {
+  return parseUsLocaleDateTime(formatUtcInZone(new Date(utcMs), ianaZone));
+}
+
+/**
+ * Convert local wall time + timezone to UTC instant
+ */
+export function localTimeToUtc(localTime: string, ianaZone: string): string {
+  const target = parseLocalWallTime(localTime);
+  assertValidIanaZone(ianaZone);
+
+  let utcMs = wallTimeToUtcMillis(target);
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const current = wallTimeInZone(utcMs, ianaZone);
+    if (sameWallTime(current, target)) {
+      return new Date(utcMs).toISOString();
+    }
+    const delta = wallTimeToUtcMillis(target) - wallTimeToUtcMillis(current);
+    utcMs += delta;
+  }
+
+  return new Date(utcMs).toISOString();
+}
+
+/**
+ * Convert UTC instant + timezone to local wall time
+ */
+export function utcToLocalTime(utcInstant: string, ianaZone: string): string {
+  const date = new Date(utcInstant);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid UTC instant: ${utcInstant}`);
+  }
+
+  assertValidIanaZone(ianaZone);
+
+  const formatted = formatUtcInZone(date, ianaZone);
+  const parts = parseUsLocaleDateTime(formatted);
+
+  return `${String(parts.year).padStart(4, '0')}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}T${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}:${String(parts.second).padStart(2, '0')}`;
+}
+
+/**
+ * Format instant for display with timezone abbreviation
+ */
+export function formatTpInstant(utcInstant: string, ianaZone: string): string {
+  const date = new Date(utcInstant);
+
+  const formattedParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: ianaZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+    hour12: false,
+  }).formatToParts(date);
+
+  const hour = formattedParts.find((p) => p.type === 'hour')?.value ?? '';
+  const minute = formattedParts.find((p) => p.type === 'minute')?.value ?? '';
+  const tz = formattedParts.find((p) => p.type === 'timeZoneName')?.value ?? '';
+
+  return `${hour}:${minute} ${tz}`;
+}

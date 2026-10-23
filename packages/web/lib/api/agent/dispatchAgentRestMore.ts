@@ -37,6 +37,13 @@ import {
   updateAgentFpSetting,
 } from '@/lib/api/agent/fpAgentSetup';
 import {getAgentProfile, updateAgentProfileDisplayName, updateAgentProfileUsername} from '@/lib/api/agent/profileAgent';
+import {getAgentTpBudgetRollup, getAgentTpWorkspace, updateAgentTpTrip} from '@/lib/api/agent/tpAgentWorkspace';
+import {createAgentTpDestination, deleteAgentTpDestination, updateAgentTpDestination} from '@/lib/api/agent/tpAgentDestinations';
+import {updateAgentTpDay} from '@/lib/api/agent/tpAgentDays';
+import {createAgentTpAction, deleteAgentTpAction, updateAgentTpAction} from '@/lib/api/agent/tpAgentActions';
+import {createAgentTpRoute, deleteAgentTpRoute, selectAgentTpRoute, updateAgentTpRoute} from '@/lib/api/agent/tpAgentRoutes';
+import {createAgentTpTransport, deleteAgentTpTransport, updateAgentTpTransport} from '@/lib/api/agent/tpAgentTransports';
+import {deleteAgentTpAttachment, listAgentTpAttachments, uploadAgentTpAttachment} from '@/lib/api/agent/tpAgentAttachments';
 import {
   createAgentPod,
   createAgentPodJoinRequest,
@@ -191,7 +198,91 @@ export default async function dispatchAgentRestMore(method: string, request: Req
     }
     return methodNotAllowed();
   }
-  return dispatchFp(method, request, path);
+  return (await dispatchTp(method, request, path)) ?? (await dispatchFp(method, request, path));
+}
+
+async function dispatchTp(method: string, request: Request, path: readonly string[]): Promise<Response | undefined> {
+  const [, id, third, fourth, fifth, sixth] = path;
+  if (path[0] !== 'pods' || !isUuid(id) || third !== 'trip') {
+    return undefined;
+  }
+  const podId = id;
+  if (fourth === 'workspace' && fifth === undefined) {
+    return method === 'GET' ? agentResultResponse(await getAgentTpWorkspace(request, {podId})) : methodNotAllowed();
+  }
+  if (fourth === undefined && fifth === undefined) {
+    return method === 'PATCH' ? agentResultResponse(await updateAgentTpTrip(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+  }
+  if (fourth === 'budget' && fifth === undefined) {
+    return method === 'GET' ? agentResultResponse(await getAgentTpBudgetRollup(request, {podId})) : methodNotAllowed();
+  }
+  if (fourth === 'destinations' && fifth === undefined) {
+    return method === 'POST' ? agentResultResponse(await createAgentTpDestination(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+  }
+  if (fourth === 'destinations' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpDestination(request, await bodyWith(request, {podId, destinationId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpDestination(request, {podId, destinationId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (fourth === 'days' && isUuid(fifth) && sixth === undefined) {
+    return method === 'PATCH' ? agentResultResponse(await updateAgentTpDay(request, await bodyWith(request, {podId, dayId: fifth}))) : methodNotAllowed();
+  }
+  if (fourth === 'actions' && fifth === undefined) {
+    return method === 'POST' ? agentResultResponse(await createAgentTpAction(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+  }
+  if (fourth === 'actions' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpAction(request, await bodyWith(request, {podId, actionId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpAction(request, {podId, actionId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (fourth === 'routes' && fifth === undefined) {
+    return method === 'POST' ? agentResultResponse(await createAgentTpRoute(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+  }
+  if (fourth === 'routes' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpRoute(request, await bodyWith(request, {podId, routeId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpRoute(request, {podId, routeId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (fourth === 'routes' && isUuid(fifth) && sixth === 'select') {
+    return method === 'POST' ? agentResultResponse(await selectAgentTpRoute(request, await bodyWith(request, {podId, routeId: fifth}))) : methodNotAllowed();
+  }
+  if (fourth === 'transports' && fifth === undefined) {
+    return method === 'POST' ? agentResultResponse(await createAgentTpTransport(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+  }
+  if (fourth === 'transports' && isUuid(fifth) && sixth === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpTransport(request, await bodyWith(request, {podId, transportId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentTpTransport(request, {podId, transportId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (fourth === 'attachments' && fifth === undefined) {
+    if (method === 'GET') {
+      return agentResultResponse(await listAgentTpAttachments(request, queryInput(request, {podId})));
+    }
+    if (method === 'POST') {
+      return agentResultResponse(await uploadAgentTpAttachment(request, await bodyWith(request, {podId})));
+    }
+    return methodNotAllowed();
+  }
+  if (fourth === 'attachments' && isUuid(fifth) && sixth === undefined) {
+    return method === 'DELETE' ? agentResultResponse(await deleteAgentTpAttachment(request, {podId, attachmentId: fifth})) : methodNotAllowed();
+  }
+  return undefined;
 }
 
 async function dispatchFp(method: string, request: Request, path: readonly string[]): Promise<Response | undefined> {

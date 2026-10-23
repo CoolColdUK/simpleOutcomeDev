@@ -1,5 +1,7 @@
+import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import type {Database} from '@/lib/supabase/database';
 
 export interface UpdateDbTpDestinationInput {
   readonly name?: string;
@@ -8,7 +10,10 @@ export interface UpdateDbTpDestinationInput {
   readonly activeEndDate?: string | null;
 }
 
-export default async function updateDbTpDestination(destinationId: string, input: UpdateDbTpDestinationInput): Promise<void> {
+export default async function updateDbTpDestination(
+  destinationId: string,
+  input: UpdateDbTpDestinationInput,
+): Promise<void> {
   const supabase = getSupabaseBrowserClient();
   const {error} = await supabase
     .from('tp_destination')
@@ -20,4 +25,17 @@ export default async function updateDbTpDestination(destinationId: string, input
     })
     .eq('id', destinationId);
   throwIfSupabaseError(error);
+}
+
+export async function updateDbTpDestinationForAgent(
+  supabase: SupabaseClient<Database>,
+  destinationId: string,
+  updates: Record<string, unknown>,
+) {
+  return supabase
+    .from('tp_destination')
+    .update(updates as Database['public']['Tables']['tp_destination']['Update'])
+    .eq('id', destinationId)
+    .select('*')
+    .single();
 }

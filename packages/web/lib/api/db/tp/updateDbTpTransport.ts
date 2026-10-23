@@ -1,5 +1,7 @@
+import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import type {Database} from '@/lib/supabase/database';
 
 export interface UpdateDbTpTransportInput {
   readonly mode?: string;
@@ -38,4 +40,23 @@ export default async function updateDbTpTransport(transportId: string, input: Up
     })
     .eq('id', transportId);
   throwIfSupabaseError(error);
+}
+
+export interface UpdateTpTransportInput {
+  readonly transportId: string;
+  readonly [key: string]: unknown;
+}
+
+export async function updateDbTpTransportForAgent(
+  supabase: SupabaseClient<Database>,
+  input: UpdateTpTransportInput,
+) {
+  const {transportId, ...updates} = input;
+
+  return supabase
+    .from('tp_transport')
+    .update(updates as Database['public']['Tables']['tp_transport']['Update'])
+    .eq('id', transportId)
+    .select('*')
+    .single();
 }

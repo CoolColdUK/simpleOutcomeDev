@@ -1,5 +1,7 @@
+import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import type {Database} from '@/lib/supabase/database';
 
 export interface UpdateDbTpActionInput {
   readonly title?: string;
@@ -48,4 +50,23 @@ export default async function updateDbTpAction(actionId: string, input: UpdateDb
     })
     .eq('id', actionId);
   throwIfSupabaseError(error);
+}
+
+export interface UpdateTpActionInput {
+  readonly actionId: string;
+  readonly [key: string]: unknown;
+}
+
+export async function updateDbTpActionForAgent(
+  supabase: SupabaseClient<Database>,
+  input: UpdateTpActionInput,
+) {
+  const {actionId, ...updates} = input;
+
+  return supabase
+    .from('tp_action')
+    .update(updates as Database['public']['Tables']['tp_action']['Update'])
+    .eq('id', actionId)
+    .select('*')
+    .single();
 }
