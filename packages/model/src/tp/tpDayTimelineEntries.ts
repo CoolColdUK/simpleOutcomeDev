@@ -43,7 +43,7 @@ export interface TpDayTimelineInput {
   readonly travels: readonly TpTimelineTravelSpan[];
 }
 
-function stayHasCompleteSpan(stay: TpTimelineStaySpan | undefined): boolean {
+function stayHasCompleteSpan(stay: TpTimelineStaySpan | undefined): stay is TpTimelineStaySpan {
   return stay !== undefined && stay.checkInAt !== '' && stay.checkOutAt !== '';
 }
 
@@ -64,7 +64,7 @@ export default function tpDayTimelineEntries(input: TpDayTimelineInput): readonl
     }
     if (action.kind === TpActionKind.STAY) {
       const stay = input.stays.find((s) => s.actionId === action.id);
-      if (stayHasCompleteSpan(stay)) {
+      if (stay !== undefined && stayHasCompleteSpan(stay)) {
         if (!tpSpanOverlapsTripDay(stay.checkInAt, stay.checkOutAt, input.calendarDate, input.tripTimezone)) {
           return;
         }

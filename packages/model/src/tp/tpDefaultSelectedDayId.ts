@@ -28,8 +28,11 @@ export default function tpDefaultSelectedDayId(
     return undefined;
   }
   const sorted = [...days].sort((a, b) => a.calendarDate.localeCompare(b.calendarDate));
-  const first = sorted[0];
-  const last = sorted[sorted.length - 1];
+  const first = sorted.at(0);
+  const last = sorted.at(-1);
+  if (first === undefined || last === undefined) {
+    return undefined;
+  }
   const today = localDateInZone(new Date(nowMs).toISOString(), tripTimezone);
   if (today === '') {
     return first.id;

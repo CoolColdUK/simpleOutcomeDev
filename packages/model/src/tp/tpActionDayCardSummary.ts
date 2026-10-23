@@ -70,8 +70,9 @@ export default function tpActionDayCardSummary(input: TpActionDayCardSummaryInpu
       parts.push(start);
     }
     const labels = placeLabels(input);
-    if (labels.length === 1) {
-      parts.push(labels[0]);
+    const onlyPlace = labels.at(0);
+    if (labels.length === 1 && onlyPlace !== undefined) {
+      parts.push(onlyPlace);
     } else if (labels.length > 1) {
       const preview = labels.slice(0, 2).join(', ');
       parts.push(labels.length > 2 ? `${preview}…` : preview);
