@@ -45,6 +45,7 @@ export default function TripActivityActionEditor({
   const [endTime, setEndTime] = useState(trimTime(action.endTime));
   const [cost, setCost] = useState(action.costAmount?.toString() ?? '');
   const [currency, setCurrency] = useState(action.costCurrency ?? defaultCurrency ?? '');
+  const [linkLocationTypeFilter, setLinkLocationTypeFilter] = useState('');
   const links = useMemo(
     () =>
       [...actionLocations]
@@ -161,6 +162,17 @@ export default function TripActivityActionEditor({
         {canWrite ? (
           <HStack wrap="wrap">
             <Field.Root flex="1" minW="12rem">
+              <Field.Label>Filter by type</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field value={linkLocationTypeFilter} onChange={(e) => setLinkLocationTypeFilter(e.target.value)}>
+                  <option value="">All types</option>
+                  {TP_LOCATION_TYPES.map((t) => (
+                    <option key={t} value={t}>{tpLocationTypeLabel(t)}</option>
+                  ))}
+                </NativeSelect.Field>
+              </NativeSelect.Root>
+            </Field.Root>
+            <Field.Root flex="1" minW="12rem">
               <Field.Label>Add location</Field.Label>
               <NativeSelect.Root>
                 <NativeSelect.Field
@@ -170,6 +182,7 @@ export default function TripActivityActionEditor({
                   <option value="">Select…</option>
                   {locations
                     .filter((l) => !links.some((link) => link.locationId === l.id))
+                    .filter((l) => linkLocationTypeFilter === '' || l.locationType === linkLocationTypeFilter)
                     .map((l) => (
                       <option key={l.id} value={l.id}>{l.name}</option>
                     ))}
