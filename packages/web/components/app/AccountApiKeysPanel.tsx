@@ -208,6 +208,7 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
       )}
       <AccountApiKeysKeyDialog
         open={createOpen}
+        formKey="create"
         title="Create API key"
         submitLabel="Create key"
         initialName=""
@@ -221,6 +222,7 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
       />
       <AccountApiKeysKeyDialog
         open={editingKey !== undefined}
+        formKey={editingKey?.id ?? 'edit'}
         title="Edit API key"
         submitLabel="Save"
         initialName={editingKey?.name ?? ''}

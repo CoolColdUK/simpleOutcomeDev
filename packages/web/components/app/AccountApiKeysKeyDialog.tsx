@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {
   Alert,
   Button,
@@ -30,6 +30,7 @@ import AccountApiKeysPanelMatrix from '@/components/app/AccountApiKeysPanelMatri
 
 export interface AccountApiKeysKeyDialogProps {
   readonly open: boolean;
+  readonly formKey: string;
   readonly title: string;
   readonly submitLabel: string;
   readonly initialName: string;
@@ -42,8 +43,7 @@ export interface AccountApiKeysKeyDialogProps {
   readonly onSubmit: (name: string, matrix: ApiKeyPermissionMatrix) => void;
 }
 
-export default function AccountApiKeysKeyDialog({
-  open,
+function AccountApiKeysKeyDialogForm({
   title,
   submitLabel,
   initialName,
@@ -54,59 +54,60 @@ export default function AccountApiKeysKeyDialog({
   error,
   onClose,
   onSubmit,
-}: AccountApiKeysKeyDialogProps) {
+}: Omit<AccountApiKeysKeyDialogProps, 'open' | 'formKey'>) {
   const [name, setName] = useState(initialName);
   const [matrix, setMatrix] = useState(initialMatrix);
-
-  useEffect(() => {
-    if (open) {
-      setName(initialName);
-      setMatrix(initialMatrix);
-    }
-  }, [open, initialName, initialMatrix]);
 
   const applyPreset = (preset: ApiKeyPresetId): void => {
     setMatrix(apiKeyMatrixForPreset(preset, pods, spaces));
   };
 
   return (
-    <DialogRoot open={open} onOpenChange={(event) => (!event.open ? onClose() : undefined)} size="xl">
+    <>
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogCloseTrigger />
+      </DialogHeader>
+      <DialogBody>
+        <Stack gap={4}>
+          <Field.Root required>
+            <Field.Label>Name</Field.Label>
+            <Input value={name} onChange={(event) => setName(event.target.value)} maxW="lg" />
+          </Field.Root>
+          <HStack gap={2} flexWrap="wrap">
+            {API_KEY_PRESET_OPTIONS.map((option) => (
+              <Button key={option.id} size="sm" variant="outline" colorPalette="brand" onClick={() => applyPreset(option.id)}>
+                {option.label}
+              </Button>
+            ))}
+          </HStack>
+          <AccountApiKeysPanelMatrix matrix={matrix} onChange={setMatrix} />
+          {error !== '' ? (
+            <Alert.Root status="error">
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Root>
+          ) : null}
+        </Stack>
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose} disabled={saving}>
+          Cancel
+        </Button>
+        <Button colorPalette="brand" loading={saving} onClick={() => onSubmit(name, matrix)}>
+          {submitLabel}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+export default function AccountApiKeysKeyDialog({open, formKey, ...formProps}: AccountApiKeysKeyDialogProps) {
+  return (
+    <DialogRoot open={open} onOpenChange={(event) => (!event.open ? formProps.onClose() : undefined)} size="xl">
       <DialogBackdrop />
       <DialogPositioner>
         <DialogContent maxW="min(100vw, 56rem)">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogCloseTrigger />
-          </DialogHeader>
-          <DialogBody>
-            <Stack gap={4}>
-              <Field.Root required>
-                <Field.Label>Name</Field.Label>
-                <Input value={name} onChange={(event) => setName(event.target.value)} maxW="lg" />
-              </Field.Root>
-              <HStack gap={2} flexWrap="wrap">
-                {API_KEY_PRESET_OPTIONS.map((option) => (
-                  <Button key={option.id} size="sm" variant="outline" colorPalette="brand" onClick={() => applyPreset(option.id)}>
-                    {option.label}
-                  </Button>
-                ))}
-              </HStack>
-              <AccountApiKeysPanelMatrix matrix={matrix} onChange={setMatrix} />
-              {error !== '' ? (
-                <Alert.Root status="error">
-                  <Alert.Description>{error}</Alert.Description>
-                </Alert.Root>
-              ) : null}
-            </Stack>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={onClose} disabled={saving}>
-              Cancel
-            </Button>
-            <Button colorPalette="brand" loading={saving} onClick={() => onSubmit(name, matrix)}>
-              {submitLabel}
-            </Button>
-          </DialogFooter>
+          {open ? <AccountApiKeysKeyDialogForm key={formKey} {...formProps} /> : null}
         </DialogContent>
       </DialogPositioner>
     </DialogRoot>
