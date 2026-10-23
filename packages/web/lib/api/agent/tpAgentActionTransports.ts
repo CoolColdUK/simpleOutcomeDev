@@ -1,6 +1,7 @@
 import {ApiKeyAction, LinkActionTransportSchema, UpdateActionTransportSchema, safeParseSchema} from '@so/model';
 import {agentErr, agentOk, agentValidation, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
+import {mapAgentTpActionTransportRow} from '@/lib/api/agent/tpAgentResourceMaps';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
 import {createDbTpActionTransportForAgent} from '@/lib/api/db/tp/createDbTpActionTransport';
 import {deleteDbTpActionTransportForAgent} from '@/lib/api/db/tp/deleteDbTpActionTransport';
@@ -42,7 +43,7 @@ export async function linkAgentTpActionTransport(request: Request, input: unknow
   if (result.data === null) {
     return agentErr(500, 'internal_error', 'Failed to link transport');
   }
-  return agentOk(result.data);
+  return agentOk(mapAgentTpActionTransportRow(result.data));
 }
 
 export async function updateAgentTpActionTransport(request: Request, input: unknown): Promise<AgentResult<unknown>> {
@@ -64,9 +65,9 @@ export async function updateAgentTpActionTransport(request: Request, input: unkn
     sortOrder,
     durationMinutes: 'durationMinutes' in args ? durationMinutes ?? null : undefined,
     costAmount: 'costAmount' in args ? costAmount ?? null : undefined,
-    costCurrency: 'costCurrency' in args ? (costCurrency ?? null) : undefined,
-    fromLocationId: 'fromLocationId' in args ? (fromLocationId ?? null) : undefined,
-    toLocationId: 'toLocationId' in args ? (toLocationId ?? null) : undefined,
+    costCurrency: 'costCurrency' in args ? costCurrency ?? null : undefined,
+    fromLocationId: 'fromLocationId' in args ? fromLocationId ?? null : undefined,
+    toLocationId: 'toLocationId' in args ? toLocationId ?? null : undefined,
   });
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) {
@@ -75,7 +76,7 @@ export async function updateAgentTpActionTransport(request: Request, input: unkn
   if (result.data === null) {
     return agentErr(404, 'not_found', 'Transport link not found');
   }
-  return agentOk(result.data);
+  return agentOk(mapAgentTpActionTransportRow(result.data));
 }
 
 export async function unlinkAgentTpActionTransport(request: Request, input: unknown): Promise<AgentResult<unknown>> {
