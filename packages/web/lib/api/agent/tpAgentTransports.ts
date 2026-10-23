@@ -7,8 +7,8 @@ import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentR
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
 import {createDbTpTransportForAgent} from '@/lib/api/db/tp/createDbTpTransport';
-import {updateDbTpTransport} from '@/lib/api/db/tp/updateDbTpTransport';
-import {deleteDbTpTransport} from '@/lib/api/db/tp/deleteDbTpTransport';
+import {updateDbTpTransportForAgent} from '@/lib/api/db/tp/updateDbTpTransport';
+import {deleteDbTpTransportForAgent} from '@/lib/api/db/tp/deleteDbTpTransport';
 import {localTimeToUtc} from '@so/model';
 
 export async function createAgentTpTransport(request: Request, input: unknown): Promise<AgentResult<unknown>> {
@@ -117,7 +117,7 @@ export async function updateAgentTpTransport(request: Request, input: unknown): 
     }
   }
   
-  const result = await updateDbTpTransport(ctx.data.supabase, {transportId, ...updates});
+  const result = await updateDbTpTransportForAgent(ctx.data.supabase, {transportId, ...updates});
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   if (result.data === null) return agentErr(404, 'not_found', 'Transport not found');
@@ -141,7 +141,7 @@ export async function deleteAgentTpTransport(request: Request, input: unknown): 
   const owned = await ownedTpRow(ctx.data, 'tp_transport', transportId, podId);
   if (!owned.ok) return owned;
   
-  const result = await deleteDbTpTransport(ctx.data.supabase, transportId);
+  const result = await deleteDbTpTransportForAgent(ctx.data.supabase, transportId);
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   

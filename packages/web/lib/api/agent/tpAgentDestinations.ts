@@ -7,7 +7,7 @@ import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentR
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
 import createDbTpDestination from '@/lib/api/db/tp/createDbTpDestination';
-import {updateDbTpDestination} from '@/lib/api/db/tp/updateDbTpDestination';
+import {updateDbTpDestinationForAgent} from '@/lib/api/db/tp/updateDbTpDestination';
 import deleteDbTpDestination from '@/lib/api/db/tp/deleteDbTpDestination';
 
 export async function createAgentTpDestination(request: Request, input: unknown): Promise<AgentResult<unknown>> {
@@ -73,7 +73,7 @@ export async function updateAgentTpDestination(request: Request, input: unknown)
   if ('activeEndDate' in args) updates.active_end_date = args.activeEndDate;
   if ('notes' in args) updates.notes = args.notes;
   
-  const result = await updateDbTpDestination(ctx.data.supabase, destinationId, updates);
+  const result = await updateDbTpDestinationForAgent(ctx.data.supabase, destinationId, updates);
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   if (result.data === null) return agentErr(404, 'not_found', 'Destination not found');

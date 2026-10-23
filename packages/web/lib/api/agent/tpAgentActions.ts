@@ -7,7 +7,7 @@ import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentR
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
 import {createDbTpActionForAgent} from '@/lib/api/db/tp/createDbTpAction';
-import {updateDbTpAction} from '@/lib/api/db/tp/updateDbTpAction';
+import {updateDbTpActionForAgent} from '@/lib/api/db/tp/updateDbTpAction';
 import deleteDbTpAction from '@/lib/api/db/tp/deleteDbTpAction';
 import {localTimeToUtc} from '@so/model';
 
@@ -142,7 +142,7 @@ export async function updateAgentTpAction(request: Request, input: unknown): Pro
     }
   }
   
-  const result = await updateDbTpAction(ctx.data.supabase, {actionId, ...updates});
+  const result = await updateDbTpActionForAgent(ctx.data.supabase, {actionId, ...updates});
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   if (result.data === null) return agentErr(404, 'not_found', 'Action not found');

@@ -7,8 +7,8 @@ import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentR
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
 import {createDbTpRouteForAgent} from '@/lib/api/db/tp/createDbTpRoute';
-import {deleteDbTpRoute} from '@/lib/api/db/tp/deleteDbTpRoute';
-import {selectDbTpRoute} from '@/lib/api/db/tp/selectDbTpRoute';
+import {deleteDbTpRouteForAgent} from '@/lib/api/db/tp/deleteDbTpRoute';
+import {selectDbTpRouteForAgent} from '@/lib/api/db/tp/selectDbTpRoute';
 
 export async function createAgentTpRoute(request: Request, input: unknown): Promise<AgentResult<unknown>> {
   const args = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
@@ -92,7 +92,7 @@ export async function deleteAgentTpRoute(request: Request, input: unknown): Prom
   const owned = await ownedTpRow(ctx.data, 'tp_route', routeId, podId);
   if (!owned.ok) return owned;
   
-  const result = await deleteDbTpRoute(ctx.data.supabase, routeId);
+  const result = await deleteDbTpRouteForAgent(ctx.data.supabase, routeId);
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   
@@ -119,7 +119,7 @@ export async function selectAgentTpRoute(request: Request, input: unknown): Prom
   const ownedRoute = await ownedTpRow(ctx.data, 'tp_route', routeId, podId);
   if (!ownedRoute.ok) return ownedRoute;
   
-  const result = await selectDbTpRoute(ctx.data.supabase, {actionId, routeId});
+  const result = await selectDbTpRouteForAgent(ctx.data.supabase, {actionId, routeId});
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   

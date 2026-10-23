@@ -8,7 +8,7 @@ import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
 import listDbTpAttachments from '@/lib/api/db/tp/listDbTpAttachments';
 import uploadDbTpAttachment from '@/lib/api/db/tp/uploadDbTpAttachment';
-import {deleteDbTpAttachment} from '@/lib/api/db/tp/deleteDbTpAttachment';
+import {deleteDbTpAttachmentForAgent} from '@/lib/api/db/tp/deleteDbTpAttachment';
 
 export async function listAgentTpAttachments(request: Request, input: unknown): Promise<AgentResult<unknown>> {
   const args = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
@@ -121,7 +121,7 @@ export async function deleteAgentTpAttachment(request: Request, input: unknown):
   const owned = await ownedTpRow(ctx.data, 'tp_attachment', attachmentId, podId);
   if (!owned.ok) return owned;
   
-  const result = await deleteDbTpAttachment(ctx.data.supabase, attachmentId);
+  const result = await deleteDbTpAttachmentForAgent(ctx.data.supabase, attachmentId);
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   

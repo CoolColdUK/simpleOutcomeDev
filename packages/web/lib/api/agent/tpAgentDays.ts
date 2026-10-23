@@ -6,7 +6,7 @@ import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
-import {updateDbTpDay, type UpdateTpDayInput} from '@/lib/api/db/tp/updateDbTpDay';
+import {updateDbTpDayForAgent, type UpdateTpDayInput} from '@/lib/api/db/tp/updateDbTpDay';
 
 export async function updateAgentTpDay(request: Request, input: unknown): Promise<AgentResult<unknown>> {
   const args = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
@@ -31,7 +31,7 @@ export async function updateAgentTpDay(request: Request, input: unknown): Promis
     updates.primary_destination_id = args.primaryDestinationId;
   }
   
-  const result = await updateDbTpDay(ctx.data.supabase, {
+  const result = await updateDbTpDayForAgent(ctx.data.supabase, {
     dayId,
     ...updates,
   });
