@@ -38,15 +38,17 @@ export async function createAgentTpAction(request: Request, input: unknown): Pro
     if (typeof args.checkInLocalTime === 'string' && typeof args.checkInTimezone === 'string') {
       try {
         checkInAt = localTimeToUtc(args.checkInLocalTime, args.checkInTimezone);
-      } catch (e) {
-        return agentErr(400, 'validation_error', `Invalid check-in time: ${e instanceof Error ? e.message : String(e)}`);
+      } catch (e: unknown) {
+        const detail = e instanceof Error ? e.message : String(e);
+        return agentErr(400, 'validation_error', `Invalid check-in time: ${detail}`);
       }
     }
     if (typeof args.checkOutLocalTime === 'string' && typeof args.checkOutTimezone === 'string') {
       try {
         checkOutAt = localTimeToUtc(args.checkOutLocalTime, args.checkOutTimezone);
-      } catch (e) {
-        return agentErr(400, 'validation_error', `Invalid check-out time: ${e instanceof Error ? e.message : String(e)}`);
+      } catch (e: unknown) {
+        const detail = e instanceof Error ? e.message : String(e);
+        return agentErr(400, 'validation_error', `Invalid check-out time: ${detail}`);
       }
     }
   }
