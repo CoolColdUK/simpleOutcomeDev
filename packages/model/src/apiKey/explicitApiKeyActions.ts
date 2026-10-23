@@ -21,6 +21,9 @@ function featureActions(grant: ApiKeyPodGrant, call: ApiKeyCall): readonly ApiKe
   if (call.resource === ApiKeyResource.FP) {
     return fpActions(grant.fp, call);
   }
+  if (call.resource === ApiKeyResource.TRIP) {
+    return grant.trip;
+  }
   return undefined;
 }
 

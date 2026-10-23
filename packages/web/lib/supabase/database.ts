@@ -871,6 +871,14 @@ export interface Database {
         Returns: {id: string; secret: string; prefix: string};
       };
       revoke_api_key: {Args: {p_id: string}; Returns: undefined};
+      update_api_key: {
+        Args: {
+          p_id: string;
+          p_name: string;
+          p_permissions: Record<string, unknown>;
+        };
+        Returns: undefined;
+      };
       create_agent_space_invite: {
         Args: {
           p_space_id: string;

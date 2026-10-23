@@ -127,5 +127,8 @@ export default function roleAllowsApiCall(call: ApiKeyCall, access: ApiKeyOwnerA
     }
     return fpCan(pod.role, isSpaceOwner(access.spaceRole), pod.fpPermission, call.fpResource, action);
   }
+  if (call.resource === ApiKeyResource.TRIP) {
+    return isSpaceOwner(access.spaceRole) || pod.role !== undefined;
+  }
   return false;
 }

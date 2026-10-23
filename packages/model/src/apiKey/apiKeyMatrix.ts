@@ -167,6 +167,9 @@ function podGrant(row: ApiKeyMatrixPodRow): ApiKeyPodGrant | undefined {
   if (row.feature === FeatureKind.SHOPPING_LIST) {
     return {shopping: actions};
   }
+  if (row.feature === FeatureKind.TRIP_PLANNING) {
+    return {trip: actions};
+  }
   return {fp: fpGrant(actions, deleteAll)};
 }
 
@@ -240,6 +243,86 @@ export function permissionsForPreset(
   spaces: readonly ApiKeyMatrixSpaceInput[],
 ): ApiKeyPermissions {
   return permissionsFromApiKeyMatrix(apiKeyMatrixForPreset(preset, pods, spaces));
+}
+
+function cellsFromActions(actions: readonly ApiKeyAction[] | undefined): ApiKeyMatrixCells {
+  if (actions === undefined || actions.length === 0) {
+    return OFF;
+  }
+  return {
+    create: actions.includes(ApiKeyAction.CREATE),
+    read: actions.includes(ApiKeyAction.READ),
+    update: actions.includes(ApiKeyAction.UPDATE),
+    delete: actions.includes(ApiKeyAction.DELETE),
+  };
+}
+
+function profileFromActions(actions: readonly ApiKeyAction[] | undefined): ApiKeyProfileCells {
+  if (actions === undefined) {
+    return PROFILE_OFF;
+  }
+  return {
+    read: actions.includes(ApiKeyAction.READ),
+    update: actions.includes(ApiKeyAction.UPDATE),
+  };
+}
+
+function actionsFromFpGrant(fp: ApiKeyFpGrant): readonly ApiKeyAction[] {
+  const fromResource = FP_RESOURCES.flatMap((resource) => {
+    const actions = fp[resource];
+    return actions === undefined ? [] : actions;
+  });
+  if (fromResource.length === 0) {
+    return [];
+  }
+  return ACTIONS.filter((action) => fromResource.includes(action));
+}
+
+function podRowFromGrant(row: ApiKeyMatrixPodRow, grant: ApiKeyPodGrant | undefined): ApiKeyMatrixPodRow {
+  if (grant === undefined) {
+    return {...row, cells: OFF, deleteAll: false};
+  }
+  if (row.feature === FeatureKind.TODO_LIST) {
+    return {...row, cells: cellsFromActions(grant.todo), deleteAll: false};
+  }
+  if (row.feature === FeatureKind.SHOPPING_LIST) {
+    return {...row, cells: cellsFromActions(grant.shopping), deleteAll: false};
+  }
+  if (row.feature === FeatureKind.TRIP_PLANNING) {
+    return {...row, cells: cellsFromActions(grant.trip), deleteAll: false};
+  }
+  const fp = grant.fp;
+  if (fp === undefined) {
+    return {...row, cells: OFF, deleteAll: false};
+  }
+  const deleteAll = fp.delete_all !== undefined && fp.delete_all.length > 0;
+  return {...row, cells: cellsFromActions(actionsFromFpGrant(fp)), deleteAll};
+}
+
+function spaceSectionFromGrant(section: ApiKeyMatrixSpaceSection, grant: ApiKeySpaceGrant | undefined): ApiKeyMatrixSpaceSection {
+  if (grant === undefined) {
+    return {...section, space: OFF, group: OFF};
+  }
+  return {
+    ...section,
+    space: cellsFromActions(grant.space),
+    group: cellsFromActions(grant.group),
+  };
+}
+
+export function apiKeyMatrixFromPermissions(
+  permissions: ApiKeyPermissions,
+  pods: readonly ApiKeyMatrixPodInput[],
+  spaces: readonly ApiKeyMatrixSpaceInput[],
+): ApiKeyPermissionMatrix {
+  const base = createApiKeyMatrix(pods, spaces);
+  const podGrants = permissions.pods ?? {};
+  const spaceGrants = permissions.spaces ?? {};
+  return {
+    profile: profileFromActions(permissions.profile),
+    pods: base.pods.map((row) => podRowFromGrant(row, podGrants[row.podId])),
+    spaces: base.spaces.map((section) => spaceSectionFromGrant(section, spaceGrants[section.spaceId])),
+  };
 }
 
 export function permissionsFromApiKeyMatrix(matrix: ApiKeyPermissionMatrix): ApiKeyPermissions {
