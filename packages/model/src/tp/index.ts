@@ -6,7 +6,6 @@ export {default as canWriteTpPod} from './canWriteTpPod';
 export {default as formatTpInstant} from './formatTpInstant';
 export {default as localDateInZone} from './localDateInZone';
 export {default as syncTpCalendarDates} from './syncTpCalendarDates';
-export {defaultTpTripCalendarDateUtc, defaultTpTripTitle} from './defaultTpTripSeed';
 export {default as planTpDaySync} from './planTpDaySync';
 export type {TpDaySyncExisting, TpDaySyncPlan} from './planTpDaySync';
 export {default as tpActiveDestinationsForDay} from './tpActiveDestinationsForDay';

@@ -145,15 +145,22 @@ export async function loadDbTpWorkspace(
   if (tripErr !== null) {
     return {data: null, error: tripErr};
   }
-  if (tripRow === null) {
-    return {data: emptyWorkspace, error: null};
-  }
-
-  const tripId = tripRow.id;
   const settingRes = await supabase.from('tp_setting').select('default_currency').eq('pod_id', podId).maybeSingle();
   if (settingRes.error !== null) {
     return {data: null, error: settingRes.error};
   }
+  const settings =
+    settingRes.data === null
+      ? undefined
+      : {
+          defaultCurrency: settingRes.data.default_currency,
+        };
+
+  if (tripRow === null) {
+    return {data: {...emptyWorkspace, settings}, error: null};
+  }
+
+  const tripId = tripRow.id;
 
   const [daysRes, destRes, actionsRes, attachRes] = await Promise.all([
     supabase.from('tp_day').select('*').eq('trip_id', tripId).order('day_index'),
@@ -206,13 +213,6 @@ export async function loadDbTpWorkspace(
     budgetCurrency: tripRow.budget_currency ?? undefined,
     notes: tripRow.notes ?? undefined,
   };
-
-  const settings =
-    settingRes.data === null
-      ? undefined
-      : {
-          defaultCurrency: settingRes.data.default_currency,
-        };
 
   return {
     data: {

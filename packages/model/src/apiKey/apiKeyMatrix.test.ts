@@ -128,4 +128,12 @@ describe('api key permission matrix', () => {
     const restored = apiKeyMatrixFromPermissions(permissions, tripPods, spaces);
     expect(restored.pods[0]?.cells).toEqual({create: false, read: true, update: false, delete: false});
   });
+
+  it('maps trip planning create permission to the trip grant (create_trip)', () => {
+    const podTrip = '99999999-9999-4999-8999-999999999998';
+    const tripPods = [{podId: podTrip, spaceId: space, spaceName: 'Family', podName: 'Summer', feature: FeatureKind.TRIP_PLANNING}];
+    const matrix = toggleApiKeyMatrixPodCell(createApiKeyMatrix(tripPods, spaces), podTrip, ApiKeyAction.CREATE);
+    const permissions = permissionsFromApiKeyMatrix(matrix);
+    expect(permissions.pods?.[podTrip]).toEqual({trip: [ApiKeyAction.CREATE]});
+  });
 });

@@ -1,6 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
-import ensureDbTpTrip from '@/lib/api/db/tp/ensureDbTpTrip';
 import syncDbTpDaysForTrip from '@/lib/api/db/tp/syncDbTpDaysForTrip';
 
 export interface UpdateTpTripInput {
@@ -21,9 +20,12 @@ export default async function updateDbTpTrip(supabase: SupabaseClient<Database>,
   const {podId, defaultCurrency, title, timezone, startDate, endDate, status, budgetAmount, budgetCurrency, mapsUrl, notes} =
     input;
 
-  const ensured = await ensureDbTpTrip(supabase, podId);
-  if (ensured.error !== null) {
-    return {data: null, error: ensured.error};
+  const existing = await supabase.from('tp_trip').select('id, start_date, end_date').eq('pod_id', podId).maybeSingle();
+  if (existing.error !== null) {
+    return {data: null, error: existing.error};
+  }
+  if (existing.data === null) {
+    return {data: null, error: null};
   }
 
   const tripUpdates: Database['public']['Tables']['tp_trip']['Update'] = {
@@ -38,17 +40,20 @@ export default async function updateDbTpTrip(supabase: SupabaseClient<Database>,
     ...(notes !== undefined ? {notes} : {}),
   };
 
-  const trip = await supabase.from('tp_trip').update(tripUpdates).eq('pod_id', podId).select('*').single();
+  const trip = await supabase.from('tp_trip').update(tripUpdates).eq('pod_id', podId).select('*').maybeSingle();
 
   if (trip.error !== null) {
     return trip;
   }
+  if (trip.data === null) {
+    return {data: null, error: null};
+  }
 
-  const nextStart = trip.data?.start_date ?? ensured.startDate;
-  const nextEnd = trip.data?.end_date ?? ensured.endDate;
+  const nextStart = trip.data.start_date;
+  const nextEnd = trip.data.end_date;
   const datesChanged = startDate !== undefined || endDate !== undefined;
   if (datesChanged) {
-    const synced = await syncDbTpDaysForTrip(supabase, ensured.tripId, nextStart, nextEnd);
+    const synced = await syncDbTpDaysForTrip(supabase, existing.data.id, nextStart, nextEnd);
     if (synced.error !== null) {
       return {data: null, error: synced.error};
     }

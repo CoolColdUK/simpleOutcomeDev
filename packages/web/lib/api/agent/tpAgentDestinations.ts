@@ -5,7 +5,7 @@
 import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
-import {tpCall, ownedTpRow, requireTpTripId} from '@/lib/api/agent/tpAgentCall';
+import {tpCall, ownedTpRow, requireExistingTpTripId} from '@/lib/api/agent/tpAgentCall';
 import createDbTpDestination from '@/lib/api/db/tp/createDbTpDestination';
 import {updateDbTpDestinationForAgent} from '@/lib/api/db/tp/updateDbTpDestination';
 import deleteDbTpDestination from '@/lib/api/db/tp/deleteDbTpDestination';
@@ -22,7 +22,7 @@ export async function createAgentTpDestination(request: Request, input: unknown)
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
   if (!ctx.ok) return ctx;
   
-  const tripId = await requireTpTripId(ctx.data, podId);
+  const tripId = await requireExistingTpTripId(ctx.data, podId);
   if (!tripId.ok) return tripId;
 
   const result = await createDbTpDestination(ctx.data.supabase, {

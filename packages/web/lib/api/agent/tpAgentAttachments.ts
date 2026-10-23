@@ -5,7 +5,7 @@
 import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
-import {tpCall, ownedTpRow, requireTpTripId} from '@/lib/api/agent/tpAgentCall';
+import {tpCall, ownedTpRow, requireExistingTpTripId} from '@/lib/api/agent/tpAgentCall';
 import listDbTpAttachments from '@/lib/api/db/tp/listDbTpAttachments';
 import uploadDbTpAttachment from '@/lib/api/db/tp/uploadDbTpAttachment';
 import {deleteDbTpAttachmentForAgent} from '@/lib/api/db/tp/deleteDbTpAttachment';
@@ -62,7 +62,7 @@ export async function uploadAgentTpAttachment(request: Request, input: unknown):
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
   if (!ctx.ok) return ctx;
   
-  const tripId = await requireTpTripId(ctx.data, podId);
+  const tripId = await requireExistingTpTripId(ctx.data, podId);
   if (!tripId.ok) return tripId;
 
   // Verify parent ownership

@@ -5,7 +5,7 @@
 import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
-import {tpCall, ownedTpRow, requireTpTripId} from '@/lib/api/agent/tpAgentCall';
+import {tpCall, ownedTpRow, requireExistingTpTripId} from '@/lib/api/agent/tpAgentCall';
 import {createDbTpActionForAgent} from '@/lib/api/db/tp/createDbTpAction';
 import {updateDbTpActionForAgent} from '@/lib/api/db/tp/updateDbTpAction';
 import deleteDbTpAction from '@/lib/api/db/tp/deleteDbTpAction';
@@ -24,7 +24,7 @@ export async function createAgentTpAction(request: Request, input: unknown): Pro
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
   if (!ctx.ok) return ctx;
   
-  const tripId = await requireTpTripId(ctx.data, podId);
+  const tripId = await requireExistingTpTripId(ctx.data, podId);
   if (!tripId.ok) return tripId;
 
   // Convert local times to UTC for check-in/check-out

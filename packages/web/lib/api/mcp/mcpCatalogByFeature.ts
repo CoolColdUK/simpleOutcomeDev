@@ -14,6 +14,7 @@ import {
   TODO_EXTRA_MCP_TOOLS,
 } from '@/lib/api/mcp/mcpCatalogExtra';
 import {
+  createAgentTpTrip,
   getAgentTpBudgetRollup,
   getAgentTpWorkspace,
   updateAgentTpTrip,
@@ -61,10 +62,28 @@ function tool(
   return {name, description, inputSchema: {type: 'object', properties, required}, run};
 }
 
-// Trip planning MCP tools (20 total)
+// Trip planning MCP tools (21 total)
 export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 1. Core workspace
   tool('get_tp_workspace', 'Load complete trip workspace with all entities.', {podId}, ['podId'], (request, args) => getAgentTpWorkspace(request, args)),
+
+  tool(
+    'create_trip',
+    'Create the trip for a new trip-planning pod (title, dates, timezone, optional destinations). Fails if a trip already exists.',
+    {
+      podId,
+      title: {type: 'string'},
+      timezone: {type: 'string'},
+      startDate: {type: 'string'},
+      endDate: {type: 'string'},
+      destinationNames: {type: 'array', items: {type: 'string'}},
+      destinations: {type: 'string', description: 'Destination names, one per line (same as the web form)'},
+      budgetAmount: {type: 'number'},
+      budgetCurrency: {type: 'string'},
+    },
+    ['podId', 'title', 'timezone', 'startDate', 'endDate'],
+    (request, args) => createAgentTpTrip(request, args),
+  ),
   
   // 2-3. Trip metadata
   tool(
