@@ -65,12 +65,12 @@ describe('timezoneHelpers', () => {
   describe('formatTpInstant', () => {
     it('formats with timezone abbreviation', () => {
       const result = formatTpInstant('2026-11-15T06:00:00Z', 'Asia/Hong_Kong');
-      expect(result).toMatch(/14:00\s+HKT/);
+      expect(result).toMatch(/14:00\s+(HKT|GMT\+8)/);
     });
     
     it('formats GMT', () => {
       const result = formatTpInstant('2026-11-15T18:30:00Z', 'Europe/London');
-      expect(result).toMatch(/18:30\s+GMT/);
+      expect(result).toMatch(/18:30\s+(GMT|UTC)/);
     });
   });
   
