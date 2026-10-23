@@ -6,7 +6,9 @@ import type {DbTpAction, DbTpActionLocation, DbTpLocation} from '@/lib/api/db/tp
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import createDbTpActionLocation from '@/lib/api/db/tp/createDbTpActionLocation';
 import deleteDbTpActionLocation from '@/lib/api/db/tp/deleteDbTpActionLocation';
+import updateDbTpActionLocation from '@/lib/api/db/tp/updateDbTpActionLocation';
 import createDbTpLocation from '@/lib/api/db/tp/createDbTpLocation';
+import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
 
 export interface TripActivityActionEditorProps {
   readonly action: DbTpAction;
@@ -15,7 +17,7 @@ export interface TripActivityActionEditorProps {
   readonly actionLocations: readonly DbTpActionLocation[];
   readonly defaultCurrency?: string;
   readonly canWrite: boolean;
-  readonly onSaved: () => void;
+  readonly onSaved: () => void | Promise<void>;
   readonly onError: (message: string) => void;
 }
 
@@ -134,8 +136,21 @@ export default function TripActivityActionEditor({
             return null;
           }
           return (
-            <HStack key={link.id} justify="space-between">
-              <Text>{loc.name}{loc.address !== undefined && loc.address !== '' ? ` — ${loc.address}` : ''}</Text>
+            <HStack key={link.id} justify="space-between" align="flex-start">
+              <HStack align="flex-start" flex="1">
+                <TripTpDoneCheckbox
+                  checked={link.done}
+                  disabled={!canWrite}
+                  ariaLabel={
+                    link.done
+                      ? `Mark location ${loc.name} not done on this activity`
+                      : `Mark location ${loc.name} done on this activity`
+                  }
+                  tooltip="Done for this activity only — not the shared location catalog or other cards."
+                  onCheckedChange={(v) => void updateDbTpActionLocation(link.id, {done: v}).then(onSaved).catch((e) => onError(String(e)))}
+                />
+                <Text>{loc.name}{loc.address !== undefined && loc.address !== '' ? ` — ${loc.address}` : ''}</Text>
+              </HStack>
               {canWrite ? (
                 <Button size="xs" variant="outline" onClick={() => void unlink(link.id)}>Remove</Button>
               ) : null}

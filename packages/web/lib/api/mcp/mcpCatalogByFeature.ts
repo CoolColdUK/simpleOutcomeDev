@@ -42,7 +42,11 @@ import {
   updateAgentTpTransport,
 } from '@/lib/api/agent/tpAgentTransports';
 import {createAgentTpLocation, deleteAgentTpLocation, updateAgentTpLocation} from '@/lib/api/agent/tpAgentLocations';
-import {linkAgentTpActionLocation, unlinkAgentTpActionLocation} from '@/lib/api/agent/tpAgentActionLocations';
+import {
+  linkAgentTpActionLocation,
+  unlinkAgentTpActionLocation,
+  updateAgentTpActionLocation,
+} from '@/lib/api/agent/tpAgentActionLocations';
 import {
   createAgentTpTransportLib,
   deleteAgentTpTransportLib,
@@ -204,13 +208,14 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       toDestinationId: {type: 'string'},
       fromMapsUrl: {type: 'string'},
       toMapsUrl: {type: 'string'},
+      done: {type: 'boolean'},
     },
     ['podId', 'kind', 'title'],
     (request, args) => createAgentTpAction(request, args),
   ),
   tool(
     'update_tp_action',
-    'Update action fields (use sortOrder to reorder).',
+    'Update action fields (use sortOrder to reorder). done marks this day-card action complete.',
     {
       podId,
       actionId: {type: 'string'},
@@ -238,6 +243,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       toDestinationId: {type: 'string'},
       fromMapsUrl: {type: 'string'},
       toMapsUrl: {type: 'string'},
+      done: {type: 'boolean'},
     },
     ['podId', 'actionId'],
     (request, args) => updateAgentTpAction(request, args),
@@ -275,7 +281,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 15-17. Transports
   tool(
     'create_tp_transport',
-    'Add transport leg to a route. mode: flight/train/bus/ferry/car/other. Local times → departLocalTime/departTimezone.',
+    'Add a route step (transport leg). mode: flight/train/bus/ferry/car/other. Local times → departLocalTime/departTimezone.',
     {
       podId,
       routeId: {type: 'string'},
@@ -292,13 +298,17 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       url: {type: 'string'},
       notes: {type: 'string'},
       sortOrder: {type: 'number'},
+      durationMinutes: {type: 'number'},
+      fromLocationId: {type: 'string'},
+      toLocationId: {type: 'string'},
+      done: {type: 'boolean'},
     },
     ['podId', 'routeId'],
     (request, args) => createAgentTpTransport(request, args),
   ),
   tool(
     'update_tp_transport',
-    'Update transport leg (use sortOrder to reorder).',
+    'Update a route step (use sortOrder to reorder).',
     {
       podId,
       transportId: {type: 'string'},
@@ -315,11 +325,15 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       url: {type: 'string'},
       notes: {type: 'string'},
       sortOrder: {type: 'number'},
+      durationMinutes: {type: 'number'},
+      fromLocationId: {type: 'string'},
+      toLocationId: {type: 'string'},
+      done: {type: 'boolean'},
     },
     ['podId', 'transportId'],
     (request, args) => updateAgentTpTransport(request, args),
   ),
-  tool('delete_tp_transport', 'Delete a transport leg.', {podId, transportId: {type: 'string'}}, ['podId', 'transportId'], (request, args) =>
+  tool('delete_tp_transport', 'Delete a route step.', {podId, transportId: {type: 'string'}}, ['podId', 'transportId'], (request, args) =>
     deleteAgentTpTransport(request, args),
   ),
 
@@ -367,10 +381,17 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'link_tp_action_location',
-    'Link a location to an activity (cost stays on the activity).',
-    {podId, actionId: {type: 'string'}, locationId: {type: 'string'}, sortOrder: {type: 'number'}},
+    'Link a location to an activity (cost stays on the activity). done applies to this activity link only.',
+    {podId, actionId: {type: 'string'}, locationId: {type: 'string'}, sortOrder: {type: 'number'}, done: {type: 'boolean'}},
     ['podId', 'actionId', 'locationId'],
     (request, args) => linkAgentTpActionLocation(request, args),
+  ),
+  tool(
+    'update_tp_action_location',
+    'Update an activity location link (done is for this card only; sortOrder to reorder).',
+    {podId, linkId: {type: 'string'}, sortOrder: {type: 'number'}, done: {type: 'boolean'}},
+    ['podId', 'linkId'],
+    (request, args) => updateAgentTpActionLocation(request, args),
   ),
   tool('unlink_tp_action_location', 'Remove a location link from an activity.', {podId, linkId: {type: 'string'}}, ['podId', 'linkId'], (request, args) =>
     unlinkAgentTpActionLocation(request, args),
@@ -432,13 +453,14 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       costCurrency: {type: 'string'},
       fromLocationId: {type: 'string'},
       toLocationId: {type: 'string'},
+      done: {type: 'boolean'},
     },
     ['podId', 'actionId', 'transportLibId'],
     (request, args) => linkAgentTpActionTransport(request, args),
   ),
   tool(
     'update_tp_action_transport',
-    'Update a travel action transport link (duration, price, from/to locations).',
+    'Update a travel action transport link (duration, price, from/to locations, done).',
     {
       podId,
       linkId: {type: 'string'},
@@ -448,6 +470,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       costCurrency: {type: 'string'},
       fromLocationId: {type: 'string'},
       toLocationId: {type: 'string'},
+      done: {type: 'boolean'},
     },
     ['podId', 'linkId'],
     (request, args) => updateAgentTpActionTransport(request, args),

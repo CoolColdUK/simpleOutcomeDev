@@ -68,6 +68,7 @@ export interface DbTpAction {
   readonly fromLocationId?: string;
   readonly toLocationId?: string;
   readonly durationMinutes?: number;
+  readonly done: boolean;
 }
 
 export interface DbTpLocation {
@@ -90,6 +91,7 @@ export interface DbTpActionLocation {
   readonly actionId: string;
   readonly locationId: string;
   readonly sortOrder: number;
+  readonly done: boolean;
 }
 
 export interface DbTpTransportLib {
@@ -116,6 +118,7 @@ export interface DbTpActionTransport {
   readonly costCurrency?: string;
   readonly fromLocationId?: string;
   readonly toLocationId?: string;
+  readonly done: boolean;
 }
 
 export interface DbTpRoute {
@@ -145,6 +148,7 @@ export interface DbTpTransport {
   readonly fromLocationId?: string;
   readonly toLocationId?: string;
   readonly durationMinutes?: number;
+  readonly done: boolean;
 }
 
 export interface DbTpAttachment {
@@ -363,6 +367,7 @@ export async function loadDbTpWorkspace(
         fromLocationId: a.from_location_id ?? undefined,
         toLocationId: a.to_location_id ?? undefined,
         durationMinutes: a.duration_minutes ?? undefined,
+        done: a.done,
       })),
       routes: (routesRes.data ?? []).map((r) => ({
         id: r.id,
@@ -390,6 +395,7 @@ export async function loadDbTpWorkspace(
         fromLocationId: t.from_location_id ?? undefined,
         toLocationId: t.to_location_id ?? undefined,
         durationMinutes: t.duration_minutes ?? undefined,
+        done: t.done,
       })),
       attachments: (attachRes.data ?? []).map((a) => ({
         id: a.id,
@@ -418,6 +424,7 @@ export async function loadDbTpWorkspace(
         actionId: l.action_id,
         locationId: l.location_id,
         sortOrder: l.sort_order,
+        done: l.done,
       })),
       transportLib: (transportLibRes.data ?? []).map((t) => ({
         id: t.id,
@@ -442,6 +449,7 @@ export async function loadDbTpWorkspace(
         costCurrency: l.cost_currency ?? undefined,
         fromLocationId: l.from_location_id ?? undefined,
         toLocationId: l.to_location_id ?? undefined,
+        done: l.done,
       })),
     },
     error: null,

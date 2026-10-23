@@ -45,7 +45,11 @@ import {createAgentTpRoute, deleteAgentTpRoute, selectAgentTpRoute, updateAgentT
 import {createAgentTpTransport, deleteAgentTpTransport, updateAgentTpTransport} from '@/lib/api/agent/tpAgentTransports';
 import {deleteAgentTpAttachment, listAgentTpAttachments, uploadAgentTpAttachment} from '@/lib/api/agent/tpAgentAttachments';
 import {createAgentTpLocation, deleteAgentTpLocation, updateAgentTpLocation} from '@/lib/api/agent/tpAgentLocations';
-import {linkAgentTpActionLocation, unlinkAgentTpActionLocation} from '@/lib/api/agent/tpAgentActionLocations';
+import {
+  linkAgentTpActionLocation,
+  unlinkAgentTpActionLocation,
+  updateAgentTpActionLocation,
+} from '@/lib/api/agent/tpAgentActionLocations';
 import {
   createAgentTpTransportLib,
   deleteAgentTpTransportLib,
@@ -281,9 +285,15 @@ async function dispatchTp(method: string, request: Request, path: readonly strin
       : methodNotAllowed();
   }
   if (fourth === 'action-locations' && isUuid(fifth) && sixth === undefined) {
-    return method === 'DELETE'
-      ? agentResultResponse(await unlinkAgentTpActionLocation(request, {podId, linkId: fifth}))
-      : methodNotAllowed();
+    if (method === 'PATCH') {
+      return agentResultResponse(
+        await updateAgentTpActionLocation(request, await bodyWith(request, {podId, linkId: fifth})),
+      );
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await unlinkAgentTpActionLocation(request, {podId, linkId: fifth}));
+    }
+    return methodNotAllowed();
   }
   if (fourth === 'transport-library' && fifth === undefined) {
     return method === 'POST'

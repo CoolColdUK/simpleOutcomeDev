@@ -667,6 +667,7 @@ export interface Database {
           from_location_id: string | null;
           to_location_id: string | null;
           duration_minutes: number | null;
+          done: boolean;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -701,6 +702,7 @@ export interface Database {
           from_location_id?: string | null;
           to_location_id?: string | null;
           duration_minutes?: number | null;
+          done?: boolean;
           sort_order?: number;
         };
         Update: Record<string, unknown>;
@@ -753,6 +755,7 @@ export interface Database {
           from_location_id: string | null;
           to_location_id: string | null;
           duration_minutes: number | null;
+          done: boolean;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -776,6 +779,7 @@ export interface Database {
           from_location_id?: string | null;
           to_location_id?: string | null;
           duration_minutes?: number | null;
+          done?: boolean;
           sort_order?: number;
         };
         Update: Record<string, unknown>;
@@ -832,6 +836,7 @@ export interface Database {
           action_id: string;
           location_id: string;
           sort_order: number;
+          done: boolean;
           created_at: string;
         };
         Insert: {
@@ -839,9 +844,11 @@ export interface Database {
           action_id: string;
           location_id: string;
           sort_order?: number;
+          done?: boolean;
         };
         Update: {
           sort_order?: number;
+          done?: boolean;
         };
         Relationships: [];
       };
@@ -888,6 +895,7 @@ export interface Database {
           cost_currency: string | null;
           from_location_id: string | null;
           to_location_id: string | null;
+          done: boolean;
           created_at: string;
         };
         Insert: {
@@ -900,6 +908,7 @@ export interface Database {
           cost_currency?: string | null;
           from_location_id?: string | null;
           to_location_id?: string | null;
+          done?: boolean;
         };
         Update: {
           sort_order?: number;
@@ -908,6 +917,7 @@ export interface Database {
           cost_currency?: string | null;
           from_location_id?: string | null;
           to_location_id?: string | null;
+          done?: boolean;
         };
         Relationships: [];
       };

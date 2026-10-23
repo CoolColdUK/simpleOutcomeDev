@@ -20,5 +20,7 @@ export {default as tpActionDayCardSummary} from './tpActionDayCardSummary';
 export type {TpActionDayCardSummaryInput, TpLocationNameRef} from './tpActionDayCardSummary';
 export {default as tpTagsFromLocationNotes} from './tpTagsFromLocationNotes';
 export {default as tpLocationNotesWithoutTagLines} from './tpLocationNotesWithoutTagLines';
+export {default as tpRouteOptionSummary} from './tpRouteOptionSummary';
+export type {TpRouteOptionSummaryInput, TpRouteOptionStepInput} from './tpRouteOptionSummary';
 export {default as tpSpanOverlapsTripDay} from './tpSpanOverlapsTripDay';
 export type {TpDestinationRef} from './tpDestinationRef';

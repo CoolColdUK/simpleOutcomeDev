@@ -58,6 +58,10 @@ export interface CreateTpTransportInputForAgent {
   readonly url?: string;
   readonly notes?: string;
   readonly sortOrder: number;
+  readonly durationMinutes?: number;
+  readonly fromLocationId?: string;
+  readonly toLocationId?: string;
+  readonly done?: boolean;
 }
 
 export async function createDbTpTransportForAgent(
@@ -81,6 +85,10 @@ export async function createDbTpTransportForAgent(
       url: input.url ?? null,
       notes: input.notes ?? null,
       sort_order: input.sortOrder,
+      duration_minutes: input.durationMinutes ?? null,
+      from_location_id: input.fromLocationId ?? null,
+      to_location_id: input.toLocationId ?? null,
+      done: input.done ?? false,
     })
     .select('*')
     .single();

@@ -60,6 +60,7 @@ export function mapAgentTpActionTransportRow(row: TpActionTransportRow) {
     costCurrency: row.cost_currency ?? undefined,
     fromLocationId: row.from_location_id ?? undefined,
     toLocationId: row.to_location_id ?? undefined,
+    done: row.done,
     createdAt: row.created_at,
   };
 }

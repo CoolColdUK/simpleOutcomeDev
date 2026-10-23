@@ -7,6 +7,7 @@ export interface CreateDbTpActionLocationInput {
   readonly actionId: string;
   readonly locationId: string;
   readonly sortOrder?: number;
+  readonly done?: boolean;
 }
 
 export async function createDbTpActionLocationForAgent(
@@ -19,6 +20,7 @@ export async function createDbTpActionLocationForAgent(
       action_id: input.actionId,
       location_id: input.locationId,
       sort_order: input.sortOrder ?? 0,
+      done: input.done ?? false,
     })
     .select('*')
     .single();

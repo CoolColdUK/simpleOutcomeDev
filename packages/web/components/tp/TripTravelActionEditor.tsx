@@ -2,7 +2,8 @@
 
 import {useMemo, useState} from 'react';
 import {Alert, Button, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
-import {formatTpInstant} from '@so/model';
+import {formatTpInstant, tpRouteIsSelected, tpRouteOptionSummary} from '@so/model';
+import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
 import type {
   DbTpAction,
   DbTpActionTransport,
@@ -43,9 +44,11 @@ export interface TripTravelActionEditorProps {
   readonly tripTimezone: string;
   readonly defaultCurrency?: string;
   readonly canWrite: boolean;
-  readonly onSaved: () => void;
+  readonly onSaved: () => void | Promise<void>;
   readonly onError: (message: string) => void;
 }
+
+type TravelPending = 'addRoute' | 'addStep' | 'selectRoute' | 'deleteRoute' | 'linkTransport' | 'saveJourney' | null;
 
 export default function TripTravelActionEditor({
   podId,
@@ -65,6 +68,8 @@ export default function TripTravelActionEditor({
   onSaved,
   onError,
 }: TripTravelActionEditorProps) {
+  const [pending, setPending] = useState<TravelPending>(null);
+  const mutationsDisabled = pending !== null;
   const actionRoutes = routes.filter((r) => r.actionId === action.id);
   const selectedRouteId = action.selectedRouteId ?? actionRoutes.find((r) => r.isSelected)?.id;
   const selectedRouteTransports = transports.filter((t) => t.routeId === selectedRouteId);
@@ -101,7 +106,12 @@ export default function TripTravelActionEditor({
     return '';
   }, [fromPlace, toPlace, selectedRouteTransports]);
 
+  const afterSave = async (): Promise<void> => {
+    await onSaved();
+  };
+
   const saveAction = async (): Promise<void> => {
+    setPending('saveJourney');
     try {
       await updateDbTpAction(action.id, {
         title,
@@ -124,49 +134,63 @@ export default function TripTravelActionEditor({
         const only = selectedRouteTransports[0];
         await updateDbTpTransport(only.id, {fromPlace, toPlace});
       }
-      onSaved();
+      await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPending(null);
     }
   };
 
   const addRoute = async (): Promise<void> => {
+    setPending('addRoute');
     try {
       const id = await createDbTpRoute(action.id, `Option ${actionRoutes.length + 1}`, actionRoutes.length);
       if (actionRoutes.length === 0) {
         await selectDbTpRoute(action.id, id);
       }
-      onSaved();
+      await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPending(null);
     }
   };
 
   const pickRoute = async (routeId: string): Promise<void> => {
+    setPending('selectRoute');
     try {
       await selectDbTpRoute(action.id, routeId);
-      onSaved();
+      await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPending(null);
     }
   };
 
   const removeRoute = async (routeId: string): Promise<void> => {
+    setPending('deleteRoute');
     try {
       await deleteDbTpRoute(routeId);
-      onSaved();
+      await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPending(null);
     }
   };
 
   const addTransport = async (routeId: string): Promise<void> => {
+    setPending('addStep');
     try {
       const count = transports.filter((t) => t.routeId === routeId).length;
       await createDbTpTransport(routeId, count);
-      onSaved();
+      await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPending(null);
     }
   };
 
@@ -174,6 +198,7 @@ export default function TripTravelActionEditor({
     if (transportLibId === '') {
       return;
     }
+    setPending('linkTransport');
     try {
       const lib = transportLib.find((t) => t.id === transportLibId);
       await createDbTpActionTransport({
@@ -199,16 +224,18 @@ export default function TripTravelActionEditor({
           toLocationId: lib.toLocationId,
         });
       }
-      onSaved();
+      await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPending(null);
     }
   };
 
   const unlinkTransportLib = async (linkId: string): Promise<void> => {
     try {
       await deleteDbTpActionTransport(linkId);
-      onSaved();
+      await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
     }
@@ -220,6 +247,9 @@ export default function TripTravelActionEditor({
         mode: draft.mode,
         fromPlace: draft.fromPlace,
         toPlace: draft.toPlace,
+        fromLocationId: draft.fromLocationId === '' ? null : draft.fromLocationId,
+        toLocationId: draft.toLocationId === '' ? null : draft.toLocationId,
+        durationMinutes: draft.durationMinutes === '' ? null : Number(draft.durationMinutes),
         departAt: tpInstantFromParts(draft.departDate, draft.departTime, draft.departTimezone) ?? null,
         arriveAt: tpInstantFromParts(draft.arriveDate, draft.arriveTime, draft.arriveTimezone) ?? null,
         departTimezone: draft.departTimezone,
@@ -228,8 +258,9 @@ export default function TripTravelActionEditor({
         costCurrency: draft.currency === '' ? null : draft.currency,
         bookingRef: draft.bookingRef,
         notes: draft.notes,
+        done: draft.done,
       });
-      onSaved();
+      await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
     }
@@ -331,11 +362,12 @@ export default function TripTravelActionEditor({
             canWrite={canWrite}
             onRemove={() => void unlinkTransportLib(link.id)}
             onError={onError}
-            onSaved={onSaved}
+            onSaved={afterSave}
+            mutationsDisabled={mutationsDisabled}
           />
         ))}
         <NativeSelect.Root>
-          <NativeSelect.Field value="" onChange={(e) => void linkTransportLib(e.target.value)}>
+          <NativeSelect.Field value="" disabled={mutationsDisabled} onChange={(e) => void linkTransportLib(e.target.value)}>
             <option value="">Add from library…</option>
             {transportLib
               .filter((t) => !travelLinks.some((l) => l.transportLibId === t.id))
@@ -349,7 +381,14 @@ export default function TripTravelActionEditor({
         <Field.Label>Notes</Field.Label>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
       </Field.Root>
-      <Button size="sm" colorPalette="brand" onClick={() => void saveAction()}>Save journey</Button>
+      <Button
+        size="sm"
+        colorPalette="brand"
+        disabled={mutationsDisabled}
+        onClick={() => void saveAction()}
+      >
+        {pending === 'saveJourney' ? 'Saving…' : 'Save journey'}
+      </Button>
       {multimodalWarning !== '' ? (
         <Alert.Root status="warning" size="sm">
           <Alert.Description>{multimodalWarning}</Alert.Description>
@@ -357,35 +396,53 @@ export default function TripTravelActionEditor({
       ) : null}
       <HStack justify="space-between">
         <Text fontWeight="medium">Routes</Text>
-        <Button size="xs" onClick={() => void addRoute()}>+ Route</Button>
+        <Button size="xs" disabled={mutationsDisabled} onClick={() => void addRoute()}>
+          {pending === 'addRoute' ? 'Adding route…' : '+ Route'}
+        </Button>
       </HStack>
       {actionRoutes.map((route) => {
-        const routeTransports = transports.filter((t) => t.routeId === route.id);
-        const legHint =
-          routeTransports.length === 0
-            ? 'No legs'
-            : `${routeTransports.length} leg${routeTransports.length === 1 ? '' : 's'}`;
+        const routeTransports = transports.filter((t) => t.routeId === route.id).sort((a, b) => a.sortOrder - b.sortOrder);
+        const routeTitle = tpRouteOptionSummary({
+          name: route.name,
+          isSelected: tpRouteIsSelected(route.id, selectedRouteId, route.isSelected),
+          steps: routeTransports.map((s) => ({
+            fromPlace: s.fromPlace,
+            toPlace: s.toPlace,
+            fromLocationName: locations.find((l) => l.id === s.fromLocationId)?.name,
+            toLocationName: locations.find((l) => l.id === s.toLocationId)?.name,
+            costAmount: s.costAmount,
+            costCurrency: s.costCurrency,
+            departAt: s.departAt,
+            departTimezone: s.departTimezone,
+            arriveAt: s.arriveAt,
+            arriveTimezone: s.arriveTimezone,
+          })),
+        });
         return (
           <TripTpCollapsible
             key={route.id}
-            title={`${route.name}${route.id === selectedRouteId ? ' (selected)' : ''} · ${legHint}`}
+            title={routeTitle}
           >
             <BoxRoute
               route={route}
               selected={route.id === selectedRouteId}
               transports={routeTransports}
+              locations={locations}
+              transportLib={transportLib}
               tripTimezone={tripTimezone}
               defaultCurrency={defaultCurrency}
               podId={podId}
               tripId={tripId}
               userId={userId}
               attachments={attachments}
+              mutationsDisabled={mutationsDisabled}
+              pending={pending}
               onPick={() => void pickRoute(route.id)}
               onDelete={() => void removeRoute(route.id)}
               onAddTransport={() => void addTransport(route.id)}
               onSaveTransport={saveTransport}
-              onRemoveTransport={(id) => void deleteDbTpTransport(id).then(onSaved).catch((e) => onError(String(e)))}
-              onChanged={onSaved}
+              onRemoveTransport={(id) => void deleteDbTpTransport(id).then(afterSave).catch((e) => onError(String(e)))}
+              onChanged={afterSave}
               onError={onError}
             />
           </TripTpCollapsible>
@@ -424,6 +481,7 @@ function ActionTransportLinkRow({
   onRemove,
   onError,
   onSaved,
+  mutationsDisabled,
 }: {
   readonly link: DbTpActionTransport;
   readonly lib?: DbTpTransportLib;
@@ -432,7 +490,8 @@ function ActionTransportLinkRow({
   readonly canWrite: boolean;
   readonly onRemove: () => void;
   readonly onError: (message: string) => void;
-  readonly onSaved: () => void;
+  readonly onSaved: () => void | Promise<void>;
+  readonly mutationsDisabled: boolean;
 }) {
   const [duration, setDuration] = useState(effectiveMinutes(link, lib)?.toString() ?? '');
   const [cost, setCost] = useState(effectiveCost(link, lib)?.toString() ?? '');
@@ -457,9 +516,27 @@ function ActionTransportLinkRow({
 
   const locName = (id: string): string => locations.find((l) => l.id === id)?.name ?? '—';
 
+  const toggleDone = async (done: boolean): Promise<void> => {
+    try {
+      await updateDbTpActionTransport(link.id, {done});
+      await onSaved();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   return (
     <Stack gap={2} pl={2} borderLeftWidth="2px">
-      <Text fontWeight="medium">{lib?.label ?? 'Transport'}</Text>
+      <HStack>
+        <TripTpDoneCheckbox
+          checked={link.done}
+          disabled={!canWrite || mutationsDisabled}
+          ariaLabel={link.done ? `Mark transport ${lib?.label ?? 'link'} not done` : `Mark transport ${lib?.label ?? 'link'} done`}
+          tooltip="Done for this travel link only — not the route step or transport library."
+          onCheckedChange={(v) => void toggleDone(v)}
+        />
+        <Text fontWeight="medium">{lib?.label ?? 'Transport'}</Text>
+      </HStack>
       {canWrite ? (
         <>
           <HStack wrap="wrap">
@@ -520,6 +597,9 @@ interface TransportDraft {
   mode: string;
   fromPlace: string;
   toPlace: string;
+  fromLocationId: string;
+  toLocationId: string;
+  durationMinutes: string;
   departDate: string;
   departTime: string;
   departTimezone: string;
@@ -530,6 +610,7 @@ interface TransportDraft {
   currency: string;
   bookingRef: string;
   notes: string;
+  done: boolean;
 }
 
 function transportDraft(transport: DbTpTransport, tripTimezone: string, defaultCurrency?: string): TransportDraft {
@@ -541,6 +622,9 @@ function transportDraft(transport: DbTpTransport, tripTimezone: string, defaultC
     mode: transport.mode,
     fromPlace: transport.fromPlace ?? '',
     toPlace: transport.toPlace ?? '',
+    fromLocationId: transport.fromLocationId ?? '',
+    toLocationId: transport.toLocationId ?? '',
+    durationMinutes: transport.durationMinutes?.toString() ?? '',
     departDate: dep.date,
     departTime: dep.time,
     departTimezone: depTz,
@@ -551,6 +635,7 @@ function transportDraft(transport: DbTpTransport, tripTimezone: string, defaultC
     currency: transport.costCurrency ?? defaultCurrency ?? '',
     bookingRef: transport.bookingRef ?? '',
     notes: transport.notes ?? '',
+    done: transport.done,
   };
 }
 
@@ -558,12 +643,16 @@ interface BoxRouteProps {
   readonly route: DbTpRoute;
   readonly selected: boolean;
   readonly transports: readonly DbTpTransport[];
+  readonly locations: readonly DbTpLocation[];
+  readonly transportLib: readonly DbTpTransportLib[];
   readonly tripTimezone: string;
   readonly defaultCurrency?: string;
   readonly podId: string;
   readonly tripId: string;
   readonly userId: string;
   readonly attachments: readonly DbTpAttachment[];
+  readonly mutationsDisabled: boolean;
+  readonly pending: TravelPending;
   readonly onPick: () => void;
   readonly onDelete: () => void;
   readonly onAddTransport: () => void;
@@ -590,27 +679,42 @@ function BoxRoute({
   onRemoveTransport,
   onChanged,
   onError,
+  locations,
+  transportLib,
+  mutationsDisabled,
+  pending,
 }: BoxRouteProps) {
   return (
     <Stack gap={2} opacity={selected ? 1 : 0.85}>
       <HStack justify="space-between">
         <Text fontWeight="medium">Route options</Text>
         <HStack>
-          {!selected ? <Button size="xs" onClick={onPick}>Select</Button> : null}
-          <Button size="xs" variant="outline" colorPalette="red" onClick={onDelete}>Delete route</Button>
+          {!selected ? (
+            <Button size="xs" disabled={mutationsDisabled} onClick={onPick}>
+              {pending === 'selectRoute' ? 'Selecting…' : 'Select'}
+            </Button>
+          ) : null}
+          <Button size="xs" variant="outline" colorPalette="red" disabled={mutationsDisabled} onClick={onDelete}>
+            {pending === 'deleteRoute' ? 'Deleting route…' : 'Delete route'}
+          </Button>
         </HStack>
       </HStack>
-      <Button size="xs" alignSelf="flex-start" onClick={onAddTransport}>+ Transport</Button>
+      <Button size="xs" alignSelf="flex-start" disabled={mutationsDisabled} onClick={onAddTransport}>
+        {pending === 'addStep' ? 'Adding step…' : '+ Step'}
+      </Button>
       {transports.map((t) => (
         <TransportRow
           key={t.id}
           transport={t}
+          transportLib={transportLib}
+          locations={locations}
           tripTimezone={tripTimezone}
           defaultCurrency={defaultCurrency}
           podId={podId}
           tripId={tripId}
           userId={userId}
           attachments={attachments}
+          mutationsDisabled={mutationsDisabled}
           onSave={(draft) => onSaveTransport(t, draft)}
           onRemove={() => onRemoveTransport(t.id)}
           onChanged={onChanged}
@@ -623,27 +727,33 @@ function BoxRoute({
 
 function TransportRow({
   transport,
+  transportLib,
+  locations,
   tripTimezone,
   defaultCurrency,
   podId,
   tripId,
   userId,
   attachments,
+  mutationsDisabled,
   onSave,
   onRemove,
   onChanged,
   onError,
 }: {
   readonly transport: DbTpTransport;
+  readonly transportLib: readonly DbTpTransportLib[];
+  readonly locations: readonly DbTpLocation[];
   readonly tripTimezone: string;
   readonly defaultCurrency?: string;
   readonly podId: string;
   readonly tripId: string;
   readonly userId: string;
   readonly attachments: readonly DbTpAttachment[];
+  readonly mutationsDisabled: boolean;
   readonly onSave: (draft: TransportDraft) => Promise<void>;
   readonly onRemove: () => void;
-  readonly onChanged: () => void;
+  readonly onChanged: () => void | Promise<void>;
   readonly onError: (message: string) => void;
 }) {
   const [draft, setDraft] = useState(() => transportDraft(transport, tripTimezone, defaultCurrency));
@@ -653,9 +763,22 @@ function TransportRow({
       ? `${formatTpInstant(transport.departAt, draft.departTimezone)} → ${formatTpInstant(transport.arriveAt, draft.arriveTimezone)}`
       : '';
 
+  const libLabel =
+    transport.transportLibId !== undefined
+      ? transportLib.find((t) => t.id === transport.transportLibId)?.label
+      : undefined;
+
   return (
     <Stack gap={2} pl={2} borderLeftWidth="2px">
       {summary !== '' ? <Text fontSize="xs" color="fg.muted">{summary}</Text> : null}
+      {libLabel !== undefined ? <Text fontSize="xs">{libLabel}</Text> : null}
+      <TripTpDoneCheckbox
+        checked={draft.done}
+        disabled={mutationsDisabled}
+        ariaLabel={draft.done ? 'Mark route step not done' : 'Mark route step done'}
+        tooltip="Done for this route step only — independent of the linked transport on the journey."
+        onCheckedChange={(v) => setDraft({...draft, done: v})}
+      />
       <NativeSelect.Root>
         <NativeSelect.Field value={draft.mode} onChange={(e) => setDraft({...draft, mode: e.target.value})}>
           {TP_TRANSPORT_MODES.map((m) => (
@@ -666,6 +789,37 @@ function TransportRow({
       <HStack>
         <Input placeholder="From" value={draft.fromPlace} onChange={(e) => setDraft({...draft, fromPlace: e.target.value})} />
         <Input placeholder="To" value={draft.toPlace} onChange={(e) => setDraft({...draft, toPlace: e.target.value})} />
+      </HStack>
+      <HStack wrap="wrap">
+        <Field.Root flex="1" minW="10rem">
+          <Field.Label>From location</Field.Label>
+          <NativeSelect.Root>
+            <NativeSelect.Field
+              value={draft.fromLocationId}
+              onChange={(e) => setDraft({...draft, fromLocationId: e.target.value})}
+            >
+              <option value="">—</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </NativeSelect.Field>
+          </NativeSelect.Root>
+        </Field.Root>
+        <Field.Root flex="1" minW="10rem">
+          <Field.Label>To location</Field.Label>
+          <NativeSelect.Root>
+            <NativeSelect.Field value={draft.toLocationId} onChange={(e) => setDraft({...draft, toLocationId: e.target.value})}>
+              <option value="">—</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </NativeSelect.Field>
+          </NativeSelect.Root>
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>Duration (min)</Field.Label>
+          <Input value={draft.durationMinutes} onChange={(e) => setDraft({...draft, durationMinutes: e.target.value})} />
+        </Field.Root>
       </HStack>
       <Text fontSize="xs">Depart</Text>
       <HStack wrap="wrap">
@@ -686,8 +840,8 @@ function TransportRow({
       </HStack>
       <Input placeholder="Segment notes" value={draft.notes} onChange={(e) => setDraft({...draft, notes: e.target.value})} />
       <HStack>
-        <Button size="xs" colorPalette="brand" onClick={() => void onSave(draft)}>Save segment</Button>
-        <Button size="xs" variant="outline" colorPalette="red" onClick={onRemove}>Remove</Button>
+        <Button size="xs" colorPalette="brand" disabled={mutationsDisabled} onClick={() => void onSave(draft)}>Save step</Button>
+        <Button size="xs" variant="outline" colorPalette="red" disabled={mutationsDisabled} onClick={onRemove}>Remove</Button>
       </HStack>
       <TripTpAttachmentPanel
         podId={podId}

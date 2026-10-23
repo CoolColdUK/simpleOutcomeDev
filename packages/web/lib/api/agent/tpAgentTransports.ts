@@ -64,6 +64,10 @@ export async function createAgentTpTransport(request: Request, input: unknown): 
     url: typeof args.url === 'string' ? args.url : undefined,
     notes: typeof args.notes === 'string' ? args.notes : undefined,
     sortOrder: typeof args.sortOrder === 'number' ? args.sortOrder : 0,
+    durationMinutes: typeof args.durationMinutes === 'number' ? args.durationMinutes : undefined,
+    fromLocationId: typeof args.fromLocationId === 'string' ? args.fromLocationId : undefined,
+    toLocationId: typeof args.toLocationId === 'string' ? args.toLocationId : undefined,
+    done: typeof args.done === 'boolean' ? args.done : undefined,
   });
   
   const resultErr = dbErr(result.error);
@@ -99,6 +103,10 @@ export async function updateAgentTpTransport(request: Request, input: unknown): 
   if ('url' in args) updates.url = args.url;
   if ('notes' in args) updates.notes = args.notes;
   if ('sortOrder' in args) updates.sort_order = args.sortOrder;
+  if ('durationMinutes' in args) updates.duration_minutes = args.durationMinutes;
+  if ('fromLocationId' in args) updates.from_location_id = args.fromLocationId;
+  if ('toLocationId' in args) updates.to_location_id = args.toLocationId;
+  if ('done' in args) updates.done = args.done;
   
   // Handle timezone conversions
   if ('departLocalTime' in args && 'departTimezone' in args) {

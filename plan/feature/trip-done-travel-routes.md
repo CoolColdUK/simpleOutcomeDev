@@ -6,7 +6,7 @@ A day card should be markable **done** without opening the editor, and a **trave
 **Base:** `develop` after [#19](https://github.com/CoolColdUK/simpleOutcomeDev/pull/19) (routes, selected route), [#20](https://github.com/CoolColdUK/simpleOutcomeDev/pull/20) (locations, transport library, `tp_action_transport`), and [#21](https://github.com/CoolColdUK/simpleOutcomeDev/pull/21) (activity Details, location hours/contact, transport-instance overrides, optional library mode).  
 **Earlier plans:** [trip-planning.md](./trip-planning.md) (locked travel → route → transport model), [trip-day-ui-polish.md](./trip-day-ui-polish.md), [trip-day-card-icons-activity-accordion.md](./trip-day-card-icons-activity-accordion.md). This plan does not reopen those models.
 
-**Status:** Plan only. After Matthew approves, implementation lands on **this same branch / PR**. Do not open a second implementation PR. Agents do not merge. The PR stays **draft** until he says otherwise.
+**Status:** Implemented on branch `cursor/trip-done-travel-routes-7026` (PR #22). Agents do not merge.
 
 **Out of scope:** Telegram and any other non-trip track. Stay or note Details accordions. A new `tp_step` table. Renaming MCP tools or REST paths. `tp_trip.status` (`draft` / `active` / `done` / `archived`) — that is the whole-trip lifecycle, not a day-card checkbox. Strikethrough, hiding done cards, or a “show done” filter. Dropping done costs out of the budget rollup. Cascading done from a parent to its children. A `done` flag on the location catalog (`tp_location`) or the transport library (`tp_transport_lib`) or on `tp_route`. Making `tp_transport.mode` nullable. Bulk edits to the live HK–JP trip. New npm packages. Realtime. New Vercel env vars.
 
