@@ -69,7 +69,10 @@ function timePart(steps: readonly TpRouteOptionStepInput[]): string | undefined 
   }
   const first = steps[0];
   const last = steps[steps.length - 1];
-  if (first?.departAt === undefined || last?.arriveAt === undefined) {
+  if (first === undefined || last === undefined) {
+    return undefined;
+  }
+  if (first.departAt === undefined || last.arriveAt === undefined) {
     return undefined;
   }
   const depTz = first.departTimezone ?? 'UTC';
@@ -84,10 +87,14 @@ export default function tpRouteOptionSummary(input: TpRouteOptionSummaryInput): 
   }
   const steps = input.steps;
   if (steps.length > 0) {
-    const from = stepStartLabel(steps[0]);
-    const to = stepEndLabel(steps[steps.length - 1]);
-    if (from !== undefined && to !== undefined) {
-      parts.push(`${from} → ${to}`);
+    const first = steps[0];
+    const last = steps[steps.length - 1];
+    if (first !== undefined && last !== undefined) {
+      const from = stepStartLabel(first);
+      const to = stepEndLabel(last);
+      if (from !== undefined && to !== undefined) {
+        parts.push(`${from} → ${to}`);
+      }
     }
   }
   parts.push(stepCountLabel(steps.length));
