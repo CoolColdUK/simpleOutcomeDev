@@ -6,7 +6,7 @@ import type {Database} from '@/lib/supabase/database';
 export interface CreateDbTpTransportLibInput {
   readonly tripId: string;
   readonly label: string;
-  readonly mode?: string;
+  readonly mode?: string | null;
   readonly durationMinutes?: number;
   readonly costAmount?: number;
   readonly costCurrency?: string;
