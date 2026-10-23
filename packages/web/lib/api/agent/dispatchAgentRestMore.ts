@@ -37,7 +37,7 @@ import {
   updateAgentFpSetting,
 } from '@/lib/api/agent/fpAgentSetup';
 import {getAgentProfile, updateAgentProfileDisplayName, updateAgentProfileUsername} from '@/lib/api/agent/profileAgent';
-import {getAgentTpBudgetRollup, getAgentTpWorkspace, updateAgentTpTrip} from '@/lib/api/agent/tpAgentWorkspace';
+import {createAgentTpTrip, getAgentTpBudgetRollup, getAgentTpWorkspace, updateAgentTpTrip} from '@/lib/api/agent/tpAgentWorkspace';
 import {createAgentTpDestination, deleteAgentTpDestination, updateAgentTpDestination} from '@/lib/api/agent/tpAgentDestinations';
 import {updateAgentTpDay} from '@/lib/api/agent/tpAgentDays';
 import {createAgentTpAction, deleteAgentTpAction, updateAgentTpAction} from '@/lib/api/agent/tpAgentActions';
@@ -211,7 +211,13 @@ async function dispatchTp(method: string, request: Request, path: readonly strin
     return method === 'GET' ? agentResultResponse(await getAgentTpWorkspace(request, {podId})) : methodNotAllowed();
   }
   if (fourth === undefined && fifth === undefined) {
-    return method === 'PATCH' ? agentResultResponse(await updateAgentTpTrip(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+    if (method === 'POST') {
+      return agentResultResponse(await createAgentTpTrip(request, await bodyWith(request, {podId})));
+    }
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentTpTrip(request, await bodyWith(request, {podId})));
+    }
+    return methodNotAllowed();
   }
   if (fourth === 'budget' && fifth === undefined) {
     return method === 'GET' ? agentResultResponse(await getAgentTpBudgetRollup(request, {podId})) : methodNotAllowed();

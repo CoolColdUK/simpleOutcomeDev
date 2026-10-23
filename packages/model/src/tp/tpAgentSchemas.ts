@@ -10,6 +10,18 @@ const optionalString = v.optional(v.string());
 const optionalNumber = v.optional(v.number());
 
 // Trip
+export const CreateTripSchema = v.object({
+  podId,
+  title: v.pipe(v.string(), v.minLength(1)),
+  timezone: v.pipe(v.string(), v.minLength(1)),
+  startDate: v.pipe(v.string(), v.minLength(1)),
+  endDate: v.pipe(v.string(), v.minLength(1)),
+  destinationNames: v.optional(v.array(v.pipe(v.string(), v.minLength(1)))),
+  destinations: optionalString,
+  budgetAmount: optionalNumber,
+  budgetCurrency: optionalString,
+});
+
 export const UpdateTripSchema = v.object({
   podId,
   title: optionalString,

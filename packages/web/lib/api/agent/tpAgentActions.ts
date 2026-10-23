@@ -5,7 +5,7 @@
 import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
-import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
+import {tpCall, ownedTpRow, requireExistingTpTripId} from '@/lib/api/agent/tpAgentCall';
 import {createDbTpActionForAgent} from '@/lib/api/db/tp/createDbTpAction';
 import {updateDbTpActionForAgent} from '@/lib/api/db/tp/updateDbTpAction';
 import deleteDbTpAction from '@/lib/api/db/tp/deleteDbTpAction';
@@ -24,12 +24,9 @@ export async function createAgentTpAction(request: Request, input: unknown): Pro
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
   if (!ctx.ok) return ctx;
   
-  // Get trip ID
-  const trip = await ctx.data.supabase.from('tp_trip').select('id').eq('pod_id', podId).single();
-  const tripErr = dbErr(trip.error);
-  if (tripErr !== undefined) return tripErr;
-  if (trip.data === null) return agentErr(404, 'not_found', 'Trip not found');
-  
+  const tripId = await requireExistingTpTripId(ctx.data, podId);
+  if (!tripId.ok) return tripId;
+
   // Convert local times to UTC for check-in/check-out
   let checkInAt: string | undefined;
   let checkOutAt: string | undefined;
@@ -54,7 +51,7 @@ export async function createAgentTpAction(request: Request, input: unknown): Pro
   }
   
   const result = await createDbTpActionForAgent(ctx.data.supabase, {
-    tripId: trip.data.id,
+    tripId: tripId.data,
     kind,
     title,
     anchorDayId: typeof args.anchorDayId === 'string' ? args.anchorDayId : undefined,

@@ -98,8 +98,13 @@ export interface DbTpAttachment {
   readonly storagePath: string;
 }
 
+export interface DbTpSettings {
+  readonly defaultCurrency: string;
+}
+
 export interface DbTpWorkspace {
   readonly trip?: DbTpTrip;
+  readonly settings?: DbTpSettings;
   readonly days: readonly DbTpDay[];
   readonly destinations: readonly DbTpDestination[];
   readonly dayDestinationLinks: readonly {dayId: string; destinationId: string}[];
@@ -140,11 +145,23 @@ export async function loadDbTpWorkspace(
   if (tripErr !== null) {
     return {data: null, error: tripErr};
   }
+  const settingRes = await supabase.from('tp_setting').select('default_currency').eq('pod_id', podId).maybeSingle();
+  if (settingRes.error !== null) {
+    return {data: null, error: settingRes.error};
+  }
+  const settings =
+    settingRes.data === null
+      ? undefined
+      : {
+          defaultCurrency: settingRes.data.default_currency,
+        };
+
   if (tripRow === null) {
-    return {data: emptyWorkspace, error: null};
+    return {data: {...emptyWorkspace, settings}, error: null};
   }
 
   const tripId = tripRow.id;
+
   const [daysRes, destRes, actionsRes, attachRes] = await Promise.all([
     supabase.from('tp_day').select('*').eq('trip_id', tripId).order('day_index'),
     supabase.from('tp_destination').select('*').eq('trip_id', tripId).order('sort_order'),
@@ -200,6 +217,7 @@ export async function loadDbTpWorkspace(
   return {
     data: {
       trip,
+      settings,
       days: (daysRes.data ?? []).map((d) => ({
         id: d.id,
         tripId: d.trip_id,

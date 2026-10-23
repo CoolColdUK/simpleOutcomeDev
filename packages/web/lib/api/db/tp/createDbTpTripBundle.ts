@@ -1,6 +1,8 @@
+import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import {syncTpCalendarDates, TpTripStatus} from '@so/model';
+import type {Database} from '@/lib/supabase/database';
 
 export interface CreateDbTpTripBundleInput {
   readonly podId: string;
@@ -13,8 +15,10 @@ export interface CreateDbTpTripBundleInput {
   readonly budgetCurrency?: string;
 }
 
-export default async function createDbTpTripBundle(input: CreateDbTpTripBundleInput): Promise<string> {
-  const supabase = getSupabaseBrowserClient();
+export async function createDbTpTripBundleWithClient(
+  supabase: SupabaseClient<Database>,
+  input: CreateDbTpTripBundleInput,
+): Promise<string> {
   const {data: trip, error: tripErr} = await supabase
     .from('tp_trip')
     .insert({
@@ -59,4 +63,9 @@ export default async function createDbTpTripBundle(input: CreateDbTpTripBundleIn
     throwIfSupabaseError(destErr);
   }
   return tripId;
+}
+
+export default async function createDbTpTripBundle(input: CreateDbTpTripBundleInput): Promise<string> {
+  const supabase = getSupabaseBrowserClient();
+  return createDbTpTripBundleWithClient(supabase, input);
 }

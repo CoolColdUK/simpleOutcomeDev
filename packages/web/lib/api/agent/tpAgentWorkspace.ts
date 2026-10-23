@@ -2,10 +2,16 @@
  * Trip planning agent: workspace operations
  */
 
-import {ApiKeyAction} from '@so/model';
-import {agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
+import {ApiKeyAction, CreateTripSchema, safeParseSchema} from '@so/model';
+import {agentOk, agentValidation, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
 import {tpCall} from '@/lib/api/agent/tpAgentCall';
+import {
+  agentTripAlreadyExists,
+  agentTripNotSetup,
+  TP_TRIP_SETUP_HINT,
+} from '@/lib/api/agent/tpAgentTrip';
+import {createDbTpTripBundleWithClient} from '@/lib/api/db/tp/createDbTpTripBundle';
 import {
   loadDbTpWorkspace,
   type DbTpAction,
@@ -14,29 +20,110 @@ import {
 } from '@/lib/api/db/tp/loadDbTpWorkspace';
 import type {UpdateTpTripInput} from '@/lib/api/db/tp/updateDbTpTrip';
 
+function destinationNamesFromInput(args: Record<string, unknown>): readonly string[] {
+  if (Array.isArray(args.destinationNames)) {
+    return args.destinationNames.filter((name): name is string => typeof name === 'string');
+  }
+  if (typeof args.destinations === 'string') {
+    return args.destinations.split('\n');
+  }
+  return [];
+}
+
 /**
  * Load full trip workspace
  */
 export async function getAgentTpWorkspace(request: Request, input: unknown): Promise<AgentResult<unknown>> {
   const podId = typeof input === 'object' && input !== null && 'podId' in input && typeof input.podId === 'string' ? input.podId : '';
-  
+
   if (!podId) {
     return {ok: false, status: 400, code: 'validation_error', message: 'podId is required'};
   }
-  
+
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.READ));
-  
+
   if (!ctx.ok) {
     return ctx;
   }
-  
+
   const workspace = await loadDbTpWorkspace(ctx.data.supabase, podId);
   const workspaceErr = dbErr(workspace.error);
   if (workspaceErr !== undefined) {
     return workspaceErr;
   }
-  
-  return agentOk(workspace.data);
+
+  const base = workspace.data ?? {
+    days: [],
+    destinations: [],
+    dayDestinationLinks: [],
+    actions: [],
+    routes: [],
+    transports: [],
+    attachments: [],
+  };
+
+  if (base.trip === undefined) {
+    return agentOk({
+      ...base,
+      trip: null,
+      tripSetupRequired: true,
+      message: TP_TRIP_SETUP_HINT,
+    });
+  }
+
+  return agentOk(base);
+}
+
+/**
+ * Create trip (same bundle as the web UI create form)
+ */
+export async function createAgentTpTrip(request: Request, input: unknown): Promise<AgentResult<unknown>> {
+  const parsed = safeParseSchema(CreateTripSchema, input);
+  if (!parsed.ok) {
+    return agentValidation(parsed.message);
+  }
+
+  const ctx = await requirePodAgent(request, tpCall(parsed.value.podId, ApiKeyAction.CREATE));
+  if (!ctx.ok) {
+    return ctx;
+  }
+
+  const existing = await ctx.data.supabase.from('tp_trip').select('id').eq('pod_id', parsed.value.podId).maybeSingle();
+  const existingErr = dbErr(existing.error);
+  if (existingErr !== undefined) {
+    return existingErr;
+  }
+  if (existing.data !== null) {
+    return agentTripAlreadyExists();
+  }
+
+  const destinationNames =
+    parsed.value.destinationNames ??
+    (typeof input === 'object' && input !== null && !Array.isArray(input)
+      ? destinationNamesFromInput(input as Record<string, unknown>)
+      : []);
+
+  try {
+    const tripId = await createDbTpTripBundleWithClient(ctx.data.supabase, {
+      podId: parsed.value.podId,
+      title: parsed.value.title.trim(),
+      timezone: parsed.value.timezone.trim() || 'UTC',
+      startDate: parsed.value.startDate,
+      endDate: parsed.value.endDate,
+      destinationNames,
+      budgetAmount: parsed.value.budgetAmount,
+      budgetCurrency: parsed.value.budgetCurrency,
+    });
+    const workspace = await loadDbTpWorkspace(ctx.data.supabase, parsed.value.podId);
+    const workspaceErr = dbErr(workspace.error);
+    if (workspaceErr !== undefined) {
+      return workspaceErr;
+    }
+    return agentOk({tripId, workspace: workspace.data});
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    return agentValidation(message);
+  }
 }
 
 /**
@@ -45,17 +132,17 @@ export async function getAgentTpWorkspace(request: Request, input: unknown): Pro
 export async function updateAgentTpTrip(request: Request, input: unknown): Promise<AgentResult<unknown>> {
   const args = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
   const podId = typeof args.podId === 'string' ? args.podId : '';
-  
+
   if (!podId) {
     return {ok: false, status: 400, code: 'validation_error', message: 'podId is required'};
   }
-  
+
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.UPDATE));
-  
+
   if (!ctx.ok) {
     return ctx;
   }
-  
+
   const tripInput: UpdateTpTripInput = {
     podId,
     ...(typeof args.title === 'string' ? {title: args.title} : {}),
@@ -72,18 +159,16 @@ export async function updateAgentTpTrip(request: Request, input: unknown): Promi
 
   const {default: updateDbTpTrip} = await import('@/lib/api/db/tp/updateDbTpTrip');
   const result = await updateDbTpTrip(ctx.data.supabase, tripInput);
-  
+
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) {
     return resultErr;
   }
-  
+
   if (result.data === null) {
-    return {ok: false, status: 404, code: 'not_found', message: 'Trip not found'};
+    return agentTripNotSetup();
   }
-  
-  // TODO: If dates changed, sync tp_day rows (syncTpDaysForTrip)
-  
+
   return agentOk(result.data);
 }
 
@@ -92,31 +177,30 @@ export async function updateAgentTpTrip(request: Request, input: unknown): Promi
  */
 export async function getAgentTpBudgetRollup(request: Request, input: unknown): Promise<AgentResult<unknown>> {
   const podId = typeof input === 'object' && input !== null && 'podId' in input && typeof input.podId === 'string' ? input.podId : '';
-  
+
   if (!podId) {
     return {ok: false, status: 400, code: 'validation_error', message: 'podId is required'};
   }
-  
+
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.READ));
-  
+
   if (!ctx.ok) {
     return ctx;
   }
-  
-  // Load workspace to compute budget
+
   const workspace = await loadDbTpWorkspace(ctx.data.supabase, podId);
   const workspaceErr = dbErr(workspace.error);
   if (workspaceErr !== undefined) {
     return workspaceErr;
   }
-  
+
   if (workspace.data === null || workspace.data.trip === undefined) {
-    return {ok: false, status: 404, code: 'not_found', message: 'Trip not found'};
+    return agentTripNotSetup();
   }
-  
+
   // Compute total costs
   let totalCost = 0;
-  
+
   // Actions (stay/activity/note): count cost once per action
   const actions: readonly DbTpAction[] = workspace.data.actions;
   actions.forEach((action) => {
@@ -124,11 +208,11 @@ export async function getAgentTpBudgetRollup(request: Request, input: unknown): 
       totalCost += action.costAmount;
     }
   });
-  
+
   // Transports: sum costs of transports on selected routes
   const routes: readonly DbTpRoute[] = workspace.data.routes;
   const transports: readonly DbTpTransport[] = workspace.data.transports;
-  
+
   actions.forEach((action) => {
     if (action.kind === 'travel' && action.selectedRouteId !== undefined) {
       const selectedRoute = routes.find((route) => route.id === action.selectedRouteId);
@@ -142,10 +226,10 @@ export async function getAgentTpBudgetRollup(request: Request, input: unknown): 
       }
     }
   });
-  
+
   const trip = workspace.data.trip;
   const budgetAmount = trip.budgetAmount ?? 0;
-  
+
   return agentOk({
     totalCost,
     budgetAmount,
