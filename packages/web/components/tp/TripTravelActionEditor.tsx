@@ -366,8 +366,8 @@ export default function TripTravelActionEditor({
             mutationsDisabled={mutationsDisabled}
           />
         ))}
-        <NativeSelect.Root>
-          <NativeSelect.Field value="" disabled={mutationsDisabled} onChange={(e) => void linkTransportLib(e.target.value)}>
+        <NativeSelect.Root disabled={mutationsDisabled}>
+          <NativeSelect.Field value="" onChange={(e) => void linkTransportLib(e.target.value)}>
             <option value="">Add from library…</option>
             {transportLib
               .filter((t) => !travelLinks.some((l) => l.transportLibId === t.id))
@@ -663,7 +663,6 @@ interface BoxRouteProps {
 }
 
 function BoxRoute({
-  route,
   selected,
   transports,
   tripTimezone,
