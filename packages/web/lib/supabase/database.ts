@@ -716,6 +716,10 @@ export interface Database {
           is_selected: boolean;
           notes: string | null;
           sort_order: number;
+          cost_amount: string | null;
+          cost_currency: string | null;
+          duration_minutes: number | null;
+          transport_lib_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -726,12 +730,20 @@ export interface Database {
           is_selected?: boolean;
           notes?: string | null;
           sort_order?: number;
+          cost_amount?: string | number | null;
+          cost_currency?: string | null;
+          duration_minutes?: number | null;
+          transport_lib_id?: string | null;
         };
         Update: {
           name?: string;
           is_selected?: boolean;
           notes?: string | null;
           sort_order?: number;
+          cost_amount?: string | number | null;
+          cost_currency?: string | null;
+          duration_minutes?: number | null;
+          transport_lib_id?: string | null;
         };
         Relationships: [];
       };
@@ -798,6 +810,8 @@ export interface Database {
           website: string | null;
           email: string | null;
           phone: string | null;
+          country: string | null;
+          location_type: string;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -814,6 +828,8 @@ export interface Database {
           website?: string | null;
           email?: string | null;
           phone?: string | null;
+          country?: string | null;
+          location_type?: string;
           sort_order?: number;
         };
         Update: {
@@ -826,6 +842,8 @@ export interface Database {
           website?: string | null;
           email?: string | null;
           phone?: string | null;
+          country?: string | null;
+          location_type?: string;
           sort_order?: number;
         };
         Relationships: [];

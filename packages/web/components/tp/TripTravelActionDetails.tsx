@@ -2,7 +2,7 @@
 
 import {useState, type ReactNode} from 'react';
 import {Box, Button, Link, Stack, Text} from '@chakra-ui/react';
-import {formatTpInstant, tpRouteIsSelected, tpRouteOptionSummary} from '@so/model';
+import {formatTpInstant, tpRouteIsSelected} from '@so/model';
 import type {
   DbTpAction,
   DbTpActionTransport,
@@ -12,6 +12,8 @@ import type {
   DbTpTransportLib,
 } from '@/lib/api/db/tp/loadDbTpWorkspace';
 import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
+import TripTpTruncateText from '@/components/tp/TripTpTruncateText';
+import {tpIsoCountryName, tpRouteOptionSummary} from '@so/model';
 import tpFormatLocationTime from '@/components/tp/tpFormatLocationTime';
 import updateDbTpActionTransport from '@/lib/api/db/tp/updateDbTpActionTransport';
 import updateDbTpTransport from '@/lib/api/db/tp/updateDbTpTransport';
@@ -64,8 +66,11 @@ function endpointBlock(
           : undefined;
   return (
     <Stack key={label} gap={0}>
-      <Text fontWeight="medium">{label}: {name}</Text>
-      {location?.address !== undefined && location.address !== '' ? <Text>{location.address}</Text> : null}
+      <TripTpTruncateText fontWeight="medium" lineClamp={2}>{label}: {name}</TripTpTruncateText>
+      {location?.country !== undefined ? (
+        <TripTpTruncateText lineClamp={1}>{tpIsoCountryName(location.country) ?? location.country}</TripTpTruncateText>
+      ) : null}
+      {location?.address !== undefined && location.address !== '' ? <TripTpTruncateText lineClamp={3}>{location.address}</TripTpTruncateText> : null}
       {hours !== undefined ? <Text>{hours}</Text> : null}
       {location?.website !== undefined && location.website !== '' ? (
         <Link href={location.website} target="_blank" rel="noopener noreferrer">{location.website}</Link>
@@ -113,9 +118,16 @@ function TripTravelRouteOptionDetails({
   const [open, setOpen] = useState(false);
   const [busyStepId, setBusyStepId] = useState<string | undefined>();
   const isSelected = tpRouteIsSelected(route.id, selectedRouteId, route.isSelected);
+  const routeLib = route.transportLibId !== undefined
+    ? transportLib.find((t) => t.id === route.transportLibId)
+    : undefined;
   const summary = tpRouteOptionSummary({
     name: route.name,
     isSelected,
+    routeCostAmount: route.costAmount,
+    routeCostCurrency: route.costCurrency,
+    transportLibLabel: routeLib?.label,
+    transportLibMode: routeLib?.mode,
     steps: steps.map((s) => ({
       fromPlace: s.fromPlace,
       toPlace: s.toPlace,
@@ -155,11 +167,22 @@ function TripTravelRouteOptionDetails({
         aria-expanded={open}
         aria-controls={bodyId}
       >
-        <Text textAlign="left">{summary}</Text>
+        <TripTpTruncateText textAlign="left" lineClamp={3} flex="1" minW={0}>{summary}</TripTpTruncateText>
         <Text as="span" color="fg.muted" fontSize="sm">{open ? '−' : '+'}</Text>
       </Button>
       {open ? (
-        <Stack id={bodyId} gap={2} p={3} pt={0} borderTopWidth="1px" fontSize="sm">
+        <Stack id={bodyId} gap={2} p={3} pt={0} borderTopWidth="1px" fontSize="sm" minW={0} maxW="100%">
+          {route.costAmount !== undefined || route.durationMinutes !== undefined || routeLib !== undefined ? (
+            <Stack gap={0}>
+              {route.costAmount !== undefined ? (
+                <TripTpTruncateText lineClamp={1}>
+                  {route.costCurrency !== undefined ? `${route.costCurrency} ` : ''}{route.costAmount}
+                </TripTpTruncateText>
+              ) : null}
+              {route.durationMinutes !== undefined ? <TripTpTruncateText lineClamp={1}>{route.durationMinutes} min (option)</TripTpTruncateText> : null}
+              {routeLib !== undefined ? <TripTpTruncateText lineClamp={2}>{routeLib.label}</TripTpTruncateText> : null}
+            </Stack>
+          ) : null}
           {steps.length === 0 ? <Text color="fg.muted">No steps.</Text> : null}
           {steps.map((step) => {
             const lib = step.transportLibId !== undefined
@@ -326,7 +349,7 @@ export default function TripTravelActionDetails({
               })}
             </Stack>
           ) : null}
-          {hasNotes ? <Text whiteSpace="pre-wrap">{action.notes}</Text> : null}
+          {hasNotes ? <TripTpTruncateText lineClamp={4}>{action.notes}</TripTpTruncateText> : null}
           {actionRoutes.length > 0 ? (
             <Stack gap={2}>
               <Text fontWeight="medium">Route options</Text>

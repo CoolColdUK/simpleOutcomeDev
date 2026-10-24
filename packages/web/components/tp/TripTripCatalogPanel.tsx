@@ -11,6 +11,8 @@ import createDbTpTransportLib from '@/lib/api/db/tp/createDbTpTransportLib';
 import updateDbTpTransportLib from '@/lib/api/db/tp/updateDbTpTransportLib';
 import deleteDbTpTransportLib from '@/lib/api/db/tp/deleteDbTpTransportLib';
 import {TP_TRANSPORT_MODES} from '@/components/tp/tpTransportModes';
+import TripTpCountrySelect from '@/components/tp/TripTpCountrySelect';
+import {TP_LOCATION_TYPES, tpLocationTypeLabel} from '@so/model';
 
 export interface TripTripCatalogPanelProps {
   readonly tripId: string;
@@ -118,6 +120,8 @@ function LocationRow({location, canWrite, onSaved, onError}: LocationRowProps) {
   const [website, setWebsite] = useState(location.website ?? '');
   const [email, setEmail] = useState(location.email ?? '');
   const [phone, setPhone] = useState(location.phone ?? '');
+  const [country, setCountry] = useState(location.country ?? '');
+  const [locationType, setLocationType] = useState(location.locationType);
   const save = async (): Promise<void> => {
     try {
       await updateDbTpLocation(location.id, {
@@ -130,6 +134,8 @@ function LocationRow({location, canWrite, onSaved, onError}: LocationRowProps) {
         website: website === '' ? null : website,
         email: email === '' ? null : email,
         phone: phone === '' ? null : phone,
+        country: country === '' ? null : country,
+        locationType,
       });
       onSaved();
     } catch (e) {
@@ -150,6 +156,17 @@ function LocationRow({location, canWrite, onSaved, onError}: LocationRowProps) {
         <Field.Label>Name</Field.Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} disabled={!canWrite} />
       </Field.Root>
+      <Field.Root>
+        <Field.Label>Type</Field.Label>
+        <NativeSelect.Root disabled={!canWrite}>
+          <NativeSelect.Field value={locationType} onChange={(e) => setLocationType(e.target.value)}>
+            {TP_LOCATION_TYPES.map((t) => (
+              <option key={t} value={t}>{tpLocationTypeLabel(t)}</option>
+            ))}
+          </NativeSelect.Field>
+        </NativeSelect.Root>
+      </Field.Root>
+      <TripTpCountrySelect value={country} disabled={!canWrite} onChange={setCountry} />
       <Field.Root>
         <Field.Label>Address</Field.Label>
         <Textarea value={address} onChange={(e) => setAddress(e.target.value)} disabled={!canWrite} rows={2} />

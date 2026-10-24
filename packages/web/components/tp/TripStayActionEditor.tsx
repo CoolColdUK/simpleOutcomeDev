@@ -5,6 +5,7 @@ import {Button, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from 
 import type {DbTpAction, DbTpDestination} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import {tpInstantFromParts, tpPartsFromInstant} from '@/lib/tp/tpDateTimeParts';
+import TripTpTimestampField from '@/components/tp/TripTpTimestampField';
 
 export interface TripStayActionEditorProps {
   readonly action: DbTpAction;
@@ -98,18 +99,28 @@ export default function TripStayActionEditor({
           </NativeSelect.Field>
         </NativeSelect.Root>
       </Field.Root>
-      <Text fontSize="sm" fontWeight="medium">Check-in</Text>
-      <HStack wrap="wrap">
-        <Input type="date" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} />
-        <Input type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} />
-        <Input placeholder="IANA tz" value={checkInTzState} onChange={(e) => setCheckInTzState(e.target.value)} width="10rem" />
-      </HStack>
-      <Text fontSize="sm" fontWeight="medium">Check-out</Text>
-      <HStack wrap="wrap">
-        <Input type="date" value={checkOutDate} onChange={(e) => setCheckOutDate(e.target.value)} />
-        <Input type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} />
-        <Input placeholder="IANA tz" value={checkOutTzState} onChange={(e) => setCheckOutTzState(e.target.value)} width="10rem" />
-      </HStack>
+      <TripTpTimestampField
+        label="Check-in"
+        date={checkInDate}
+        time={checkInTime}
+        timezone={checkInTzState}
+        onChange={(next) => {
+          setCheckInDate(next.date);
+          setCheckInTime(next.time);
+          setCheckInTzState(next.timezone);
+        }}
+      />
+      <TripTpTimestampField
+        label="Check-out"
+        date={checkOutDate}
+        time={checkOutTime}
+        timezone={checkOutTzState}
+        onChange={(next) => {
+          setCheckOutDate(next.date);
+          setCheckOutTime(next.time);
+          setCheckOutTzState(next.timezone);
+        }}
+      />
       <HStack>
         <Field.Root>
           <Field.Label>Cost</Field.Label>

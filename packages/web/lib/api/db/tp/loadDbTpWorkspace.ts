@@ -83,6 +83,8 @@ export interface DbTpLocation {
   readonly website?: string;
   readonly email?: string;
   readonly phone?: string;
+  readonly country?: string;
+  readonly locationType: string;
   readonly sortOrder: number;
 }
 
@@ -127,6 +129,10 @@ export interface DbTpRoute {
   readonly name: string;
   readonly isSelected: boolean;
   readonly sortOrder: number;
+  readonly costAmount?: number;
+  readonly costCurrency?: string;
+  readonly durationMinutes?: number;
+  readonly transportLibId?: string;
 }
 
 export interface DbTpTransport {
@@ -375,6 +381,10 @@ export async function loadDbTpWorkspace(
         name: r.name,
         isSelected: tpRouteIsSelected(r.id, selectedRouteByAction.get(r.action_id), r.is_selected),
         sortOrder: r.sort_order,
+        costAmount: num(r.cost_amount),
+        costCurrency: r.cost_currency ?? undefined,
+        durationMinutes: r.duration_minutes ?? undefined,
+        transportLibId: r.transport_lib_id ?? undefined,
       })),
       transports: (transportRes.data ?? []).map((t) => ({
         id: t.id,
@@ -417,6 +427,8 @@ export async function loadDbTpWorkspace(
         website: l.website ?? undefined,
         email: l.email ?? undefined,
         phone: l.phone ?? undefined,
+        country: l.country ?? undefined,
+        locationType: l.location_type,
         sortOrder: l.sort_order,
       })),
       actionLocations: (actionLocationRes.data ?? []).map((l) => ({

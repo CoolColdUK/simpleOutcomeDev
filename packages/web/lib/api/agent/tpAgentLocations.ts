@@ -23,6 +23,8 @@ export async function createAgentTpLocation(request: Request, input: unknown): P
     website,
     email,
     phone,
+    country,
+    locationType,
     sortOrder,
   } = parsed.value;
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
@@ -44,6 +46,8 @@ export async function createAgentTpLocation(request: Request, input: unknown): P
     website,
     email,
     phone,
+    country: country !== undefined && country !== '' ? country.toUpperCase() : country,
+    locationType: locationType ?? 'other',
     sortOrder: sortOrder ?? 0,
   });
   const resultErr = dbErr(result.error);
@@ -61,7 +65,7 @@ export async function updateAgentTpLocation(request: Request, input: unknown): P
   if (!parsed.ok) {
     return agentValidation(parsed.message);
   }
-  const {podId, locationId, name, address, mapsUrl, notes, openTime, closeTime, website, email, phone, sortOrder} =
+  const {podId, locationId, name, address, mapsUrl, notes, openTime, closeTime, website, email, phone, country, locationType, sortOrder} =
     parsed.value;
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.UPDATE));
   if (!ctx.ok) {
@@ -82,6 +86,13 @@ export async function updateAgentTpLocation(request: Request, input: unknown): P
     website: 'website' in args ? (website ?? null) : undefined,
     email: 'email' in args ? (email ?? null) : undefined,
     phone: 'phone' in args ? (phone ?? null) : undefined,
+    country:
+      'country' in args
+        ? country === null || country === undefined || country === ''
+          ? null
+          : country.toUpperCase()
+        : undefined,
+    locationType,
     sortOrder,
   });
   const resultErr = dbErr(result.error);

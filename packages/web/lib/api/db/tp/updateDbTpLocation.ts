@@ -13,6 +13,8 @@ export interface UpdateDbTpLocationInput {
   readonly website?: string | null;
   readonly email?: string | null;
   readonly phone?: string | null;
+  readonly country?: string | null;
+  readonly locationType?: string;
   readonly sortOrder?: number;
 }
 
@@ -51,6 +53,12 @@ export async function updateDbTpLocationForAgent(
   }
   if (input.sortOrder !== undefined) {
     patch.sort_order = input.sortOrder;
+  }
+  if (input.country !== undefined) {
+    patch.country = input.country;
+  }
+  if (input.locationType !== undefined) {
+    patch.location_type = input.locationType;
   }
   return supabase.from('tp_location').update(patch).eq('id', locationId).select('*').single();
 }
