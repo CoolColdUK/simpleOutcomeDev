@@ -6,7 +6,7 @@ A price should pick its currency from a fixed list, through one shared amount + 
 **Base:** `develop` after [#23](https://github.com/CoolColdUK/simpleOutcomeDev/pull/23) (Prod v0.34: location country, route price/currency/duration/`transport_lib_id`, travel from/to locations, `TripTpTimestampField`, type-filtered selects, truncate). Matthew confirmed truncate works.  
 **Earlier plans:** [trip-planning.md](./trip-planning.md) (locked travel → route → step model), [trip-day-card-icons-activity-accordion.md](./trip-day-card-icons-activity-accordion.md) (optional library mode, still an enum), [trip-done-travel-routes.md](./trip-done-travel-routes.md), [trip-mobile-overflow-location-route.md](./trip-mobile-overflow-location-route.md) (implemented as #23). This plan follows those tables. It does not replace them.
 
-**Status:** Plan only. No feature code on this branch. Agents do not merge. Implement only after Matthew approves this draft.
+**Status:** Plan only. No feature code on this branch. Agents do not merge. The four former open questions are locked from Technical Forum / PA. Implement only after Matthew approves this draft.
 
 **Out of scope:** Telegram. A `tags` column or rewriting tag parsing. Browser sign-in docs. Redesigning trip planning. Dropping the travel → route → step model. A new currency or country lookup table. Renaming MCP tools or REST paths. Realtime. New Vercel env vars. New npm packages. Making `tp_transport.transport_lib_id` required. A backfill that invents library rows for old steps. Bulk edits of the live HK–JP trip.
 
@@ -17,7 +17,7 @@ A price should pick its currency from a fixed list, through one shared amount + 
 1. **Currency is a fixed list.** Amounts stay numeric. Currency codes are chosen from a searchable ISO 4217-style list, the same interaction as [`TripTpCountrySelect`](../../packages/web/components/tp/TripTpCountrySelect.tsx) / [`tpIsoCountries.ts`](../../packages/model/src/tp/tpIsoCountries.ts). A new money field with no stored currency opens on the trip’s budget currency, then the pod default currency.
 2. **One money control.** `TripTpMoneyField` (`export default function`) is the only amount + currency editor: route option, route step, activity, stay, note, and transport-library template.
 3. **Library mode is a string.** `tp_transport_lib` is a label (the name: walk, train, bus 123) plus an optional free-text mode. The predefined mode dropdown and the database enum check on that column go away. There is no replacement enum.
-4. **A step picks a transport.** The route-step editor leads with a transport select onto `tp_transport_lib`. It does not show a step mode dropdown. On save, `tp_transport.mode` is written from the linked library’s mode string, or `other` when that string is blank, so the existing `NOT NULL` column stays valid.
+4. **A step picks a transport.** The route-step editor leads with a transport select onto `tp_transport_lib`. It shows no mode control, linked or unlinked. Mode is edited only on the library row. On save of a linked step, `tp_transport.mode` is written from that library’s mode string, or `other` when that string is blank, so the existing `NOT NULL` column stays valid. An unlinked legacy step keeps the mode it already has.
 5. **From and to sit on one row each.** For a journey and for a step, the location type filter and the location select share one wrapping row. The same for the other end.
 
 ## Non-goals
@@ -86,7 +86,7 @@ The route summary already prints a library label and, when set, its mode in pare
 
 New module [`packages/model/src/tp/tpIsoCurrencies.ts`](../../packages/model/src/tp/tpIsoCurrencies.ts), named exports, re-exported from [`packages/model/src/tp/index.ts`](../../packages/model/src/tp/index.ts). Same shape as countries: `{code, name}`, `TP_ISO_CURRENCIES`, `filterTpIsoCurrencies`, `isTpIsoCurrencyCode`, `tpIsoCurrencyName`.
 
-Curated active ISO 4217 codes, parallel to the country subset already shipped (plus `EUR` for the euro countries on that list). No lookup table. No new check constraint on `cost_currency` (country has none; a check would make every added code a migration).
+Curated active ISO 4217 codes, parallel to the country subset already shipped (plus `EUR` for the euro countries on that list). This list is enough. It is not the full ISO 4217 set. It must include at least `JPY`, `HKD`, and `GBP` (all three are in the table below). No lookup table. No new check constraint on `cost_currency` (country has none; a check would make every added code a migration).
 
 | Code | Name |
 | --- | --- |
@@ -127,7 +127,7 @@ Curated active ISO 4217 codes, parallel to the country subset already shipped (p
 
 `isTpIsoCurrencyCode` is case-insensitive. Writers store the uppercase code. The UI only submits uppercase codes from the list.
 
-**Default when the stored currency is empty**, in this order:
+**Default when the stored currency is empty** (locked: trip budget wins over the pod setting):
 
 1. `tp_trip.budget_currency` when it is on the list (the header already shows this next to the budget amount, and the editors already receive it).
 2. Else `tp_setting.default_currency` when it is on the list (column default `GBP`).
@@ -159,14 +159,16 @@ MCP blurbs for `create_tp_transport_lib` / `update_tp_transport_lib`: label is t
 
 ### 4. Step transport, derived mode
 
-The step editor’s first control is `TripTpTransportLibSelect`, label **Transport**. Remove the **Step mode** dropdown. There is no free-text mode field on the step. Mode text is edited on the library row.
+The step editor’s first control is `TripTpTransportLibSelect`, label **Transport**. There is no mode control on the step at all, whether or not a transport is linked: no dropdown, no text box, no disabled mode field. Mode is edited only on the transport library row. The select’s option text may still show that library mode in parentheses, the same way the catalog list does. That is the library’s mode, not a step field.
 
 | Step state | Editor | Save |
 | --- | --- | --- |
-| A library row is selected | Transport select. If that row’s mode string is non-empty, show it as read-only text under the select. No mode input. | `transport_lib_id` = that id. `mode` = trimmed library mode, or `other` when the library mode is null or blank. Ignore any mode the client also sent. |
-| No library row (legacy, or a new step not linked yet) | Transport select, empty, is the prompt. No mode dropdown and no mode text box. A stored mode may show as muted read-only text (`Stored mode: train`) so the old value is visible. | Leave `mode` unchanged on update. Create with no library id still inserts `mode` `other` (column default). Clearing the link (update `transportLibId: null`) clears the FK and does not rewrite `mode`. |
+| A library row is selected | Transport select only. | `transport_lib_id` = that id. `mode` = trimmed library mode, or `other` when the library mode is null or blank. Ignore any mode the client also sent. |
+| No library row (legacy, or a new step not linked yet) | Transport select, empty, is the prompt. The stored `tp_transport.mode` stays in the database and is not shown as a step control. | Leave `mode` unchanged on update. Create with no library id still inserts `mode` `other` (column default). Clearing the link (update `transportLibId: null`) clears the FK and does not rewrite `mode`. |
 
-**+ Step** still inserts an unlinked step. The user then picks a transport and saves. Save is allowed with an empty transport select. The UI prefers a transport by leading with that select. It does not block the save.
+`transport_lib_id` stays optional. No backfill. No `NOT NULL`. A legacy unlinked step stays valid. **+ Step** still inserts an unlinked step. The user then picks a transport and saves. Save is allowed with an empty transport select. The UI pushes toward a transport by leading with that select. It does not block the save.
+
+Saving this link does not insert a `tp_action_transport` row. See [Agent attach path](#agent-attach-path).
 
 Shared helper in the model package, named export, used by the editor and by the agent handlers:
 
@@ -202,7 +204,7 @@ What that leaves:
 | `tp_transport_lib.mode` | Nullable `text`, no default, no check. Already nullable since #21. |
 | `tp_transport_lib.label` | Unchanged. Still required and non-blank. |
 | `tp_transport.mode` | `text not null default 'other'`. The enum check is gone so a library string such as `JR Yamanote` can be copied here. `other` remains the fallback when the linked mode is blank and when a step is inserted with no library id. |
-| `tp_transport.transport_lib_id` | Unchanged. Still optional. |
+| `tp_transport.transport_lib_id` | Unchanged. Still optional. No backfill. No `NOT NULL`. |
 | `cost_currency`, `budget_currency`, `default_currency` | Unchanged columns. List membership is application validation, same as `tp_location.country`. |
 
 No data rewrite. Existing enum words stay valid text. No new enum. No new index. `database.ts` column types stay `mode: string` on `tp_transport` and `mode: string | null` on `tp_transport_lib`.
@@ -221,13 +223,21 @@ Same handlers. No renamed tools. No new permission resource (still the `trip` gr
 | --- | --- | --- | --- |
 | Currency | Every tool that already takes `costCurrency`, `budgetCurrency`, or `defaultCurrency` | Same bodies | Value must be an uppercase code on `TP_ISO_CURRENCIES`, or null where the update schema already allows null. Blurbs name the list (example: `JPY`, `HKD`, `GBP`). |
 | Library | `create_tp_transport_lib`, `update_tp_transport_lib` | `POST/PATCH …/trip/transport-library` | `mode` is an optional free-text string. Label stays required. Blurb drops any reading that mode is the eight-word enum. |
-| Step | `create_tp_transport`, `update_tp_transport` | `POST/PATCH …/trip/transports` | Optional `transportLibId`. When set, the server writes `mode` from that library row and ignores a different `mode` in the call. When omitted on create, `mode` defaults to `other`. When omitted on update, `mode` and the link stay. Update `transportLibId: null` clears the link and leaves `mode`. |
-| Route | `update_tp_route` | `PATCH …/trip/routes/{id}` | Unchanged shape. `costCurrency` joins the list check. Whole-option `transportLibId` stays. |
-| Action-transport link | `link_tp_action_transport`, `update_tp_action_transport` | `POST/PATCH …/trip/action-transports` | Contract stays. `costCurrency` joins the list check. Still not the editor path for option price. |
+| Step | `create_tp_transport`, `update_tp_transport` | `POST/PATCH …/trip/transports` | Optional `transportLibId`. This is how an agent attaches a means to a journey leg. When set, the server writes `mode` from that library row and ignores a different `mode` in the call. When omitted on create, `mode` defaults to `other`. When omitted on update, `mode` and the link stay. Update `transportLibId: null` clears the link and leaves `mode`. The call does not insert or update `tp_action_transport`. |
+| Route | `update_tp_route` | `PATCH …/trip/routes/{id}` | Unchanged shape. `costCurrency` joins the list check. Whole-option `transportLibId` stays the option label from #23. Setting it does not insert a step and does not insert `tp_action_transport`. |
+| Action-transport link | `link_tp_action_transport`, `update_tp_action_transport` | `POST/PATCH …/trip/action-transports` | Legacy contract stays so old rows can still be read and patched. `costCurrency` joins the list check. Blurbs say this is not how to attach a means. Attaching a means is `transportLibId` on the step (and, for the whole-option label, on the route). Calling the link tool must not also insert a step. |
 
 Patch semantics stay: omit a key to leave the column; send null on an update schema that already allows null to clear a nullable column.
 
 `CreateTransportSchema` and `UpdateTransportSchema` gain `transportLibId` (required string on create when present; null allowed on update). The agent create/update functions must persist `transport_lib_id`. Today they never set it.
+
+### Agent attach path
+
+Once this ships, agents attach a means with `create_tp_transport` / `update_tp_transport` and `transportLibId`. They stop treating `actionTransports` / `tp_action_transport` as the way to put a means on a journey.
+
+One source of truth for a leg is the step’s `transport_lib_id`. The route’s `transport_lib_id` remains the optional whole-option label from #23. Those two writes are independent.
+
+Do not double-write. Linking a library row on a step must not also insert a `tp_action_transport` row. Linking one on the route must not either. The reverse is the same rule: `link_tp_action_transport` must not insert a step or set `tp_route.transport_lib_id`. The web editor follows the same rule. `tp_action_transport` stays in the schema for rows that already exist. It is not a second leg.
 
 ---
 
@@ -244,12 +254,12 @@ Patch semantics stay: omit a key to leave the column; send null on an update sch
 | [`TripTpLocationSelect.tsx`](../../packages/web/components/tp/TripTpLocationSelect.tsx) | Type filter and location select on one wrapping row. |
 | [`TripTpTransportLibSelect.tsx`](../../packages/web/components/tp/TripTpTransportLibSelect.tsx) | Label list only. Drop the mode filter props. |
 | [`tpTransportModes.ts`](../../packages/web/components/tp/tpTransportModes.ts) | Remove when unused. |
-| [`TripTravelActionEditor.tsx`](../../packages/web/components/tp/TripTravelActionEditor.tsx) | Money field on the route option and the step. Step transport select. Stop sending a user-edited step mode. Drop the route mode-filter state. |
+| [`TripTravelActionEditor.tsx`](../../packages/web/components/tp/TripTravelActionEditor.tsx) | Money field on the route option and the step. Step transport select. No step mode control. Saving a step or route library link does not insert `tp_action_transport`. Drop the route mode-filter state. |
 | [`TripActivityActionEditor.tsx`](../../packages/web/components/tp/TripActivityActionEditor.tsx), [`TripStayActionEditor.tsx`](../../packages/web/components/tp/TripStayActionEditor.tsx), [`TripSimpleActionEditor.tsx`](../../packages/web/components/tp/TripSimpleActionEditor.tsx), [`TripTripCatalogPanel.tsx`](../../packages/web/components/tp/TripTripCatalogPanel.tsx) | Money field. Library mode text input. |
 | [`TripPlanningBoard.tsx`](../../packages/web/components/tp/TripPlanningBoard.tsx) | Resolve `defaultCurrency` from budget currency, then settings. |
 | [`updateDbTpTransport.ts`](../../packages/web/lib/api/db/tp/updateDbTpTransport.ts) | Accept `transportLibId`. |
 | [`tpAgentTransports.ts`](../../packages/web/lib/api/agent/tpAgentTransports.ts) | Persist `transportLibId`. Derive `mode` when the link is set. |
-| [`mcpCatalogByFeature.ts`](../../packages/web/lib/api/mcp/mcpCatalogByFeature.ts) | Blurbs and the step `transportLibId` property. Currency descriptions. |
+| [`mcpCatalogByFeature.ts`](../../packages/web/lib/api/mcp/mcpCatalogByFeature.ts) | Step `transportLibId`. Blurbs: attach a means with that field; `link_tp_action_transport` is legacy and must not insert a step. Currency descriptions. |
 
 Application files: `export default function`. No new `index.ts` under `packages/web`. Package helpers stay named exports. No new dependency. No application tests.
 
@@ -269,9 +279,9 @@ No test for the SQL drop or the React layout.
 ## Accessibility
 
 - `TripTpMoneyField`: visible labels **Amount** (or the caller’s label, such as **Option price**) and **Currency**. The search input’s label is **Search currency**.
-- The transport select’s accessible name is **Transport**. Read-only mode text is plain text, not a disabled select that still looks editable.
+- The transport select’s accessible name is **Transport**. The step has no mode control.
 - `TripTpLocationSelect` keeps the caller’s location label and **Filter by type**. Putting them on one row does not drop either label.
-- Library **Mode (optional)** stays a labeled text field. **Label** stays labeled.
+- Library **Label** and **Mode (optional)** stay labeled. Mode is only on that catalog row.
 
 ---
 
@@ -281,7 +291,7 @@ No test for the SQL drop or the React layout.
 2. Migration (checks only) and MCP/REST: free-text library mode, step link, derived step mode, currency rejection. Blurbs.
 3. `TripTpMoneyField`. Swap every amount + currency pair. Board passes the resolved default.
 4. Catalog: mode text input. Transport select loses the mode filter. Remove `tpTransportModes.ts`.
-5. Step editor: transport select, no mode dropdown, save derives mode and writes `transportLibId`.
+5. Step editor: transport select, no mode control, save derives mode and writes `transportLibId`. Do not also insert `tp_action_transport`.
 6. `TripTpLocationSelect` on one wrapping row per endpoint.
 7. QA below.
 
@@ -296,9 +306,9 @@ Use a phone-width viewport (about 390px) and the desktop width. The live HK–JP
 - [ ] MCP `update_tp_route` with `costCurrency: "yen"` fails validation. `costCurrency: "JPY"` matches REST `PATCH …/trip/routes/{id}`. Clearing with null clears the column.
 - [ ] Catalog: a library row saves with only a label. Mode left blank is null. Mode `bus 123` saves and comes back. The mode control is a text field. `get_tp_workspace` returns that string. MCP `update_tp_transport_lib` and REST match.
 - [ ] The transport select lists labels (`walk`, `train`, `bus 123`) and has no mode filter. The route’s whole-option transport select is the same control.
-- [ ] A step shows **Transport** and no mode dropdown. Choosing `bus 123` and saving sets `transport_lib_id` and sets `mode` to that row’s mode string. A linked library row with a null mode saves step `mode` `other`. The step form does not let you type a different mode while the link is set.
-- [ ] **+ Step** still adds a step with no library id. Saving it without a transport succeeds. An existing step that has a mode and no library id still shows that mode as read-only text and still saves its other fields.
-- [ ] MCP `create_tp_transport` with `transportLibId` and a conflicting `mode` stores the library mode. REST `POST/PATCH …/trip/transports` matches. Clearing `transportLibId` clears the FK and leaves `mode`.
+- [ ] A step shows **Transport** and no mode control, with or without a library id. Choosing `bus 123` and saving sets `transport_lib_id` and sets `mode` to that row’s mode string. A linked library row with a null mode saves step `mode` `other`. Saving the step does not insert `tp_action_transport`.
+- [ ] **+ Step** still adds a step with no library id. Saving it without a transport succeeds. An existing step that has a mode and no library id keeps that stored mode and still saves its other fields. The form does not offer a way to edit that mode.
+- [ ] MCP `create_tp_transport` with `transportLibId` and a conflicting `mode` stores the library mode and does not insert `tp_action_transport`. REST `POST/PATCH …/trip/transports` matches. Clearing `transportLibId` clears the FK and leaves `mode`. `link_tp_action_transport` does not insert a step.
 - [ ] Journey from: type filter and location select are on one row. Journey to is its own row. Step from and step to match. At about 390px the rows wrap inside the card and the page does not scroll horizontally.
 - [ ] Done checkboxes, route accordions, depart/arrive timestamps, location country, and truncate from #23 still behave as they do on `develop`.
 
@@ -306,28 +316,29 @@ Use a phone-width viewport (about 390px) and the desktop width. The live HK–JP
 
 ## Decisions locked by this plan
 
+Locked from Technical Forum / PA, pending Matthew’s approval of this plan before implementation.
+
 | Topic | Decision |
 | --- | --- |
-| Currency list | Curated ISO 4217 codes in `tpIsoCurrencies.ts`. Searchable select, same pattern as country. No currency table and no currency check constraint. |
+| Currency list | Curated ISO 4217 codes in `tpIsoCurrencies.ts` are enough. Not the full ISO 4217 set. The list must include at least `JPY`, `HKD`, and `GBP`. Searchable select, same pattern as country. No currency table and no currency check constraint. |
 | Stored off-list currency | Shown so it is not wiped. New choices and API writes must be on the list. No backfill. |
-| Default currency | Empty money field uses `budget_currency` when it is on the list, else `default_currency`, else blank. |
+| Default currency | Empty money field: trip `budget_currency` wins over pod `default_currency`. Use the budget code when it is on the list, else the pod setting, else blank. |
 | Money UI | One `TripTpMoneyField` for every amount + currency editor. |
-| Library | Label required. Mode is an optional free-text string. Drop `tp_transport_lib_mode_check`. No new enum. |
+| Library | Label required. Mode is an optional free-text string. Drop `tp_transport_lib_mode_check`. No new enum. Mode is edited only on the library row. |
 | Mode filter | Removed from the transport select. The list is labels. |
-| Step control | Transport select. No step mode dropdown and no step mode text box. |
-| Step `mode` column | Stays `NOT NULL` default `other`. Drop `tp_transport_mode_check` so the library string can be stored. Blank library mode writes `other`. |
+| Step control | Transport select. No mode control on the step, linked or unlinked. |
+| Step `mode` column | Stays `NOT NULL` default `other`. Drop `tp_transport_mode_check` so the library string can be stored. Blank library mode writes `other`. An unlinked legacy step keeps the `tp_transport.mode` it already has. |
 | Linked save | Server and editor write `mode` from the library and ignore a caller mode. |
+| Step `transport_lib_id` | Optional. No backfill. No `NOT NULL`. Legacy unlinked steps stay valid. The UI still pushes toward picking a transport. |
 | Unlinked step | Allowed. Create uses `other`. Update leaves `mode` alone. Clearing the link leaves `mode`. |
-| Route means | `tp_route.transport_lib_id` stays the whole-option link. It is not copied onto new steps. |
+| Route means | `tp_route.transport_lib_id` stays the optional whole-option label from #23. It is not copied onto new steps. |
+| Means on a journey | One source of truth for a leg is the step’s `transport_lib_id`. Agents set it with `create_tp_transport` / `update_tp_transport`. Do not also write `tp_action_transport`, and do not let that link tool insert a step. |
 | From / to | Type filter and location select share one wrapping row, per end, via `TripTpLocationSelect`. |
-| `tp_action_transport` | Still legacy. Tools stay. The editor does not grow a price form there. |
+| `tp_action_transport` | Legacy rows and tools stay. Not the way to attach a means. The editor does not grow a price form there, and a step or route link does not insert one. |
 | Migration | One file, the two `DROP CONSTRAINT`s only. |
 
 ---
 
 ## Open questions
 
-1. **Step with no `transport_lib_id`.** Recommendation: keep the column optional. The new step UI prompts for a transport and still saves a legacy or brand-new row that has none. Do not backfill library rows and do not add `NOT NULL` unless Matthew says that is required. Existing steps keep their stored mode until a transport is chosen.
-2. **Which default wins.** Recommendation: trip `budget_currency` first, then pod `default_currency` (often `GBP`). Say if the pod setting should win instead.
-3. **Full ISO 4217.** Recommendation: the curated table above, the same size of list as countries. Say if a missing code has to be added before implementation, or if the list should be the full active ISO 4217 set.
-4. **Unlinked step mode box.** Recommendation: no mode field on the step at all. Mode is edited on the library row. A legacy unlinked step shows its stored mode as read-only text. Say if an unlinked step should still have a free-text mode box.
+None. The four questions that were open are in [Decisions locked by this plan](#decisions-locked-by-this-plan). Matthew’s approval of this draft is what remains before implementation.
