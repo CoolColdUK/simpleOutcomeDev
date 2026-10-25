@@ -20,6 +20,7 @@ export interface UpdateDbTpTransportInput {
   readonly durationMinutes?: number | null;
   readonly fromLocationId?: string | null;
   readonly toLocationId?: string | null;
+  readonly transportLibId?: string | null;
   readonly done?: boolean;
 }
 
@@ -72,6 +73,9 @@ function buildTpTransportPatch(input: UpdateDbTpTransportInput): Database['publi
   }
   if (input.toLocationId !== undefined) {
     patch.to_location_id = input.toLocationId;
+  }
+  if (input.transportLibId !== undefined) {
+    patch.transport_lib_id = input.transportLibId;
   }
   if (input.done !== undefined) {
     patch.done = input.done;

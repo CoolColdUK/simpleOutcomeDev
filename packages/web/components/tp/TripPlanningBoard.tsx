@@ -25,6 +25,7 @@ import {
   tpBudgetRollup,
   tpDayTimelineEntries,
   tpDefaultSelectedDayId,
+  tpMoneyDefaultCurrency,
   tpTagsFromLocationNotes,
   TpTripStatus,
   type PodRole,
@@ -100,6 +101,11 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
 
   const selectedDay = data?.days.find((d) => d.id === selectedDayId);
   const trip = data?.trip;
+
+  const moneyDefaultCurrency = useMemo(
+    () => tpMoneyDefaultCurrency(trip?.budgetCurrency, data?.settings?.defaultCurrency),
+    [trip?.budgetCurrency, data?.settings?.defaultCurrency],
+  );
 
   const activeDestinationIds = useMemo(() => {
     if (trip === undefined || selectedDay === undefined || data === undefined) {
@@ -731,7 +737,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                           action={action}
                           destinations={data.destinations}
                           tripTimezone={trip.timezone}
-                          defaultCurrency={trip.budgetCurrency}
+                          defaultCurrency={moneyDefaultCurrency}
                           canWrite={canWrite && entry.displayMode === 'canonical'}
                           onSaved={onEditorSaved}
                           onError={onEditorError}
@@ -751,7 +757,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                           transportLib={data.transportLib}
                           actionTransports={data.actionTransports}
                           tripTimezone={trip.timezone}
-                          defaultCurrency={trip.budgetCurrency}
+                          defaultCurrency={moneyDefaultCurrency}
                           canWrite={canWrite && entry.displayMode === 'canonical'}
                           onSaved={onEditorSaved}
                           onError={onEditorError}
@@ -763,7 +769,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                           tripId={trip.id}
                           locations={data.locations}
                           actionLocations={data.actionLocations}
-                          defaultCurrency={trip.budgetCurrency}
+                          defaultCurrency={moneyDefaultCurrency}
                           canWrite={canWrite && entry.displayMode === 'canonical'}
                           onSaved={onEditorSaved}
                           onError={onEditorError}
@@ -772,7 +778,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                       {action.kind === TpActionKind.NOTE ? (
                         <TripSimpleActionEditor
                           action={action}
-                          defaultCurrency={trip.budgetCurrency}
+                          defaultCurrency={moneyDefaultCurrency}
                           canWrite={canWrite && entry.displayMode === 'canonical'}
                           onSaved={onEditorSaved}
                           onError={onEditorError}
@@ -791,7 +797,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
           tripId={trip.id}
           locations={data.locations}
           transportLib={data.transportLib}
-          defaultCurrency={trip.budgetCurrency}
+          defaultCurrency={moneyDefaultCurrency}
           canWrite={canWrite}
           onSaved={() => void reload()}
           onError={(message) => setError(message)}

@@ -10,8 +10,8 @@ import deleteDbTpLocation from '@/lib/api/db/tp/deleteDbTpLocation';
 import createDbTpTransportLib from '@/lib/api/db/tp/createDbTpTransportLib';
 import updateDbTpTransportLib from '@/lib/api/db/tp/updateDbTpTransportLib';
 import deleteDbTpTransportLib from '@/lib/api/db/tp/deleteDbTpTransportLib';
-import {TP_TRANSPORT_MODES} from '@/components/tp/tpTransportModes';
 import TripTpCountrySelect from '@/components/tp/TripTpCountrySelect';
+import TripTpMoneyField from '@/components/tp/TripTpMoneyField';
 import {TP_LOCATION_TYPES, tpLocationTypeLabel} from '@so/model';
 
 export interface TripTripCatalogPanelProps {
@@ -260,31 +260,31 @@ function TransportLibRow({transport, locations, defaultCurrency, canWrite, onSav
         <Field.Label>Label</Field.Label>
         <Input value={label} onChange={(e) => setLabel(e.target.value)} disabled={!canWrite} />
       </Field.Root>
+      <Field.Root>
+        <Field.Label>Mode (optional)</Field.Label>
+        <Input
+          value={mode}
+          placeholder="e.g. walk, bus 123"
+          onChange={(e) => setMode(e.target.value)}
+          disabled={!canWrite}
+        />
+      </Field.Root>
       <HStack align="flex-end" wrap="wrap">
-        <Field.Root flex="1" minW="8rem">
-          <Field.Label>Mode (optional)</Field.Label>
-          <NativeSelect.Root disabled={!canWrite}>
-            <NativeSelect.Field value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option value="">—</option>
-              {TP_TRANSPORT_MODES.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </NativeSelect.Field>
-          </NativeSelect.Root>
-        </Field.Root>
         <Field.Root flex="1" minW="6rem">
           <Field.Label>Duration (min)</Field.Label>
           <Input value={duration} onChange={(e) => setDuration(e.target.value)} disabled={!canWrite} />
         </Field.Root>
-        <Field.Root flex="1" minW="6rem">
-          <Field.Label>Price</Field.Label>
-          <Input value={cost} onChange={(e) => setCost(e.target.value)} disabled={!canWrite} />
-        </Field.Root>
-        <Field.Root flex="1" minW="4rem">
-          <Field.Label>Cur.</Field.Label>
-          <Input value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!canWrite} />
-        </Field.Root>
       </HStack>
+      <TripTpMoneyField
+        amountLabel="Price"
+        amount={cost}
+        currency={currency}
+        disabled={!canWrite}
+        onChange={({amount, currency: nextCurrency}) => {
+          setCost(amount);
+          setCurrency(nextCurrency);
+        }}
+      />
       <HStack wrap="wrap">
         <Field.Root flex="1" minW="10rem">
           <Field.Label>From location</Field.Label>

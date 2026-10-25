@@ -2,7 +2,7 @@
 
 import {useMemo, useState} from 'react';
 import {Alert, Button, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
-import {formatTpInstant, tpRouteIsSelected, tpRouteOptionSummary} from '@so/model';
+import {formatTpInstant, tpRouteIsSelected, tpRouteOptionSummary, tpStepModeFromLibrary} from '@so/model';
 import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
 import type {
   DbTpAction,
@@ -19,11 +19,11 @@ import createDbTpRoute from '@/lib/api/db/tp/createDbTpRoute';
 import deleteDbTpRoute from '@/lib/api/db/tp/deleteDbTpRoute';
 import selectDbTpRoute from '@/lib/api/db/tp/selectDbTpRoute';
 import createDbTpTransport from '@/lib/api/db/tp/createDbTpTransport';
-import updateDbTpTransport from '@/lib/api/db/tp/updateDbTpTransport';
+import updateDbTpTransport, {type UpdateDbTpTransportInput} from '@/lib/api/db/tp/updateDbTpTransport';
 import deleteDbTpTransport from '@/lib/api/db/tp/deleteDbTpTransport';
 import {tpInstantFromParts, tpPartsFromInstant} from '@/lib/tp/tpDateTimeParts';
-import {TP_TRANSPORT_MODES} from '@/components/tp/tpTransportModes';
 import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
+import TripTpMoneyField from '@/components/tp/TripTpMoneyField';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
 import TripTpLocationSelect from '@/components/tp/TripTpLocationSelect';
 import TripTpTimestampField from '@/components/tp/TripTpTimestampField';
@@ -203,8 +203,9 @@ export default function TripTravelActionEditor({
     try {
       const resolvedFrom = locationPlaceName(locations, draft.fromLocationId, draft.fromPlace);
       const resolvedTo = locationPlaceName(locations, draft.toLocationId, draft.toPlace);
-      await updateDbTpTransport(transport.id, {
-        mode: draft.mode,
+      const transportLibId = draft.transportLibId === '' ? null : draft.transportLibId;
+      const linkedLib = transportLibId !== null ? transportLib.find((t) => t.id === transportLibId) : undefined;
+      const patch: UpdateDbTpTransportInput = {
         fromPlace: resolvedFrom === '' ? null : resolvedFrom,
         toPlace: resolvedTo === '' ? null : resolvedTo,
         fromLocationId: draft.fromLocationId === '' ? null : draft.fromLocationId,
@@ -219,7 +220,10 @@ export default function TripTravelActionEditor({
         bookingRef: draft.bookingRef,
         notes: draft.notes,
         done: draft.done,
-      });
+        transportLibId,
+        ...(transportLibId !== null ? {mode: tpStepModeFromLibrary(linkedLib?.mode)} : {}),
+      };
+      await updateDbTpTransport(transport.id, patch);
       await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
@@ -389,7 +393,7 @@ export default function TripTravelActionEditor({
 }
 
 interface TransportDraft {
-  mode: string;
+  transportLibId: string;
   fromPlace: string;
   toPlace: string;
   fromLocationId: string;
@@ -414,7 +418,7 @@ function transportDraft(transport: DbTpTransport, tripTimezone: string, defaultC
   const dep = tpPartsFromInstant(transport.departAt, depTz);
   const arr = tpPartsFromInstant(transport.arriveAt, arrTz);
   return {
-    mode: transport.mode,
+    transportLibId: transport.transportLibId ?? '',
     fromPlace: transport.fromPlace ?? '',
     toPlace: transport.toPlace ?? '',
     fromLocationId: transport.fromLocationId ?? '',
@@ -483,7 +487,6 @@ function BoxRoute({
   const [routeCurrency, setRouteCurrency] = useState(route.costCurrency ?? defaultCurrency ?? '');
   const [routeDuration, setRouteDuration] = useState(route.durationMinutes?.toString() ?? '');
   const [routeTransportLibId, setRouteTransportLibId] = useState(route.transportLibId ?? '');
-  const [transportModeFilter, setTransportModeFilter] = useState('');
 
   const saveRouteFields = async (): Promise<void> => {
     try {
@@ -501,27 +504,25 @@ function BoxRoute({
 
   return (
     <Stack gap={2} opacity={selected ? 1 : 0.85} minW={0} maxW="100%">
-      <HStack wrap="wrap" minW={0} maxW="100%">
-        <Field.Root>
-          <Field.Label>Option price</Field.Label>
-          <Input value={routeCost} onChange={(e) => setRouteCost(e.target.value)} size="sm" disabled={mutationsDisabled} />
-        </Field.Root>
-        <Field.Root>
-          <Field.Label>Currency</Field.Label>
-          <Input value={routeCurrency} onChange={(e) => setRouteCurrency(e.target.value)} size="sm" width="5rem" disabled={mutationsDisabled} />
-        </Field.Root>
-        <Field.Root>
-          <Field.Label>Duration (min)</Field.Label>
-          <Input value={routeDuration} onChange={(e) => setRouteDuration(e.target.value)} size="sm" disabled={mutationsDisabled} />
-        </Field.Root>
-      </HStack>
+      <TripTpMoneyField
+        amountLabel="Option price"
+        amount={routeCost}
+        currency={routeCurrency}
+        disabled={mutationsDisabled}
+        onChange={({amount, currency}) => {
+          setRouteCost(amount);
+          setRouteCurrency(currency);
+        }}
+      />
+      <Field.Root maxW="12rem">
+        <Field.Label>Duration (min)</Field.Label>
+        <Input value={routeDuration} onChange={(e) => setRouteDuration(e.target.value)} size="sm" disabled={mutationsDisabled} />
+      </Field.Root>
       <TripTpTransportLibSelect
         label="Whole-option transport (library)"
         value={routeTransportLibId}
         transportLib={transportLib}
-        modeFilter={transportModeFilter}
         disabled={mutationsDisabled}
-        onModeFilterChange={setTransportModeFilter}
         onChange={setRouteTransportLibId}
       />
       <Button size="xs" alignSelf="flex-start" disabled={mutationsDisabled} onClick={() => void saveRouteFields()}>
@@ -606,15 +607,9 @@ function TransportRow({
       ? `${formatTpInstant(transport.departAt, draft.departTimezone)} → ${formatTpInstant(transport.arriveAt, draft.arriveTimezone)}`
       : '';
 
-  const libLabel =
-    transport.transportLibId !== undefined
-      ? transportLib.find((t) => t.id === transport.transportLibId)?.label
-      : undefined;
-
   return (
     <Stack gap={2} pl={2} borderLeftWidth="2px" minW={0} maxW="100%">
       {summary !== '' ? <Text fontSize="xs" color="fg.muted">{summary}</Text> : null}
-      {libLabel !== undefined ? <Text fontSize="xs">{libLabel}</Text> : null}
       <TripTpDoneCheckbox
         checked={draft.done}
         disabled={mutationsDisabled}
@@ -622,16 +617,13 @@ function TransportRow({
         tooltip="Done for this route step only — independent of the linked transport on the journey."
         onCheckedChange={(v) => setDraft({...draft, done: v})}
       />
-      <Field.Root>
-        <Field.Label>Step mode</Field.Label>
-        <NativeSelect.Root disabled={mutationsDisabled}>
-          <NativeSelect.Field value={draft.mode} onChange={(e) => setDraft({...draft, mode: e.target.value})}>
-            {TP_TRANSPORT_MODES.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </NativeSelect.Field>
-        </NativeSelect.Root>
-      </Field.Root>
+      <TripTpTransportLibSelect
+        label="Transport"
+        value={draft.transportLibId}
+        transportLib={transportLib}
+        disabled={mutationsDisabled}
+        onChange={(id) => setDraft({...draft, transportLibId: id})}
+      />
       <HStack wrap="wrap" align="flex-start" minW={0} maxW="100%">
         <TripTpLocationSelect
           label="From location"
@@ -672,11 +664,17 @@ function TransportRow({
         disabled={mutationsDisabled}
         onChange={(next) => setDraft({...draft, arriveDate: next.date, arriveTime: next.time, arriveTimezone: next.timezone})}
       />
-      <HStack>
-        <Input placeholder="Cost" value={draft.cost} onChange={(e) => setDraft({...draft, cost: e.target.value})} />
-        <Input placeholder="Currency" value={draft.currency} onChange={(e) => setDraft({...draft, currency: e.target.value})} />
-        <Input placeholder="Booking ref" value={draft.bookingRef} onChange={(e) => setDraft({...draft, bookingRef: e.target.value})} />
-      </HStack>
+      <TripTpMoneyField
+        amountLabel="Step cost"
+        amount={draft.cost}
+        currency={draft.currency}
+        disabled={mutationsDisabled}
+        onChange={({amount, currency}) => setDraft({...draft, cost: amount, currency})}
+      />
+      <Field.Root>
+        <Field.Label>Booking ref</Field.Label>
+        <Input value={draft.bookingRef} onChange={(e) => setDraft({...draft, bookingRef: e.target.value})} disabled={mutationsDisabled} />
+      </Field.Root>
       <Input placeholder="Segment notes" value={draft.notes} onChange={(e) => setDraft({...draft, notes: e.target.value})} />
       <HStack>
         <Button size="xs" colorPalette="brand" disabled={mutationsDisabled} onClick={() => void onSave(draft)}>Save step</Button>

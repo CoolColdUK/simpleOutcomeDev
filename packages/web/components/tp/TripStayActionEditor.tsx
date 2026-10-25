@@ -6,6 +6,7 @@ import type {DbTpAction, DbTpDestination} from '@/lib/api/db/tp/loadDbTpWorkspac
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import {tpInstantFromParts, tpPartsFromInstant} from '@/lib/tp/tpDateTimeParts';
 import TripTpTimestampField from '@/components/tp/TripTpTimestampField';
+import TripTpMoneyField from '@/components/tp/TripTpMoneyField';
 
 export interface TripStayActionEditorProps {
   readonly action: DbTpAction;
@@ -121,16 +122,15 @@ export default function TripStayActionEditor({
           setCheckOutTzState(next.timezone);
         }}
       />
-      <HStack>
-        <Field.Root>
-          <Field.Label>Cost</Field.Label>
-          <Input value={cost} onChange={(e) => setCost(e.target.value)} />
-        </Field.Root>
-        <Field.Root>
-          <Field.Label>Currency</Field.Label>
-          <Input value={currency} onChange={(e) => setCurrency(e.target.value)} />
-        </Field.Root>
-      </HStack>
+      <TripTpMoneyField
+        amountLabel="Cost"
+        amount={cost}
+        currency={currency}
+        onChange={({amount, currency: nextCurrency}) => {
+          setCost(amount);
+          setCurrency(nextCurrency);
+        }}
+      />
       <Field.Root>
         <Field.Label>Notes</Field.Label>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />

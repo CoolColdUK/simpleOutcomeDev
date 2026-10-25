@@ -291,10 +291,11 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 15-17. Transports
   tool(
     'create_tp_transport',
-    'Add a route step (transport leg). mode: flight/train/bus/ferry/car/other. Local times → departLocalTime/departTimezone.',
+    'Add a route step (transport leg). Attach means with transportLibId (do not also link_tp_action_transport). When transportLibId is set, mode is copied from the library. Local times → departLocalTime/departTimezone.',
     {
       podId,
       routeId: {type: 'string'},
+      transportLibId: {type: 'string'},
       mode: {type: 'string'},
       fromPlace: {type: 'string'},
       toPlace: {type: 'string'},
@@ -303,7 +304,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       arriveLocalTime: {type: 'string'},
       arriveTimezone: {type: 'string'},
       costAmount: {type: 'number'},
-      costCurrency: {type: 'string'},
+      costCurrency: {type: 'string', description: 'ISO 4217 code from curated list (e.g. JPY, HKD, GBP)'},
       bookingRef: {type: 'string'},
       url: {type: 'string'},
       notes: {type: 'string'},
@@ -318,10 +319,11 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'update_tp_transport',
-    'Update a route step (use sortOrder to reorder).',
+    'Update a route step (use sortOrder to reorder). Set transportLibId to attach library means; omit tp_action_transport for legs.',
     {
       podId,
       transportId: {type: 'string'},
+      transportLibId: {type: 'string'},
       mode: {type: 'string'},
       fromPlace: {type: 'string'},
       toPlace: {type: 'string'},
@@ -330,7 +332,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       arriveLocalTime: {type: 'string'},
       arriveTimezone: {type: 'string'},
       costAmount: {type: 'number'},
-      costCurrency: {type: 'string'},
+      costCurrency: {type: 'string', description: 'ISO 4217 code from curated list (e.g. JPY, HKD, GBP)'},
       bookingRef: {type: 'string'},
       url: {type: 'string'},
       notes: {type: 'string'},
@@ -412,7 +414,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'create_tp_transport_lib',
-    'Create a reusable transport template (label is the name, e.g. bus 123; mode is optional).',
+    'Create a reusable transport template (label is the name, e.g. bus 123; mode is optional free text).',
     {
       podId,
       label: {type: 'string'},
@@ -456,7 +458,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'link_tp_action_transport',
-    'Link a transport library entry to a travel action with optional instance duration, price, and from/to locations.',
+    'Legacy: link transport library to the travel action (not a route step). Prefer create_tp_transport/update_tp_transport with transportLibId for journey legs.',
     {
       podId,
       actionId: {type: 'string'},
