@@ -6,7 +6,7 @@ A price should pick its currency from a fixed list, through one shared amount + 
 **Base:** `develop` after [#23](https://github.com/CoolColdUK/simpleOutcomeDev/pull/23) (Prod v0.34: location country, route price/currency/duration/`transport_lib_id`, travel from/to locations, `TripTpTimestampField`, type-filtered selects, truncate). Matthew confirmed truncate works.  
 **Earlier plans:** [trip-planning.md](./trip-planning.md) (locked travel → route → step model), [trip-day-card-icons-activity-accordion.md](./trip-day-card-icons-activity-accordion.md) (optional library mode, still an enum), [trip-done-travel-routes.md](./trip-done-travel-routes.md), [trip-mobile-overflow-location-route.md](./trip-mobile-overflow-location-route.md) (implemented as #23). This plan follows those tables. It does not replace them.
 
-**Status:** Plan only. No feature code on this branch. Agents do not merge. The four former open questions are locked from Technical Forum / PA. Implement only after Matthew approves this draft.
+**Status:** Implemented on branch `cursor/trip-currency-money-transport-steps-d846` (PR #24). Agents do not merge. Production applies migration `20261025170000_trip_transport_mode_free_text.sql` via GitHub Actions `db push` after merge.
 
 **Out of scope:** Telegram. A `tags` column or rewriting tag parsing. Browser sign-in docs. Redesigning trip planning. Dropping the travel → route → step model. A new currency or country lookup table. Renaming MCP tools or REST paths. Realtime. New Vercel env vars. New npm packages. Making `tp_transport.transport_lib_id` required. A backfill that invents library rows for old steps. Bulk edits of the live HK–JP trip.
 

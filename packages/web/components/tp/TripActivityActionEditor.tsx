@@ -10,6 +10,7 @@ import deleteDbTpActionLocation from '@/lib/api/db/tp/deleteDbTpActionLocation';
 import updateDbTpActionLocation from '@/lib/api/db/tp/updateDbTpActionLocation';
 import createDbTpLocation from '@/lib/api/db/tp/createDbTpLocation';
 import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
+import TripTpMoneyField from '@/components/tp/TripTpMoneyField';
 
 export interface TripActivityActionEditorProps {
   readonly action: DbTpAction;
@@ -116,16 +117,16 @@ export default function TripActivityActionEditor({
           <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={!canWrite} />
         </Field.Root>
       </HStack>
-      <HStack wrap="wrap">
-        <Field.Root>
-          <Field.Label>Activity cost</Field.Label>
-          <Input value={cost} onChange={(e) => setCost(e.target.value)} disabled={!canWrite} />
-        </Field.Root>
-        <Field.Root>
-          <Field.Label>Currency</Field.Label>
-          <Input value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!canWrite} />
-        </Field.Root>
-      </HStack>
+      <TripTpMoneyField
+        amountLabel="Activity cost"
+        amount={cost}
+        currency={currency}
+        disabled={!canWrite}
+        onChange={({amount, currency: nextCurrency}) => {
+          setCost(amount);
+          setCurrency(nextCurrency);
+        }}
+      />
       <Field.Root>
         <Field.Label>Notes</Field.Label>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!canWrite} rows={3} />

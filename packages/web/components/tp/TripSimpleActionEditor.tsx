@@ -4,6 +4,7 @@ import {useState} from 'react';
 import {Button, Field, HStack, Input, Stack, Text, Textarea} from '@chakra-ui/react';
 import type {DbTpAction} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
+import TripTpMoneyField from '@/components/tp/TripTpMoneyField';
 
 export interface TripSimpleActionEditorProps {
   readonly action: DbTpAction;
@@ -64,16 +65,15 @@ export default function TripSimpleActionEditor({action, defaultCurrency, canWrit
         <Field.Label>Notes</Field.Label>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
       </Field.Root>
-      <HStack>
-        <Field.Root>
-          <Field.Label>Cost</Field.Label>
-          <Input value={cost} onChange={(e) => setCost(e.target.value)} />
-        </Field.Root>
-        <Field.Root>
-          <Field.Label>Currency</Field.Label>
-          <Input value={currency} onChange={(e) => setCurrency(e.target.value)} />
-        </Field.Root>
-      </HStack>
+      <TripTpMoneyField
+        amountLabel="Cost"
+        amount={cost}
+        currency={currency}
+        onChange={({amount, currency: nextCurrency}) => {
+          setCost(amount);
+          setCurrency(nextCurrency);
+        }}
+      />
       <Button size="sm" colorPalette="brand" onClick={() => void save()}>Save</Button>
     </Stack>
   );

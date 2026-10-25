@@ -61,6 +61,7 @@ export interface CreateTpTransportInputForAgent {
   readonly durationMinutes?: number;
   readonly fromLocationId?: string;
   readonly toLocationId?: string;
+  readonly transportLibId?: string;
   readonly done?: boolean;
 }
 
@@ -88,6 +89,7 @@ export async function createDbTpTransportForAgent(
       duration_minutes: input.durationMinutes ?? null,
       from_location_id: input.fromLocationId ?? null,
       to_location_id: input.toLocationId ?? null,
+      transport_lib_id: input.transportLibId ?? null,
       done: input.done ?? false,
     })
     .select('*')

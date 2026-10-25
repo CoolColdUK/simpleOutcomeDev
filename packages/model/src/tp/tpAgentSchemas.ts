@@ -4,6 +4,7 @@
 
 import * as v from 'valibot';
 import {isTpIsoCountryCode} from './tpIsoCountries';
+import {isTpIsoCurrencyCode} from './tpIsoCurrencies';
 import {isTpLocationType} from './tpLocationType';
 
 // Common
@@ -13,6 +14,21 @@ const optionalNumber = v.optional(v.number());
 const optionalNullString = v.optional(v.union([v.string(), v.null()]));
 const optionalNullNumber = v.optional(v.union([v.number(), v.null()]));
 const optionalBoolean = v.optional(v.boolean());
+
+const currencyCode = v.pipe(
+  v.string(),
+  v.transform((s) => s.trim().toUpperCase()),
+  v.regex(/^[A-Z]{3}$/),
+  v.custom((c) => isTpIsoCurrencyCode(c as string)),
+);
+
+const optionalCurrencyCode = v.optional(currencyCode);
+
+const optionalNullCurrencyCode = v.optional(v.union([v.null(), currencyCode]));
+
+const optionalTransportLibId = v.optional(v.pipe(v.string(), v.minLength(1)));
+
+const optionalNullTransportLibId = v.optional(v.union([v.null(), v.pipe(v.string(), v.minLength(1))]));
 
 // Trip
 export const CreateTripSchema = v.object({
@@ -24,7 +40,7 @@ export const CreateTripSchema = v.object({
   destinationNames: v.optional(v.array(v.pipe(v.string(), v.minLength(1)))),
   destinations: optionalString,
   budgetAmount: optionalNumber,
-  budgetCurrency: optionalString,
+  budgetCurrency: optionalCurrencyCode,
 });
 
 export const UpdateTripSchema = v.object({
@@ -35,8 +51,8 @@ export const UpdateTripSchema = v.object({
   endDate: optionalString,
   status: optionalString,
   budgetAmount: optionalNumber,
-  budgetCurrency: optionalString,
-  defaultCurrency: optionalString,
+  budgetCurrency: optionalCurrencyCode,
+  defaultCurrency: optionalCurrencyCode,
   mapsUrl: optionalString,
   notes: optionalString,
 });
@@ -107,7 +123,7 @@ export const CreateActionSchema = v.object({
   startTime: optionalString,
   endTime: optionalString,
   costAmount: optionalNumber,
-  costCurrency: optionalString,
+  costCurrency: optionalCurrencyCode,
   bookingRef: optionalString,
   url: optionalString,
   notes: optionalString,
@@ -136,7 +152,7 @@ export const UpdateActionSchema = v.object({
   startTime: optionalString,
   endTime: optionalString,
   costAmount: optionalNumber,
-  costCurrency: optionalString,
+  costCurrency: optionalCurrencyCode,
   bookingRef: optionalString,
   url: optionalString,
   notes: optionalString,
@@ -169,9 +185,9 @@ export const UpdateRouteSchema = v.object({
   notes: optionalString,
   sortOrder: optionalNumber,
   costAmount: optionalNullNumber,
-  costCurrency: optionalNullString,
+  costCurrency: optionalNullCurrencyCode,
   durationMinutes: optionalNullNumber,
-  transportLibId: optionalNullString,
+  transportLibId: optionalNullTransportLibId,
 });
 
 export const DeleteRouteSchema = v.object({
@@ -197,7 +213,7 @@ export const CreateTransportSchema = v.object({
   arriveLocalTime: optionalString,
   arriveTimezone: optionalString,
   costAmount: optionalNumber,
-  costCurrency: optionalString,
+  costCurrency: optionalCurrencyCode,
   bookingRef: optionalString,
   url: optionalString,
   notes: optionalString,
@@ -205,6 +221,7 @@ export const CreateTransportSchema = v.object({
   durationMinutes: optionalNumber,
   fromLocationId: optionalString,
   toLocationId: optionalString,
+  transportLibId: optionalTransportLibId,
   done: optionalBoolean,
 });
 
@@ -218,8 +235,8 @@ export const UpdateTransportSchema = v.object({
   departTimezone: optionalString,
   arriveLocalTime: optionalString,
   arriveTimezone: optionalString,
-  costAmount: optionalNumber,
-  costCurrency: optionalString,
+  costAmount: optionalNullNumber,
+  costCurrency: optionalNullCurrencyCode,
   bookingRef: optionalString,
   url: optionalString,
   notes: optionalString,
@@ -227,6 +244,7 @@ export const UpdateTransportSchema = v.object({
   durationMinutes: optionalNullNumber,
   fromLocationId: optionalNullString,
   toLocationId: optionalNullString,
+  transportLibId: optionalNullTransportLibId,
   done: optionalBoolean,
 });
 
@@ -343,7 +361,7 @@ export const CreateTransportLibSchema = v.object({
   mode: optionalString,
   durationMinutes: optionalNumber,
   costAmount: optionalNumber,
-  costCurrency: optionalString,
+  costCurrency: optionalCurrencyCode,
   fromLocationId: optionalString,
   toLocationId: optionalString,
   notes: optionalString,
@@ -357,7 +375,7 @@ export const UpdateTransportLibSchema = v.object({
   mode: optionalNullString,
   durationMinutes: optionalNullNumber,
   costAmount: optionalNullNumber,
-  costCurrency: optionalNullString,
+  costCurrency: optionalNullCurrencyCode,
   fromLocationId: optionalNullString,
   toLocationId: optionalNullString,
   notes: optionalNullString,
@@ -376,7 +394,7 @@ export const LinkActionTransportSchema = v.object({
   sortOrder: optionalNumber,
   durationMinutes: optionalNumber,
   costAmount: optionalNumber,
-  costCurrency: optionalString,
+  costCurrency: optionalCurrencyCode,
   fromLocationId: optionalString,
   toLocationId: optionalString,
   done: optionalBoolean,
@@ -388,7 +406,7 @@ export const UpdateActionTransportSchema = v.object({
   sortOrder: optionalNumber,
   durationMinutes: optionalNullNumber,
   costAmount: optionalNullNumber,
-  costCurrency: optionalNullString,
+  costCurrency: optionalNullCurrencyCode,
   fromLocationId: optionalNullString,
   toLocationId: optionalNullString,
   done: optionalBoolean,
