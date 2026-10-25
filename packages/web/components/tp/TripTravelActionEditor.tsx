@@ -19,7 +19,7 @@ import createDbTpRoute from '@/lib/api/db/tp/createDbTpRoute';
 import deleteDbTpRoute from '@/lib/api/db/tp/deleteDbTpRoute';
 import selectDbTpRoute from '@/lib/api/db/tp/selectDbTpRoute';
 import createDbTpTransport from '@/lib/api/db/tp/createDbTpTransport';
-import updateDbTpTransport from '@/lib/api/db/tp/updateDbTpTransport';
+import updateDbTpTransport, {type UpdateDbTpTransportInput} from '@/lib/api/db/tp/updateDbTpTransport';
 import deleteDbTpTransport from '@/lib/api/db/tp/deleteDbTpTransport';
 import {tpInstantFromParts, tpPartsFromInstant} from '@/lib/tp/tpDateTimeParts';
 import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
@@ -204,7 +204,8 @@ export default function TripTravelActionEditor({
       const resolvedFrom = locationPlaceName(locations, draft.fromLocationId, draft.fromPlace);
       const resolvedTo = locationPlaceName(locations, draft.toLocationId, draft.toPlace);
       const transportLibId = draft.transportLibId === '' ? null : draft.transportLibId;
-      const patch: Parameters<typeof updateDbTpTransport>[1] = {
+      const linkedLib = transportLibId !== null ? transportLib.find((t) => t.id === transportLibId) : undefined;
+      const patch: UpdateDbTpTransportInput = {
         fromPlace: resolvedFrom === '' ? null : resolvedFrom,
         toPlace: resolvedTo === '' ? null : resolvedTo,
         fromLocationId: draft.fromLocationId === '' ? null : draft.fromLocationId,
@@ -220,11 +221,8 @@ export default function TripTravelActionEditor({
         notes: draft.notes,
         done: draft.done,
         transportLibId,
+        ...(transportLibId !== null ? {mode: tpStepModeFromLibrary(linkedLib?.mode)} : {}),
       };
-      if (transportLibId !== null) {
-        const lib = transportLib.find((t) => t.id === transportLibId);
-        patch.mode = tpStepModeFromLibrary(lib?.mode);
-      }
       await updateDbTpTransport(transport.id, patch);
       await afterSave();
     } catch (e) {
