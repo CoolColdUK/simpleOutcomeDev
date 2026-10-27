@@ -590,6 +590,7 @@ function TransportRow({
   onRemove,
   onChanged,
   onError,
+  defaultOpen,
 }: {
   readonly transport: DbTpTransport;
   readonly transportLib: readonly DbTpTransportLib[];

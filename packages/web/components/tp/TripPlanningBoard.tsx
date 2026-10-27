@@ -723,7 +723,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                           Anchor day
                         </Button>
                       ) : null}
-                      {entry.displayMode === 'canonical' && canWrite ? (
+                      {entry.displayMode === 'canonical' && entry.pin === 'flow' && canWrite ? (
                         <>
                           <AppIconTooltip label={`Move ${entry.kind} ${title} up`}>
                             <IconButton
