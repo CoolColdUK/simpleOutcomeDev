@@ -22,7 +22,7 @@ describe('tpDayTimelineEntries', () => {
     expect(entries[0]?.kind).toBe(TpActionKind.ACTIVITY);
   });
 
-  it('mirrors stay with complete span', () => {
+  it('pins middle stay day top and bottom', () => {
     const entries = tpDayTimelineEntries({
       dayId,
       calendarDate,
@@ -37,9 +37,28 @@ describe('tpDayTimelineEntries', () => {
       ],
       travels: [],
     });
+    expect(entries).toHaveLength(2);
+    expect(entries.map((e) => e.pin)).toEqual(['top', 'bottom']);
+    expect(entries.every((e) => e.displayMode === 'mirror' && e.kind === TpActionKind.STAY)).toBe(true);
+  });
+
+  it('check-out day is top only', () => {
+    const entries = tpDayTimelineEntries({
+      dayId: 'day-out',
+      calendarDate: '2026-06-03',
+      tripTimezone,
+      actions: [{id: 's1', kind: TpActionKind.STAY, anchorDayId: 'anchor', sortOrder: 0, title: 'Hotel'}],
+      stays: [
+        {
+          actionId: 's1',
+          checkInAt: '2026-06-01T10:00:00.000Z',
+          checkOutAt: '2026-06-03T18:00:00.000Z',
+        },
+      ],
+      travels: [],
+    });
     expect(entries).toHaveLength(1);
-    expect(entries[0]?.displayMode).toBe('mirror');
-    expect(entries[0]?.kind).toBe(TpActionKind.STAY);
+    expect(entries[0]?.pin).toBe('top');
   });
 
   it('shows draft stay on anchor day only', () => {

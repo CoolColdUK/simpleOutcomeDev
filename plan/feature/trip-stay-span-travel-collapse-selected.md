@@ -6,7 +6,7 @@ A stay should read as the nights you are in it: bottom of the check-in day, top 
 **Base:** `develop` after [#24](https://github.com/CoolColdUK/simpleOutcomeDev/pull/24) (currency list, shared money field, transport steps). Prod is that line (`0.35.0`).  
 **Earlier plans:** [trip-planning.md](./trip-planning.md) (stay span + travel → route → step), [trip-day-ui-polish.md](./trip-day-ui-polish.md), [trip-day-card-icons-activity-accordion.md](./trip-day-card-icons-activity-accordion.md), [trip-done-travel-routes.md](./trip-done-travel-routes.md), [trip-currency-money-transport-steps.md](./trip-currency-money-transport-steps.md). This plan does not reopen those models.
 
-**Status:** Plan only. No product code, migration, or UI change in this PR. Implement on this same branch after Matthew approves. Agents do not merge.
+**Status:** Implemented on branch `cursor/trip-stay-span-travel-collapse-selected-8f18` (PR #25). Soft questions below are locked to the approved proposals. Agents do not merge.
 
 **Out of scope:** Telegram. Schema, migrations, MCP, REST. A second stay row in the database. Changing check-in / check-out storage. Travel day-board step collapse (Details already hides steps until a route is opened). Reordering pinned stays with the activity arrows. A server or database preference for the past-day switch (local UI state only; see [soft question 4](#soft-questions-for-matthew)). Filtering actions inside the open day. Using the device timezone to decide that a day has passed. New npm packages. Realtime. New Vercel env vars. Bulk edits to the live HK–JP trip.
 
@@ -201,14 +201,15 @@ Files: `packages/model/src/tp/tpDayTimelineEntries.ts`, its test, the new past-d
 
 ---
 
-## Soft questions for Matthew
+## Locked decisions (Matthew approved implement)
 
-1. **Same-day stay.** Check-in and check-out on the same calendar date (`A === B`). **Proposed:** one card in the normal action order, not a top pin and not a bottom pin, and not both. Say if you would rather pin that single card to the bottom (treat the day as check-in) or to the top (treat it as check-out).
-2. **Expand affordance.** **Proposed:** each step has its own `+` / `−`, closed by default, inside the route that is already closed by default. The Steps heading stays a heading. Say if you would rather have one **Steps** disclosure that hides every step body together. Also: a step just added with **+ Step** — **proposed** it opens expanded so the new fields are visible; existing steps stay closed.
-3. **Tag copy and placement.** **Proposed:** badge text `Selected`, on the route option header in the travel editor and in day-board Details. The word `selected` comes out of the summary sentence. The day-card glance keeps printing the chosen route’s name and does not gain a badge. Say if the copy should be different, or if the badge should also sit on the glance.
-4. **Persist the show-past switch.** **Proposed:** sticky per trip. Local UI preference keyed by trip id (`localStorage`). Default **off** the first time that trip is opened on this browser. Later opens of the same trip restore the last choice. Not a server setting and not shared across browsers. **Alternative:** reset every open (session-only, no stored key). Say if you want the alternative, or a per-user preference instead of per trip.
-5. **Selected day is past while the switch is off.** **Proposed:** snap to today when today is a trip day, otherwise to the first day that is not past. If the whole trip is past, keep the last day and leave that one chip visible. Anchor day may still open a past day, and that selected chip stays until the user leaves it. Say if you would rather snap straight to today or to the first visible day and drop the last-day and Anchor-day exceptions.
-6. **What the switch hides.** **Proposed:** the day button group only. The board has one day plan, not a row of day columns, so there is no column to collapse. The open day’s actions stay put. Say if a later multi-day layout should hide those columns too.
+1. **Same-day stay:** one card in normal action order (`pin: flow`), not duplicated.
+2. **Expand affordance:** each step has its own `+` / `−`, closed by default; **+ Step** opens the new step expanded.
+3. **Tag:** badge `Selected` on route option headers in travel editor and Details; summary sentence omits “selected”; glance unchanged.
+4. **Show-past switch:** sticky per trip in `localStorage` keyed by trip id; default off on first open.
+5. **Past selection while switch off:** snap to today, else first non-past day; all-past trips keep the last day chip; Anchor day may surface one past chip until the user leaves.
+6. **Switch scope:** day button group only.
+7. **Past cutoff:** trip timezone only, never device timezone.
 
 ---
 

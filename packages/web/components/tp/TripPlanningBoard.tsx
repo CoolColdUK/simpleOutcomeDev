@@ -13,6 +13,7 @@ import {
   Input,
   NativeSelect,
   Stack,
+  Switch,
   Text,
   Textarea,
 } from '@chakra-ui/react';
@@ -26,9 +27,12 @@ import {
   tpDayTimelineEntries,
   tpDefaultSelectedDayId,
   tpMoneyDefaultCurrency,
+  tpSnapDayWhenHidingPast,
   tpTagsFromLocationNotes,
+  tpVisibleTripDayChips,
   TpTripStatus,
   type PodRole,
+  type TpTimelinePin,
 } from '@so/model';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import TripActivityActionDetails from '@/components/tp/TripActivityActionDetails';
@@ -56,6 +60,7 @@ import TripActivityActionEditor from '@/components/tp/TripActivityActionEditor';
 import TripTripCatalogPanel from '@/components/tp/TripTripCatalogPanel';
 import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
+import useTpTripShowPastDays from '@/lib/tp/useTpTripShowPastDays';
 
 export interface TripPlanningBoardProps {
   readonly podId: string;
@@ -70,6 +75,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
   const [data, setData] = useState<DbTpWorkspace | undefined>(undefined);
   const [selectedDayId, setSelectedDayId] = useState<string | undefined>(undefined);
   const [expandedActionId, setExpandedActionId] = useState<string | undefined>(undefined);
+  const [expandedStayPin, setExpandedStayPin] = useState<TpTimelinePin | undefined>(undefined);
   const [busyActionDoneId, setBusyActionDoneId] = useState<string | undefined>(undefined);
   const [error, setError] = useState('');
   const [wizardTitle, setWizardTitle] = useState('');
@@ -101,6 +107,20 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
 
   const selectedDay = data?.days.find((d) => d.id === selectedDayId);
   const trip = data?.trip;
+  const tripId = trip?.id ?? '';
+  const {showPastDays, setShowPastDays} = useTpTripShowPastDays(tripId);
+
+  const dayChipRefs = useMemo(
+    () => data?.days.map((day) => ({id: day.id, calendarDate: day.calendarDate})) ?? [],
+    [data?.days],
+  );
+
+  const visibleDayChips = useMemo(() => {
+    if (trip === undefined) {
+      return [];
+    }
+    return tpVisibleTripDayChips(dayChipRefs, showPastDays, trip.timezone, selectedDayId);
+  }, [dayChipRefs, showPastDays, trip, selectedDayId]);
 
   const moneyDefaultCurrency = useMemo(
     () => tpMoneyDefaultCurrency(trip?.budgetCurrency, data?.settings?.defaultCurrency),
@@ -196,6 +216,8 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
           actionId: a.id,
           checkInAt: a.checkInAt ?? '',
           checkOutAt: a.checkOutAt ?? '',
+          checkInTimezone: a.checkInTimezone,
+          checkOutTimezone: a.checkOutTimezone,
         })),
       travels,
     });
@@ -249,9 +271,20 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
   };
 
   const canonicalTimelineIds = useMemo(
-    () => timeline.filter((e) => e.displayMode === 'canonical').map((e) => e.actionId),
+    () => timeline.filter((e) => e.displayMode === 'canonical' && e.pin === 'flow').map((e) => e.actionId),
     [timeline],
   );
+
+  const toggleCardEditor = (actionId: string, pin: TpTimelinePin): void => {
+    const isOpen = expandedActionId === actionId && expandedStayPin === pin;
+    if (isOpen) {
+      setExpandedActionId(undefined);
+      setExpandedStayPin(undefined);
+      return;
+    }
+    setExpandedActionId(actionId);
+    setExpandedStayPin(pin);
+  };
 
   const moveCanonicalAction = async (actionId: string, direction: 'up' | 'down'): Promise<void> => {
     if (!canWrite) {
@@ -313,6 +346,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
         await selectDbTpRoute(actionId, routeId);
       }
       setExpandedActionId(actionId);
+      setExpandedStayPin('flow');
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -335,7 +369,13 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
     }
     try {
       await deleteDbTpActionForBrowser(actionId);
-      setExpandedActionId((current) => (current === actionId ? undefined : current));
+      setExpandedActionId((current) => {
+        if (current === actionId) {
+          setExpandedStayPin(undefined);
+          return undefined;
+        }
+        return current;
+      });
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -474,18 +514,47 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
           </HStack>
         ) : null}
       </HStack>
-      <HStack gap={2} overflowX="auto" pb={2}>
-        {data.days.map((day) => (
-          <Button
-            key={day.id}
-            size="sm"
-            variant={day.id === selectedDayId ? 'solid' : 'outline'}
-            colorPalette="brand"
-            onClick={() => setSelectedDayId(day.id)}
+      <HStack gap={4} wrap="wrap" align="center" pb={2}>
+        <HStack gap={2} overflowX="auto" flex="1" minW={0}>
+          {visibleDayChips.map((chip) => {
+            const day = data.days.find((d) => d.id === chip.id);
+            if (day === undefined) {
+              return null;
+            }
+            return (
+              <Button
+                key={day.id}
+                size="sm"
+                variant={day.id === selectedDayId ? 'solid' : 'outline'}
+                colorPalette="brand"
+                onClick={() => setSelectedDayId(day.id)}
+              >
+                {day.dayTitle ?? day.calendarDate}
+              </Button>
+            );
+          })}
+        </HStack>
+        {trip !== undefined ? (
+          <Switch.Root
+            checked={showPastDays}
+            onCheckedChange={(e) => {
+              const next = e.checked;
+              setShowPastDays(next);
+              if (!next) {
+                const snapped = tpSnapDayWhenHidingPast(dayChipRefs, trip.timezone, selectedDayId);
+                if (snapped !== undefined) {
+                  setSelectedDayId(snapped);
+                }
+              }
+            }}
           >
-            {day.dayTitle ?? day.calendarDate}
-          </Button>
-        ))}
+            <Switch.HiddenInput />
+            <Switch.Control>
+              <Switch.Thumb />
+            </Switch.Control>
+            <Switch.Label>Show past days</Switch.Label>
+          </Switch.Root>
+        ) : null}
       </HStack>
       {selectedDay !== undefined ? (
         <Stack gap={4}>
@@ -593,7 +662,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             {timeline.length === 0 ? <Text color="fg.muted">No actions yet.</Text> : null}
             {timeline.map((entry) => {
               const action = data.actions.find((a) => a.id === entry.actionId);
-              const expanded = expandedActionId === entry.actionId;
+              const expanded = expandedActionId === entry.actionId && expandedStayPin === entry.pin;
               const canonicalIdx = canonicalTimelineIds.indexOf(entry.actionId);
               const title = action?.title ?? entry.title;
               const activityTags =
@@ -617,7 +686,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                   entry.kind === TpActionKind.STAY ||
                   entry.kind === TpActionKind.TRAVEL);
               return (
-                <Box key={`${entry.actionId}-${entry.displayMode}`} borderWidth="1px" borderRadius="md" p={3} minW={0} maxW="100%" overflowX="clip">
+                <Box key={`${entry.actionId}-${entry.pin}`} borderWidth="1px" borderRadius="md" p={3} minW={0} maxW="100%" overflowX="clip">
                   <HStack justify="space-between" wrap="wrap" gap={2} align="flex-start" minW={0} maxW="100%">
                     <HStack align="flex-start" flex="1" minW={0}>
                       {showActionDone ? (
@@ -699,7 +768,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                             aria-label={expanded ? `Close editor ${title}` : `Edit ${entry.kind} ${title}`}
                             size="xs"
                             variant={expanded ? 'solid' : 'outline'}
-                            onClick={() => setExpandedActionId(expanded ? undefined : entry.actionId)}
+                            onClick={() => toggleCardEditor(entry.actionId, entry.pin)}
                           >
                             {expanded ? <CrossIcon size={14} /> : <EditIcon size={14} />}
                           </IconButton>
