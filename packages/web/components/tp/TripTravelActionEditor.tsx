@@ -25,6 +25,7 @@ import {tpInstantFromParts, tpPartsFromInstant} from '@/lib/tp/tpDateTimeParts';
 import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
 import TripTpMoneyField from '@/components/tp/TripTpMoneyField';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
+import TripTpRouteOptionTitle from '@/components/tp/TripTpRouteOptionTitle';
 import TripTpLocationSelect from '@/components/tp/TripTpLocationSelect';
 import TripTpTimestampField from '@/components/tp/TripTpTimestampField';
 import TripTpTransportLibSelect from '@/components/tp/TripTpTransportLibSelect';
@@ -77,6 +78,7 @@ export default function TripTravelActionEditor({
   onError,
 }: TripTravelActionEditorProps) {
   const [pending, setPending] = useState<TravelPending>(null);
+  const [expandStepId, setExpandStepId] = useState<string | undefined>(undefined);
   const mutationsDisabled = pending !== null;
   const actionRoutes = routes.filter((r) => r.actionId === action.id);
   const selectedRouteId = action.selectedRouteId ?? actionRoutes.find((r) => r.isSelected)?.id;
@@ -190,7 +192,8 @@ export default function TripTravelActionEditor({
     setPending('addStep');
     try {
       const count = transports.filter((t) => t.routeId === routeId).length;
-      await createDbTpTransport(routeId, count);
+      const stepId = await createDbTpTransport(routeId, count);
+      setExpandStepId(stepId);
       await afterSave();
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
@@ -358,15 +361,17 @@ export default function TripTravelActionEditor({
             arriveTimezone: s.arriveTimezone,
           })),
         });
+        const routeSelected = tpRouteIsSelected(route.id, selectedRouteId, route.isSelected);
         return (
           <TripTpCollapsible
             key={route.id}
-            title={routeTitle}
+            title={<TripTpRouteOptionTitle summary={routeTitle} selected={routeSelected} />}
           >
             <BoxRoute
               route={route}
-              selected={route.id === selectedRouteId}
+              selected={routeSelected}
               transports={routeTransports}
+              expandStepId={expandStepId}
               locations={locations}
               transportLib={transportLib}
               tripTimezone={tripTimezone}
@@ -459,6 +464,7 @@ interface BoxRouteProps {
   readonly onRemoveTransport: (id: string) => void;
   readonly onChanged: () => void;
   readonly onError: (message: string) => void;
+  readonly expandStepId?: string;
 }
 
 function BoxRoute({
@@ -482,6 +488,7 @@ function BoxRoute({
   transportLib,
   mutationsDisabled,
   pending,
+  expandStepId,
 }: BoxRouteProps) {
   const [routeCost, setRouteCost] = useState(route.costAmount?.toString() ?? '');
   const [routeCurrency, setRouteCurrency] = useState(route.costCurrency ?? defaultCurrency ?? '');
@@ -557,6 +564,7 @@ function BoxRoute({
           userId={userId}
           attachments={attachments}
           mutationsDisabled={mutationsDisabled}
+          defaultOpen={t.id === expandStepId}
           onSave={(draft) => onSaveTransport(t, draft)}
           onRemove={() => onRemoveTransport(t.id)}
           onChanged={onChanged}
@@ -582,6 +590,7 @@ function TransportRow({
   onRemove,
   onChanged,
   onError,
+  defaultOpen,
 }: {
   readonly transport: DbTpTransport;
   readonly transportLib: readonly DbTpTransportLib[];
@@ -597,19 +606,29 @@ function TransportRow({
   readonly onRemove: () => void;
   readonly onChanged: () => void | Promise<void>;
   readonly onError: (message: string) => void;
+  readonly defaultOpen?: boolean;
 }) {
   const [draft, setDraft] = useState(() => transportDraft(transport, tripTimezone, defaultCurrency));
   const [fromTypeFilter, setFromTypeFilter] = useState('');
   const [toTypeFilter, setToTypeFilter] = useState('');
 
-  const summary =
+  const lib = draft.transportLibId !== ''
+    ? transportLib.find((t) => t.id === draft.transportLibId)
+    : undefined;
+  const label = lib?.label ?? transport.mode;
+  const from =
+    locationPlaceName(locations, draft.fromLocationId, draft.fromPlace) || '—';
+  const to =
+    locationPlaceName(locations, draft.toLocationId, draft.toPlace) || '—';
+  const timeSummary =
     transport.departAt !== undefined && transport.arriveAt !== undefined
       ? `${formatTpInstant(transport.departAt, draft.departTimezone)} → ${formatTpInstant(transport.arriveAt, draft.arriveTimezone)}`
       : '';
+  const collapsedTitle = [label, `${from} → ${to}`, timeSummary].filter((part) => part !== '').join(' · ');
 
   return (
+    <TripTpCollapsible title={collapsedTitle} defaultOpen={defaultOpen ?? false}>
     <Stack gap={2} pl={2} borderLeftWidth="2px" minW={0} maxW="100%">
-      {summary !== '' ? <Text fontSize="xs" color="fg.muted">{summary}</Text> : null}
       <TripTpDoneCheckbox
         checked={draft.done}
         disabled={mutationsDisabled}
@@ -691,5 +710,6 @@ function TransportRow({
         onError={onError}
       />
     </Stack>
+    </TripTpCollapsible>
   );
 }

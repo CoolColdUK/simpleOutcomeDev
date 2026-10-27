@@ -17,6 +17,7 @@ import {tpIsoCountryName, tpRouteOptionSummary} from '@so/model';
 import tpFormatLocationTime from '@/components/tp/tpFormatLocationTime';
 import updateDbTpActionTransport from '@/lib/api/db/tp/updateDbTpActionTransport';
 import updateDbTpTransport from '@/lib/api/db/tp/updateDbTpTransport';
+import TripTpRouteOptionTitle from '@/components/tp/TripTpRouteOptionTitle';
 
 export interface TripTravelActionDetailsProps {
   readonly action: DbTpAction;
@@ -167,8 +168,8 @@ function TripTravelRouteOptionDetails({
         aria-expanded={open}
         aria-controls={bodyId}
       >
-        <TripTpTruncateText textAlign="left" lineClamp={3} flex="1" minW={0}>{summary}</TripTpTruncateText>
-        <Text as="span" color="fg.muted" fontSize="sm">{open ? '−' : '+'}</Text>
+        <TripTpRouteOptionTitle summary={summary} selected={isSelected} />
+        <Text as="span" color="fg.muted" fontSize="sm" flexShrink={0}>{open ? '−' : '+'}</Text>
       </Button>
       {open ? (
         <Stack id={bodyId} gap={2} p={3} pt={0} borderTopWidth="1px" fontSize="sm" minW={0} maxW="100%">

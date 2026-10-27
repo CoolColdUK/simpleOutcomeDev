@@ -97,9 +97,6 @@ function timePart(steps: readonly TpRouteOptionStepInput[]): string | undefined 
 
 export default function tpRouteOptionSummary(input: TpRouteOptionSummaryInput): string {
   const parts: string[] = [input.name.trim()];
-  if (input.isSelected) {
-    parts.push('selected');
-  }
   const label = input.transportLibLabel?.trim();
   if (label !== undefined && label !== '') {
     const mode = input.transportLibMode?.trim();

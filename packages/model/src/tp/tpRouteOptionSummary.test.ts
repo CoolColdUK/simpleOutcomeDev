@@ -5,14 +5,14 @@ describe('tpRouteOptionSummary', () => {
     expect(tpRouteOptionSummary({name: 'Option A', isSelected: false, steps: []})).toBe('Option A · No steps');
   });
 
-  it('marks selected route', () => {
+  it('does not embed selected in summary text', () => {
     expect(
       tpRouteOptionSummary({
         name: 'Option A',
         isSelected: true,
         steps: [{fromPlace: 'A', toPlace: 'B'}],
       }),
-    ).toBe('Option A · selected · A → B · 1 step');
+    ).toBe('Option A · A → B · 1 step');
   });
 
   it('uses location names over place text', () => {
@@ -39,7 +39,7 @@ describe('tpRouteOptionSummary', () => {
           {costCurrency: 'HKD'},
         ],
       }),
-    ).toBe('Option A · selected · 3 steps · HKD 180');
+    ).toBe('Option A · 3 steps · HKD 180');
   });
 
   it('uses route price over step sum', () => {
@@ -63,7 +63,7 @@ describe('tpRouteOptionSummary', () => {
         transportLibMode: 'train',
         steps: [],
       }),
-    ).toBe('Walk · selected · Metro pass (train) · No steps');
+    ).toBe('Walk · Metro pass (train) · No steps');
   });
 
   it('omits price when currencies differ', () => {
@@ -98,7 +98,7 @@ describe('tpRouteOptionSummary', () => {
         },
       ],
     });
-    expect(summary).toContain('Option A · selected');
+    expect(summary).toContain('Option A');
     expect(summary).toContain('2 steps');
     expect(summary).toMatch(/→/);
   });
