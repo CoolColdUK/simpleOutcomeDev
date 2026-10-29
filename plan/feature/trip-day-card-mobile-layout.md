@@ -6,7 +6,7 @@ On a narrow screen the day-card controls sit in the same row as the title, so th
 **Base:** `develop` after [#25](https://github.com/CoolColdUK/simpleOutcomeDev/pull/25) (stay span pins, collapsed travel steps, Selected badge, hide past days). Prod is that line (`0.36.0`).  
 **Earlier plans:** [trip-day-card-icons-activity-accordion.md](./trip-day-card-icons-activity-accordion.md) (icon edit/delete, activity Details, glance tags), [trip-done-travel-routes.md](./trip-done-travel-routes.md) (done checkbox), [trip-mobile-overflow-location-route.md](./trip-mobile-overflow-location-route.md) (wrap, line clamps, tag ellipsis), [trip-stay-span-travel-collapse-selected.md](./trip-stay-span-travel-collapse-selected.md) (top/bottom stay pins). This plan does not reopen those models.
 
-**Status:** Draft plan on branch `cursor/trip-day-card-mobile-layout-e1d6`. Not implemented. Soft questions below are the recommended defaults; Matthew saying “go” accepts every default. Agents do not merge.
+**Status:** Draft plan on branch `cursor/trip-day-card-mobile-layout-e1d6` ([#26](https://github.com/CoolColdUK/simpleOutcomeDev/pull/26)). Not implemented. Soft questions below are the recommended defaults; Matthew saying “go” accepts every default. Agents do not merge.
 
 **Out of scope:** Telegram. Schema, migrations, MCP, REST. New npm packages. A new icon set. Changing `tpActionDayCardSummary`, tag parsing, the glance cap of four, or the line-clamp counts from #23. Stay-pin placement. Reordering rules. Realtime. New Vercel env vars. Application unit tests or a visual-regression dependency. The day-chip scroller. The **+ Activity / + Note / + Stay / + Travel** toolbar. Editors. Destination accordions.
 
