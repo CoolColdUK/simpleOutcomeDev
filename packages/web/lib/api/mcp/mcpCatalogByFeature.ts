@@ -30,6 +30,7 @@ import {
   deleteAgentTpAction,
   updateAgentTpAction,
 } from '@/lib/api/agent/tpAgentActions';
+import {createAgentTpTravelWithRoute} from '@/lib/api/agent/tpAgentTravelWithRoute';
 import {
   createAgentTpRoute,
   deleteAgentTpRoute,
@@ -53,11 +54,6 @@ import {
   updateAgentTpTransportLib,
 } from '@/lib/api/agent/tpAgentTransportLib';
 import {
-  linkAgentTpActionTransport,
-  unlinkAgentTpActionTransport,
-  updateAgentTpActionTransport,
-} from '@/lib/api/agent/tpAgentActionTransports';
-import {
   deleteAgentTpAttachment,
   listAgentTpAttachments,
   uploadAgentTpAttachment,
@@ -78,7 +74,7 @@ function tool(
   return {name, description, inputSchema: {type: 'object', properties, required}, run};
 }
 
-// Trip planning MCP tools (21 total)
+// Trip planning MCP tools
 export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 1. Core workspace
   tool('get_tp_workspace', 'Load complete trip workspace with all entities.', {podId}, ['podId'], (request, args) => getAgentTpWorkspace(request, args)),
@@ -180,8 +176,70 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   
   // 8-10. Actions (stay/activity/note/travel)
   tool(
+    'create_tp_travel_with_route',
+    'Primary way to add a travel card with a route and an optional first step. Set initialStep.transportLibId to attach a transport-library means. selectRoute defaults to true. Success may include non-fatal warnings.',
+    {
+      podId,
+      title: {type: 'string'},
+      anchorDayId: {type: 'string'},
+      fromPlace: {type: 'string'},
+      toPlace: {type: 'string'},
+      fromDestinationId: {type: 'string'},
+      toDestinationId: {type: 'string'},
+      fromMapsUrl: {type: 'string'},
+      toMapsUrl: {type: 'string'},
+      fromLocationId: {type: 'string'},
+      toLocationId: {type: 'string'},
+      costAmount: {type: 'number'},
+      costCurrency: {type: 'string'},
+      bookingRef: {type: 'string'},
+      url: {type: 'string'},
+      notes: {type: 'string'},
+      sortOrder: {type: 'number'},
+      done: {type: 'boolean'},
+      selectRoute: {type: 'boolean', description: 'Default true. Selects the new route.'},
+      route: {
+        type: 'object',
+        properties: {
+          name: {type: 'string'},
+          notes: {type: 'string'},
+          sortOrder: {type: 'number'},
+          transportLibId: {type: 'string'},
+          costAmount: {type: 'number'},
+          costCurrency: {type: 'string'},
+          durationMinutes: {type: 'number'},
+        },
+        required: ['name'],
+      },
+      initialStep: {
+        type: 'object',
+        description: 'Optional first journey leg. Prefer transportLibId.',
+        properties: {
+          transportLibId: {type: 'string'},
+          mode: {type: 'string', description: 'Ignored when transportLibId is set'},
+          fromPlace: {type: 'string'},
+          toPlace: {type: 'string'},
+          fromLocationId: {type: 'string'},
+          toLocationId: {type: 'string'},
+          departLocalTime: {type: 'string'},
+          departTimezone: {type: 'string'},
+          arriveLocalTime: {type: 'string'},
+          arriveTimezone: {type: 'string'},
+          costAmount: {type: 'number'},
+          costCurrency: {type: 'string'},
+          bookingRef: {type: 'string'},
+          url: {type: 'string'},
+          notes: {type: 'string'},
+          sortOrder: {type: 'number'},
+        },
+      },
+    },
+    ['podId', 'title', 'route'],
+    (request, args) => createAgentTpTravelWithRoute(request, args),
+  ),
+  tool(
     'create_tp_action',
-    'Create action. kind: stay/activity/note/travel. Local times → checkInLocalTime/checkInTimezone.',
+    'Create a stay, activity, or note. For a new journey, prefer create_tp_travel_with_route. Use kind=travel only when routes will be added separately. Local times → checkInLocalTime/checkInTimezone.',
     {
       podId,
       kind: {type: 'string'},
@@ -215,7 +273,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'update_tp_action',
-    'Update action fields (use sortOrder to reorder). done marks this day-card action complete.',
+    'Update action fields (use sortOrder to reorder). done marks this day-card action complete. Travel field changes may include non-fatal warnings.',
     {
       podId,
       actionId: {type: 'string'},
@@ -255,7 +313,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 11-14. Routes
   tool(
     'create_tp_route',
-    'Create route option for a travel action.',
+    'Add another route option to an existing travel action. For a new journey, prefer create_tp_travel_with_route.',
     {podId, actionId: {type: 'string'}, name: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
     ['podId', 'actionId', 'name'],
     (request, args) => createAgentTpRoute(request, args),
@@ -282,7 +340,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'select_tp_route',
-    'Mark a route as selected for the travel action.',
+    'Mark a route as selected for the travel action. Success may include warnings when the route has no steps.',
     {podId, actionId: {type: 'string'}, routeId: {type: 'string'}},
     ['podId', 'actionId', 'routeId'],
     (request, args) => selectAgentTpRoute(request, args),
@@ -291,7 +349,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 15-17. Transports
   tool(
     'create_tp_transport',
-    'Add a route step (transport leg). Attach means with transportLibId (do not also link_tp_action_transport). When transportLibId is set, mode is copied from the library. Local times → departLocalTime/departTimezone.',
+    'Add a journey leg on a route. Set transportLibId to pick a library means (mode is copied from the library). Do not create legacy action-transport links. Local times → departLocalTime/departTimezone.',
     {
       podId,
       routeId: {type: 'string'},
@@ -319,7 +377,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'update_tp_transport',
-    'Update a route step (use sortOrder to reorder). Set transportLibId to attach library means; omit tp_action_transport for legs.',
+    'Update a journey leg. Set transportLibId to attach a library means; pass transportLibId null to clear the link.',
     {
       podId,
       transportId: {type: 'string'},
@@ -414,7 +472,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'create_tp_transport_lib',
-    'Create a reusable transport template (label is the name, e.g. bus 123; mode is optional free text).',
+    'Create a reusable transport label, mode, and cost template. Set important and importantReason so travel day cards can show an alert.',
     {
       podId,
       label: {type: 'string'},
@@ -426,13 +484,15 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       toLocationId: {type: 'string'},
       notes: {type: 'string'},
       sortOrder: {type: 'number'},
+      important: {type: 'boolean'},
+      importantReason: {type: 'string', description: 'Optional reason, max 500 characters. Blank is stored as null.'},
     },
     ['podId', 'label'],
     (request, args) => createAgentTpTransportLib(request, args),
   ),
   tool(
     'update_tp_transport_lib',
-    'Update a reusable transport template.',
+    'Update a reusable transport template, including important and importantReason.',
     {
       podId,
       transportLibId: {type: 'string'},
@@ -445,6 +505,8 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
       toLocationId: {type: 'string'},
       notes: {type: 'string'},
       sortOrder: {type: 'number'},
+      important: {type: 'boolean'},
+      importantReason: {type: 'string', description: 'Optional reason, max 500 characters. Null clears it.'},
     },
     ['podId', 'transportLibId'],
     (request, args) => updateAgentTpTransportLib(request, args),
@@ -455,44 +517,6 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
     {podId, transportLibId: {type: 'string'}},
     ['podId', 'transportLibId'],
     (request, args) => deleteAgentTpTransportLib(request, args),
-  ),
-  tool(
-    'link_tp_action_transport',
-    'Legacy: link transport library to the travel action (not a route step). Prefer create_tp_transport/update_tp_transport with transportLibId for journey legs.',
-    {
-      podId,
-      actionId: {type: 'string'},
-      transportLibId: {type: 'string'},
-      sortOrder: {type: 'number'},
-      durationMinutes: {type: 'number'},
-      costAmount: {type: 'number'},
-      costCurrency: {type: 'string'},
-      fromLocationId: {type: 'string'},
-      toLocationId: {type: 'string'},
-      done: {type: 'boolean'},
-    },
-    ['podId', 'actionId', 'transportLibId'],
-    (request, args) => linkAgentTpActionTransport(request, args),
-  ),
-  tool(
-    'update_tp_action_transport',
-    'Update a travel action transport link (duration, price, from/to locations, done).',
-    {
-      podId,
-      linkId: {type: 'string'},
-      sortOrder: {type: 'number'},
-      durationMinutes: {type: 'number'},
-      costAmount: {type: 'number'},
-      costCurrency: {type: 'string'},
-      fromLocationId: {type: 'string'},
-      toLocationId: {type: 'string'},
-      done: {type: 'boolean'},
-    },
-    ['podId', 'linkId'],
-    (request, args) => updateAgentTpActionTransport(request, args),
-  ),
-  tool('unlink_tp_action_transport', 'Remove a transport link from a travel action.', {podId, linkId: {type: 'string'}}, ['podId', 'linkId'], (request, args) =>
-    unlinkAgentTpActionTransport(request, args),
   ),
 
   // Attachments

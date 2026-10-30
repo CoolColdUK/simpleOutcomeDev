@@ -3,13 +3,11 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   Alert,
-  Badge,
   Box,
   Button,
   Field,
   Heading,
   HStack,
-  IconButton,
   Input,
   NativeSelect,
   Stack,
@@ -17,7 +15,6 @@ import {
   Text,
   Textarea,
 } from '@chakra-ui/react';
-import {ArrowDownIcon, ArrowUpIcon, CrossIcon, DeleteIcon, EditIcon} from '@so/component';
 import {
   canWriteTpPod,
   TpActionKind,
@@ -29,17 +26,15 @@ import {
   tpMoneyDefaultCurrency,
   tpSnapDayWhenHidingPast,
   tpTagsFromLocationNotes,
+  tpTravelCardImportantHint,
   tpVisibleTripDayChips,
   TpTripStatus,
   type PodRole,
   type TpTimelinePin,
 } from '@so/model';
-import AppIconTooltip from '@/components/app/AppIconTooltip';
 import TripActivityActionDetails from '@/components/tp/TripActivityActionDetails';
-import TripDayCardTags from '@/components/tp/TripDayCardTags';
-import TripTpTruncateText from '@/components/tp/TripTpTruncateText';
+import TripDayActionCardHeader from '@/components/tp/TripDayActionCardHeader';
 import TripTravelActionDetails from '@/components/tp/TripTravelActionDetails';
-import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
 import loadDbTpWorkspace, {type DbTpAction, type DbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import {deleteDbTpActionForBrowser} from '@/lib/api/db/tp/deleteDbTpAction';
 import createDbTpTripBundle from '@/lib/api/db/tp/createDbTpTripBundle';
@@ -60,6 +55,7 @@ import TripActivityActionEditor from '@/components/tp/TripActivityActionEditor';
 import TripTripCatalogPanel from '@/components/tp/TripTripCatalogPanel';
 import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
+import TripTpTruncateText from '@/components/tp/TripTpTruncateText';
 import useTpTripShowPastDays from '@/lib/tp/useTpTripShowPastDays';
 
 export interface TripPlanningBoardProps {
@@ -685,97 +681,62 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                 (entry.kind === TpActionKind.ACTIVITY ||
                   entry.kind === TpActionKind.STAY ||
                   entry.kind === TpActionKind.TRAVEL);
+              const importantHint =
+                action === undefined
+                  ? {show: false}
+                  : tpTravelCardImportantHint({
+                      kind: entry.kind,
+                      selectedRouteId: action.selectedRouteId,
+                      routes: data.routes.filter((route) => route.actionId === action.id),
+                      steps: data.transports
+                        .filter((step) => data.routes.some((route) => route.id === step.routeId && route.actionId === action.id))
+                        .map((step) => ({
+                          routeId: step.routeId,
+                          sortOrder: step.sortOrder,
+                          transportLibId: step.transportLibId,
+                        })),
+                      actionTransportLibIds: data.actionTransports
+                        .filter((link) => link.actionId === action.id)
+                        .sort((a, b) => a.sortOrder - b.sortOrder)
+                        .map((link) => link.transportLibId),
+                      transportLib: data.transportLib,
+                    });
               return (
                 <Box key={`${entry.actionId}-${entry.pin}`} borderWidth="1px" borderRadius="md" p={3} minW={0} maxW="100%" overflowX="clip">
-                  <HStack justify="space-between" wrap="wrap" gap={2} align="flex-start" minW={0} maxW="100%">
-                    <HStack align="flex-start" flex="1" minW={0}>
-                      {showActionDone ? (
-                        <TripTpDoneCheckbox
-                          checked={action.done}
-                          disabled={!canWrite}
-                          busy={busyActionDoneId === action.id}
-                          ariaLabel={
-                            action.done
-                              ? `Mark ${entry.kind} ${title} not done`
-                              : `Mark ${entry.kind} ${title} done`
-                          }
-                          tooltip="Done for this day card only."
-                          onCheckedChange={(v) => void toggleActionDone(action.id, v)}
-                        />
-                      ) : null}
-                      <Badge>{entry.kind}</Badge>
-                      {entry.displayMode === 'mirror' ? <Badge variant="outline">mirror</Badge> : null}
-                      <Stack gap={1} flex="1" minW={0} maxW="100%">
-                        <TripTpTruncateText fontWeight="medium" lineClamp={2}>{entry.title}</TripTpTruncateText>
-                        {action !== undefined && actionCardSummary(action) !== '' ? (
-                          <TripTpTruncateText fontSize="sm" color="fg.muted" lineClamp={3}>{actionCardSummary(action)}</TripTpTruncateText>
-                        ) : null}
-                        {activityTags.length > 0 ? <TripDayCardTags tags={activityTags} max={4} /> : null}
-                      </Stack>
-                    </HStack>
-                    <HStack>
-                      {entry.displayMode === 'mirror' && action?.anchorDayId !== undefined ? (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          onClick={() => setSelectedDayId(action.anchorDayId)}
-                        >
-                          Anchor day
-                        </Button>
-                      ) : null}
-                      {entry.displayMode === 'canonical' && entry.pin === 'flow' && canWrite ? (
-                        <>
-                          <AppIconTooltip label={`Move ${entry.kind} ${title} up`}>
-                            <IconButton
-                              aria-label={`Move ${entry.kind} ${title} up`}
-                              size="xs"
-                              variant="outline"
-                              disabled={canonicalIdx <= 0}
-                              onClick={() => void moveCanonicalAction(entry.actionId, 'up')}
-                            >
-                              <ArrowUpIcon size={14} />
-                            </IconButton>
-                          </AppIconTooltip>
-                          <AppIconTooltip label={`Move ${entry.kind} ${title} down`}>
-                            <IconButton
-                              aria-label={`Move ${entry.kind} ${title} down`}
-                              size="xs"
-                              variant="outline"
-                              disabled={canonicalIdx < 0 || canonicalIdx >= canonicalTimelineIds.length - 1}
-                              onClick={() => void moveCanonicalAction(entry.actionId, 'down')}
-                            >
-                              <ArrowDownIcon size={14} />
-                            </IconButton>
-                          </AppIconTooltip>
-                        </>
-                      ) : null}
-                      {canWrite ? (
-                        <AppIconTooltip label={`Delete ${entry.kind} ${title}`}>
-                          <IconButton
-                            aria-label={`Delete ${entry.kind} ${title}`}
-                            size="xs"
-                            variant="ghost"
-                            colorPalette="red"
-                            onClick={() => void deleteAction(entry.actionId)}
-                          >
-                            <DeleteIcon size={14} />
-                          </IconButton>
-                        </AppIconTooltip>
-                      ) : null}
-                      {showCardEdit ? (
-                        <AppIconTooltip label={expanded ? `Close editor ${title}` : `Edit ${entry.kind} ${title}`}>
-                          <IconButton
-                            aria-label={expanded ? `Close editor ${title}` : `Edit ${entry.kind} ${title}`}
-                            size="xs"
-                            variant={expanded ? 'solid' : 'outline'}
-                            onClick={() => toggleCardEditor(entry.actionId, entry.pin)}
-                          >
-                            {expanded ? <CrossIcon size={14} /> : <EditIcon size={14} />}
-                          </IconButton>
-                        </AppIconTooltip>
-                      ) : null}
-                    </HStack>
-                  </HStack>
+                  <TripDayActionCardHeader
+                    kind={entry.kind}
+                    title={title}
+                    summary={action === undefined ? '' : actionCardSummary(action)}
+                    tags={activityTags}
+                    showActionDone={showActionDone}
+                    done={action?.done ?? false}
+                    doneBusy={action !== undefined && busyActionDoneId === action.id}
+                    canToggleDone={canWrite}
+                    displayMode={entry.displayMode}
+                    pin={entry.pin}
+                    canWrite={canWrite}
+                    showCardEdit={showCardEdit}
+                    expanded={expanded}
+                    anchorDayId={action?.anchorDayId}
+                    moveUpDisabled={canonicalIdx <= 0}
+                    moveDownDisabled={canonicalIdx < 0 || canonicalIdx >= canonicalTimelineIds.length - 1}
+                    showImportant={importantHint.show}
+                    importantReason={importantHint.reason}
+                    onToggleDone={(checked) => {
+                      if (action !== undefined) {
+                        void toggleActionDone(action.id, checked);
+                      }
+                    }}
+                    onAnchorDay={() => {
+                      if (action?.anchorDayId !== undefined) {
+                        setSelectedDayId(action.anchorDayId);
+                      }
+                    }}
+                    onMoveUp={() => void moveCanonicalAction(entry.actionId, 'up')}
+                    onMoveDown={() => void moveCanonicalAction(entry.actionId, 'down')}
+                    onDelete={() => void deleteAction(entry.actionId)}
+                    onToggleEdit={() => toggleCardEditor(entry.actionId, entry.pin)}
+                  />
                   {action !== undefined && entry.kind === TpActionKind.ACTIVITY && !expanded ? (
                     <TripActivityActionDetails
                       action={action}

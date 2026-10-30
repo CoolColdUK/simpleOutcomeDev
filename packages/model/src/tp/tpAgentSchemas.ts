@@ -30,6 +30,12 @@ const optionalTransportLibId = v.optional(v.pipe(v.string(), v.minLength(1)));
 
 const optionalNullTransportLibId = v.optional(v.union([v.null(), v.pipe(v.string(), v.minLength(1))]));
 
+const importantReasonText = v.pipe(v.string(), v.maxLength(500));
+
+const optionalImportantReason = v.optional(importantReasonText);
+
+const optionalNullImportantReason = v.optional(v.union([v.null(), importantReasonText]));
+
 // Trip
 export const CreateTripSchema = v.object({
   podId,
@@ -366,6 +372,8 @@ export const CreateTransportLibSchema = v.object({
   toLocationId: optionalString,
   notes: optionalString,
   sortOrder: optionalNumber,
+  important: optionalBoolean,
+  importantReason: optionalImportantReason,
 });
 
 export const UpdateTransportLibSchema = v.object({
@@ -380,6 +388,8 @@ export const UpdateTransportLibSchema = v.object({
   toLocationId: optionalNullString,
   notes: optionalNullString,
   sortOrder: optionalNumber,
+  important: optionalBoolean,
+  importantReason: optionalNullImportantReason,
 });
 
 export const DeleteTransportLibSchema = v.object({
@@ -416,3 +426,57 @@ export const UnlinkActionTransportSchema = v.object({
   podId,
   linkId: v.pipe(v.string(), v.minLength(1)),
 });
+
+const travelWithRouteFields = {
+  podId,
+  title: v.pipe(v.string(), v.minLength(1)),
+  anchorDayId: optionalString,
+  fromPlace: optionalString,
+  toPlace: optionalString,
+  fromDestinationId: optionalString,
+  toDestinationId: optionalString,
+  fromMapsUrl: optionalString,
+  toMapsUrl: optionalString,
+  fromLocationId: optionalString,
+  toLocationId: optionalString,
+  costAmount: optionalNumber,
+  costCurrency: optionalCurrencyCode,
+  bookingRef: optionalString,
+  url: optionalString,
+  notes: optionalString,
+  sortOrder: optionalNumber,
+  done: optionalBoolean,
+  route: v.object({
+    name: v.pipe(v.string(), v.minLength(1)),
+    notes: optionalString,
+    sortOrder: optionalNumber,
+    transportLibId: optionalTransportLibId,
+    costAmount: optionalNumber,
+    costCurrency: optionalCurrencyCode,
+    durationMinutes: optionalNumber,
+  }),
+  initialStep: v.optional(
+    v.object({
+      transportLibId: optionalTransportLibId,
+      mode: optionalString,
+      fromPlace: optionalString,
+      toPlace: optionalString,
+      fromLocationId: optionalString,
+      toLocationId: optionalString,
+      departLocalTime: optionalString,
+      departTimezone: optionalString,
+      arriveLocalTime: optionalString,
+      arriveTimezone: optionalString,
+      costAmount: optionalNumber,
+      costCurrency: optionalCurrencyCode,
+      bookingRef: optionalString,
+      url: optionalString,
+      notes: optionalString,
+      sortOrder: optionalNumber,
+    }),
+  ),
+  selectRoute: optionalBoolean,
+  kind: v.optional(v.never('kind must not be set; this tool always creates travel')),
+};
+
+export const CreateTpTravelWithRouteSchema = v.object(travelWithRouteFields);

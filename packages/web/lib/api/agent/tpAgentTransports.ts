@@ -16,6 +16,7 @@ import {tpCall, ownedTpRow} from '@/lib/api/agent/tpAgentCall';
 import {createDbTpTransportForAgent} from '@/lib/api/db/tp/createDbTpTransport';
 import {updateDbTpTransportForAgent} from '@/lib/api/db/tp/updateDbTpTransport';
 import {deleteDbTpTransportForAgent} from '@/lib/api/db/tp/deleteDbTpTransport';
+import {withTpTravelWarningsForRoute} from '@/lib/api/agent/attachTpTravelWarnings';
 
 async function stepModeForLibraryId(
   ctx: AgentContext,
@@ -135,7 +136,7 @@ export async function createAgentTpTransport(request: Request, input: unknown): 
     return agentErr(500, 'internal_error', 'Failed to create transport');
   }
 
-  return agentOk(result.data);
+  return agentOk(await withTpTravelWarningsForRoute(ctx.data.supabase, routeId, result.data));
 }
 
 export async function updateAgentTpTransport(request: Request, input: unknown): Promise<AgentResult<unknown>> {

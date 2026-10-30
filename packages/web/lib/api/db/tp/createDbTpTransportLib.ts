@@ -13,6 +13,8 @@ export interface CreateDbTpTransportLibInput {
   readonly fromLocationId?: string;
   readonly toLocationId?: string;
   readonly notes?: string;
+  readonly important?: boolean;
+  readonly importantReason?: string | null;
   readonly sortOrder?: number;
 }
 
@@ -32,6 +34,8 @@ export async function createDbTpTransportLibForAgent(
       from_location_id: input.fromLocationId ?? null,
       to_location_id: input.toLocationId ?? null,
       notes: input.notes ?? null,
+      important: input.important ?? false,
+      important_reason: input.importantReason ?? null,
       sort_order: input.sortOrder ?? 0,
     })
     .select('*')

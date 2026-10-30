@@ -8,6 +8,8 @@ Expose the **trip planning** feature (merged from PR #9, tables `tp_*` / helpers
 
 **Status:** ✅ IMPLEMENTED — PR #15 (draft against `develop`)
 
+**Catalog after PR #26:** [trip-day-card-mobile-layout.md](./trip-day-card-mobile-layout.md) adds `create_tp_travel_with_route`, transport-library `important` / `importantReason`, non-fatal travel `warnings`, and removes `link_tp_action_transport`, `update_tp_action_transport`, and `unlink_tp_action_transport` from MCP. The tables below are the pre-#26 baseline.
+
 ---
 
 ## Implementation summary

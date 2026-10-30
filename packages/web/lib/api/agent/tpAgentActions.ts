@@ -5,6 +5,7 @@
 import {ApiKeyAction} from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent} from '@/lib/api/agent/loadAgentContext';
+import {withTpTravelWarnings} from '@/lib/api/agent/attachTpTravelWarnings';
 import {tpCall, ownedTpRow, requireExistingTpTripId} from '@/lib/api/agent/tpAgentCall';
 import {createDbTpActionForAgent} from '@/lib/api/db/tp/createDbTpAction';
 import {updateDbTpActionForAgent} from '@/lib/api/db/tp/updateDbTpAction';
@@ -82,7 +83,10 @@ export async function createAgentTpAction(request: Request, input: unknown): Pro
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   if (result.data === null) return agentErr(500, 'internal_error', 'Failed to create action');
-  
+
+  if (kind === 'travel') {
+    return agentOk(await withTpTravelWarnings(ctx.data.supabase, result.data.id, result.data));
+  }
   return agentOk(result.data);
 }
 
@@ -150,7 +154,22 @@ export async function updateAgentTpAction(request: Request, input: unknown): Pro
   const resultErr = dbErr(result.error);
   if (resultErr !== undefined) return resultErr;
   if (result.data === null) return agentErr(404, 'not_found', 'Action not found');
-  
+
+  const travelFields = [
+    'fromPlace',
+    'toPlace',
+    'fromDestinationId',
+    'toDestinationId',
+    'fromMapsUrl',
+    'toMapsUrl',
+    'fromLocationId',
+    'toLocationId',
+    'selectedRouteId',
+    'durationMinutes',
+  ];
+  if (result.data.kind === 'travel' && travelFields.some((key) => key in args)) {
+    return agentOk(await withTpTravelWarnings(ctx.data.supabase, actionId, result.data));
+  }
   return agentOk(result.data);
 }
 

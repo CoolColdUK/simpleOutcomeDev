@@ -12,6 +12,8 @@ export interface UpdateDbTpTransportLibInput {
   readonly fromLocationId?: string | null;
   readonly toLocationId?: string | null;
   readonly notes?: string | null;
+  readonly important?: boolean;
+  readonly importantReason?: string | null;
   readonly sortOrder?: number;
 }
 
@@ -44,6 +46,12 @@ export async function updateDbTpTransportLibForAgent(
   }
   if (input.notes !== undefined) {
     patch.notes = input.notes;
+  }
+  if (input.important !== undefined) {
+    patch.important = input.important;
+  }
+  if (input.importantReason !== undefined) {
+    patch.important_reason = input.importantReason;
   }
   if (input.sortOrder !== undefined) {
     patch.sort_order = input.sortOrder;
