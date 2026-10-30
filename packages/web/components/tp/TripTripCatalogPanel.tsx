@@ -1,7 +1,7 @@
 'use client';
 
 import {useState} from 'react';
-import {Button, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
+import {Button, Checkbox, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
 import type {DbTpLocation, DbTpTransportLib} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
 import createDbTpLocation from '@/lib/api/db/tp/createDbTpLocation';
@@ -230,7 +230,14 @@ function TransportLibRow({transport, locations, defaultCurrency, canWrite, onSav
   const [currency, setCurrency] = useState(transport.costCurrency ?? defaultCurrency ?? '');
   const [fromLocationId, setFromLocationId] = useState(transport.fromLocationId ?? '');
   const [toLocationId, setToLocationId] = useState(transport.toLocationId ?? '');
+  const [important, setImportant] = useState(transport.important);
+  const [importantReason, setImportantReason] = useState(transport.importantReason ?? '');
   const save = async (): Promise<void> => {
+    const reason = importantReason.trim();
+    if (important && reason.length > 500) {
+      onError('Important reason must be 500 characters or fewer');
+      return;
+    }
     try {
       await updateDbTpTransportLib(transport.id, {
         label,
@@ -240,6 +247,8 @@ function TransportLibRow({transport, locations, defaultCurrency, canWrite, onSav
         costCurrency: currency === '' ? null : currency,
         fromLocationId: fromLocationId === '' ? null : fromLocationId,
         toLocationId: toLocationId === '' ? null : toLocationId,
+        important,
+        importantReason: important && reason !== '' ? reason : null,
       });
       onSaved();
     } catch (e) {
@@ -309,6 +318,26 @@ function TransportLibRow({transport, locations, defaultCurrency, canWrite, onSav
           </NativeSelect.Root>
         </Field.Root>
       </HStack>
+      <Checkbox.Root
+        checked={important}
+        disabled={!canWrite}
+        onCheckedChange={(details) => setImportant(details.checked === true)}
+      >
+        <Checkbox.HiddenInput />
+        <Checkbox.Control>
+          <Checkbox.Indicator />
+        </Checkbox.Control>
+        <Checkbox.Label>Important</Checkbox.Label>
+      </Checkbox.Root>
+      {important && canWrite ? (
+        <Field.Root>
+          <Field.Label>Reason</Field.Label>
+          <Textarea value={importantReason} maxLength={500} rows={2} onChange={(e) => setImportantReason(e.target.value)} />
+        </Field.Root>
+      ) : null}
+      {important && !canWrite && importantReason.trim() !== '' ? (
+        <Text color="fg.muted" fontSize="sm">{importantReason}</Text>
+      ) : null}
       {canWrite ? (
         <HStack>
           <Button size="sm" onClick={() => void save()}>Save</Button>

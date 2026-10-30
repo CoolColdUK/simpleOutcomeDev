@@ -12,6 +12,17 @@ import {createDbTpTransportLibForAgent} from '@/lib/api/db/tp/createDbTpTranspor
 import {updateDbTpTransportLibForAgent} from '@/lib/api/db/tp/updateDbTpTransportLib';
 import {deleteDbTpTransportLibForAgent} from '@/lib/api/db/tp/deleteDbTpTransportLib';
 
+function storedImportantReason(value: string | null | undefined): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
 export async function createAgentTpTransportLib(request: Request, input: unknown): Promise<AgentResult<unknown>> {
   const parsed = safeParseSchema(CreateTransportLibSchema, input);
   if (!parsed.ok) {
@@ -28,6 +39,8 @@ export async function createAgentTpTransportLib(request: Request, input: unknown
     toLocationId,
     notes,
     sortOrder,
+    important,
+    importantReason,
   } = parsed.value;
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.CREATE));
   if (!ctx.ok) {
@@ -47,6 +60,8 @@ export async function createAgentTpTransportLib(request: Request, input: unknown
     fromLocationId,
     toLocationId,
     notes,
+    important,
+    importantReason: storedImportantReason(importantReason),
     sortOrder: sortOrder ?? 0,
   });
   const resultErr = dbErr(result.error);
@@ -76,6 +91,8 @@ export async function updateAgentTpTransportLib(request: Request, input: unknown
     toLocationId,
     notes,
     sortOrder,
+    important,
+    importantReason,
   } = parsed.value;
   const ctx = await requirePodAgent(request, tpCall(podId, ApiKeyAction.UPDATE));
   if (!ctx.ok) {
@@ -95,6 +112,8 @@ export async function updateAgentTpTransportLib(request: Request, input: unknown
     fromLocationId: 'fromLocationId' in args ? (fromLocationId ?? null) : undefined,
     toLocationId: 'toLocationId' in args ? (toLocationId ?? null) : undefined,
     notes: 'notes' in args ? (notes ?? null) : undefined,
+    important,
+    importantReason: 'importantReason' in args ? storedImportantReason(importantReason) : undefined,
     sortOrder,
   });
   const resultErr = dbErr(result.error);

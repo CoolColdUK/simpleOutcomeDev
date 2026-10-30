@@ -1,4 +1,4 @@
-import {agentResultResponse} from '@/lib/api/agent/agentResult';
+import {agentResultResponse, type AgentResult} from '@/lib/api/agent/agentResult';
 import {
   addAgentPodMemberByUsername,
   approveAgentPodJoinRequest,
@@ -41,6 +41,7 @@ import {createAgentTpTrip, getAgentTpBudgetRollup, getAgentTpWorkspace, updateAg
 import {createAgentTpDestination, deleteAgentTpDestination, updateAgentTpDestination} from '@/lib/api/agent/tpAgentDestinations';
 import {updateAgentTpDay} from '@/lib/api/agent/tpAgentDays';
 import {createAgentTpAction, deleteAgentTpAction, updateAgentTpAction} from '@/lib/api/agent/tpAgentActions';
+import {createAgentTpTravelWithRoute} from '@/lib/api/agent/tpAgentTravelWithRoute';
 import {createAgentTpRoute, deleteAgentTpRoute, selectAgentTpRoute, updateAgentTpRoute} from '@/lib/api/agent/tpAgentRoutes';
 import {createAgentTpTransport, deleteAgentTpTransport, updateAgentTpTransport} from '@/lib/api/agent/tpAgentTransports';
 import {deleteAgentTpAttachment, listAgentTpAttachments, uploadAgentTpAttachment} from '@/lib/api/agent/tpAgentAttachments';
@@ -83,6 +84,21 @@ function methodNotAllowed(): Response {
 
 function isUuid(value: string | undefined): value is string {
   return value !== undefined && UUID.test(value);
+}
+
+const ACTION_TRANSPORT_USE_INSTEAD = 'POST /api/pods/{podId}/trip/transports with transportLibId';
+
+function deprecatedActionTransportResponse(result: AgentResult<unknown>): Response {
+  if (!result.ok) {
+    const response = agentResultResponse(result);
+    response.headers.set('Deprecation', 'true');
+    return response;
+  }
+  const data = typeof result.data === 'object' && result.data !== null ? result.data : {};
+  return Response.json(
+    {...data, deprecated: true, useInstead: ACTION_TRANSPORT_USE_INSTEAD},
+    {status: 200, headers: {Deprecation: 'true'}},
+  );
 }
 
 async function bodyWith(request: Request, ids: Record<string, string>): Promise<unknown> {
@@ -256,6 +272,11 @@ async function dispatchTp(method: string, request: Request, path: readonly strin
   if (fourth === 'actions' && fifth === undefined) {
     return method === 'POST' ? agentResultResponse(await createAgentTpAction(request, await bodyWith(request, {podId}))) : methodNotAllowed();
   }
+  if (fourth === 'travel-with-route' && fifth === undefined) {
+    return method === 'POST'
+      ? agentResultResponse(await createAgentTpTravelWithRoute(request, await bodyWith(request, {podId})))
+      : methodNotAllowed();
+  }
   if (fourth === 'actions' && isUuid(fifth) && sixth === undefined) {
     if (method === 'PATCH') {
       return agentResultResponse(await updateAgentTpAction(request, await bodyWith(request, {podId, actionId: fifth})));
@@ -313,12 +334,12 @@ async function dispatchTp(method: string, request: Request, path: readonly strin
   }
   if (fourth === 'action-transports' && fifth === undefined) {
     return method === 'POST'
-      ? agentResultResponse(await linkAgentTpActionTransport(request, await bodyWith(request, {podId})))
+      ? deprecatedActionTransportResponse(await linkAgentTpActionTransport(request, await bodyWith(request, {podId})))
       : methodNotAllowed();
   }
   if (fourth === 'action-transports' && isUuid(fifth) && sixth === undefined) {
     if (method === 'PATCH') {
-      return agentResultResponse(
+      return deprecatedActionTransportResponse(
         await updateAgentTpActionTransport(request, await bodyWith(request, {podId, linkId: fifth})),
       );
     }

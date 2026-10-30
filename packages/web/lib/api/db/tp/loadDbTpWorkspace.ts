@@ -107,6 +107,8 @@ export interface DbTpTransportLib {
   readonly fromLocationId?: string;
   readonly toLocationId?: string;
   readonly notes?: string;
+  readonly important: boolean;
+  readonly importantReason?: string;
   readonly sortOrder: number;
 }
 
@@ -449,6 +451,8 @@ export async function loadDbTpWorkspace(
         fromLocationId: t.from_location_id ?? undefined,
         toLocationId: t.to_location_id ?? undefined,
         notes: t.notes ?? undefined,
+        important: t.important === true,
+        importantReason: t.important_reason ?? undefined,
         sortOrder: t.sort_order,
       })),
       actionTransports: (actionTransportRes.data ?? []).map((l) => ({

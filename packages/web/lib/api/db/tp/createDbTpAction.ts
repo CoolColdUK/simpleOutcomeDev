@@ -59,6 +59,8 @@ export interface CreateTpActionInputForAgent {
   readonly bookingRef?: string;
   readonly url?: string;
   readonly notes?: string;
+  readonly fromLocationId?: string;
+  readonly toLocationId?: string;
   readonly sortOrder: number;
   readonly done?: boolean;
 }
@@ -94,6 +96,8 @@ export async function createDbTpActionForAgent(
       booking_ref: input.bookingRef ?? null,
       url: input.url ?? null,
       notes: input.notes ?? null,
+      from_location_id: input.fromLocationId ?? null,
+      to_location_id: input.toLocationId ?? null,
       sort_order: input.sortOrder,
       done: input.done ?? false,
     })

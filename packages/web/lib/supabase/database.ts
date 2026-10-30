@@ -882,6 +882,8 @@ export interface Database {
           from_location_id: string | null;
           to_location_id: string | null;
           notes: string | null;
+          important: boolean;
+          important_reason: string | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -897,6 +899,8 @@ export interface Database {
           from_location_id?: string | null;
           to_location_id?: string | null;
           notes?: string | null;
+          important?: boolean;
+          important_reason?: string | null;
           sort_order?: number;
         };
         Update: Record<string, unknown>;

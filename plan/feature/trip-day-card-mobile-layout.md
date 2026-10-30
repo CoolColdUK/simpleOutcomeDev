@@ -1,6 +1,13 @@
 # Trip day cards, agent travel flow, and transport importance — plan (PR #26)
 
-Draft plan for [#26](https://github.com/CoolColdUK/simpleOutcomeDev/pull/26) on branch `cursor/trip-day-card-mobile-layout-e1d6`. **Plan documents only** until Matthew says “go”; agents do not merge. One implementation pass may land UI (A, E display) and agent/API (B–F) together or in focused follow-ups, but this document is the single scope contract.
+Draft plan for [#26](https://github.com/CoolColdUK/simpleOutcomeDev/pull/26) on branch `cursor/trip-day-card-mobile-layout-e1d6`. Implemented on this branch with the recommended defaults. Agents do not merge.
+
+**Implementation notes:**
+
+- Composite create calls the existing action, route, transport, and select helpers. If a later step fails, the new action is deleted (routes and steps cascade). There is no new SQL function, so insert rules stay in those helpers.
+- Legacy action-transport `POST` and `PATCH` send `Deprecation: true` plus `deprecated` and `useInstead`. HTTP 410 waits until after one production deploy.
+- Removed MCP link tools use the existing unknown-tool response (`Unknown tool`).
+- `create_tp_travel_with_route` returns camelCase action, route, and optional transport. Granular `create_tp_action` and `create_tp_transport` still return the database row shape they returned before.
 
 | Scope | Topic |
 | --- | --- |
@@ -553,7 +560,7 @@ Phone width about 390px, a width just under 768px, and a width at 768px and abov
 - **D:** Warning shape, emit rules, and non-fatal vs error documented.
 - **E:** Schema, API, and UI touch points for `important` / `importantReason` documented.
 - **F:** Description steering table agreed.
-- This PR remains **plan-only** (markdown under `plan/`). No application code until a later “go”.
+- Implemented on this branch. Production still needs the GitHub Actions **Production** `db push` for `20261030120000_trip_transport_lib_important.sql`. HTTP 410 for action-transport routes is the follow-up after that deploy.
 
 ## Risks (scope A — layout)
 
