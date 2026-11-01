@@ -477,14 +477,18 @@ No change to `tp_transport` or `tp_route` columns; importance lives on the **lib
 
 ## Scope F — MCP descriptions (structured travel flow)
 
+**Agent rule (Matthew, Travel HK JP):** one travel action per transfer/leg on a day. Alternate modes or pickup paths to the same endpoints are **`create_tp_route`** options (then **`select_tp_route`** for the one used), not a second **`create_tp_travel_with_route`** / **`create_tp_action`** with `kind=travel`. Example: limousine 10:35 DOTON PLAZA → KIX T1 vs taxi — one travel card, two routes.
+
 Rewrite short tool descriptions in [`mcpCatalogByFeature.ts`](../../packages/web/lib/api/mcp/mcpCatalogByFeature.ts) (and any duplicated strings in OpenAPI-style REST docs if present) so agents see one story:
 
 | Tool | Description direction (summary) |
 | --- | --- |
-| `create_tp_travel_with_route` | **Primary** way to add a travel card with a route (and optional first step). Mention `transportLibId` on `initialStep`. |
-| `create_tp_action` | For non-travel kinds, or travel-only when the agent will add routes separately. If `kind=travel`, description says prefer composite tool. |
-| `create_tp_route` | Add another option to an **existing** travel action. |
-| `create_tp_transport` | Add or attach a **journey leg** on a route; **set `transportLibId`** to pick a library means. |
+| `get_tp_workspace` | Full load; remind agents: one travel per transfer/leg, alternates = routes. |
+| `create_tp_travel_with_route` | **Primary** way to add **one** travel card per transfer/leg with a route (and optional first step). Never duplicate travel for alternates — use routes. Mention `transportLibId` on `initialStep`. |
+| `create_tp_action` | For non-travel kinds, or travel-only when the agent will add routes separately. If `kind=travel`, description says prefer composite tool and **no second travel** for the same leg. |
+| `create_tp_route` | Add another option to an **existing** travel action (same transfer/leg). |
+| `select_tp_route` | Mark which alternate was actually taken. |
+| `create_tp_transport` | Add or attach a **journey step** on a route; alternates are sibling routes, not new travel actions. **Set `transportLibId`** to pick a library means. |
 | `create_tp_transport_lib` | Reusable label/mode/cost template; set `important` / `importantReason` for header alerts. |
 | `update_tp_transport` | Same attach guidance; `transportLibId: null` clears link. |
 | Removed link tools | N/A — removed from catalog (scope **C**) |

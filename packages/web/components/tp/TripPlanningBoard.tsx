@@ -9,7 +9,6 @@ import {
   Heading,
   HStack,
   Input,
-  NativeSelect,
   Stack,
   Switch,
   Text,
@@ -38,9 +37,7 @@ import TripTravelActionDetails from '@/components/tp/TripTravelActionDetails';
 import loadDbTpWorkspace, {type DbTpAction, type DbTpWorkspace} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import {deleteDbTpActionForBrowser} from '@/lib/api/db/tp/deleteDbTpAction';
 import createDbTpTripBundle from '@/lib/api/db/tp/createDbTpTripBundle';
-import updateDbTpDay from '@/lib/api/db/tp/updateDbTpDay';
 import createDbTpAction from '@/lib/api/db/tp/createDbTpAction';
-import updateDbTpDestination from '@/lib/api/db/tp/updateDbTpDestination';
 import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import updateDbTpActionSortOrders from '@/lib/api/db/tp/updateDbTpActionSortOrders';
 import createDbTpRoute from '@/lib/api/db/tp/createDbTpRoute';
@@ -48,13 +45,15 @@ import selectDbTpRoute from '@/lib/api/db/tp/selectDbTpRoute';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
+import TripDayPlanPanel from '@/components/tp/TripDayPlanPanel';
+import TripDestinationImportantPanel from '@/components/tp/TripDestinationImportantPanel';
 import TripStayActionEditor from '@/components/tp/TripStayActionEditor';
 import TripTravelActionEditor from '@/components/tp/TripTravelActionEditor';
 import TripSimpleActionEditor from '@/components/tp/TripSimpleActionEditor';
 import TripActivityActionEditor from '@/components/tp/TripActivityActionEditor';
 import TripTripCatalogPanel from '@/components/tp/TripTripCatalogPanel';
-import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
+import TripTpTravelLegOptionsHint from '@/components/tp/TripTpTravelLegOptionsHint';
 import TripTpTruncateText from '@/components/tp/TripTpTruncateText';
 import useTpTripShowPastDays from '@/lib/tp/useTpTripShowPastDays';
 
@@ -243,22 +242,6 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
         startDate: wizardStart,
         endDate: wizardEnd,
         destinationNames: wizardDestinations.split('\n'),
-      });
-      await reload();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  const saveDayHeader = async (): Promise<void> => {
-    if (selectedDay === undefined || !canWrite) {
-      return;
-    }
-    try {
-      await updateDbTpDay(selectedDay.id, {
-        dayTitle: selectedDay.dayTitle,
-        dayNotes: selectedDay.dayNotes,
-        primaryDestinationId: selectedDay.primaryDestinationId ?? null,
       });
       await reload();
     } catch (e) {
@@ -552,75 +535,16 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
           </Switch.Root>
         ) : null}
       </HStack>
-      {selectedDay !== undefined ? (
+      {selectedDay !== undefined && data !== undefined ? (
         <Stack gap={4}>
-          <Box borderWidth="1px" borderRadius="md" p={4}>
-            <Heading size="sm" mb={2}>Day plan</Heading>
-            <Stack gap={2}>
-              <Input
-                placeholder="Day title"
-                value={selectedDay.dayTitle ?? ''}
-                onChange={(e) =>
-                  setData((prev) =>
-                    prev === undefined
-                      ? prev
-                      : {
-                          ...prev,
-                          days: prev.days.map((d) => (d.id === selectedDay.id ? {...d, dayTitle: e.target.value} : d)),
-                        },
-                  )
-                }
-                onBlur={() => void saveDayHeader()}
-                disabled={!canWrite}
-              />
-              <Textarea
-                placeholder="Rough plan for this day"
-                value={selectedDay.dayNotes ?? ''}
-                onChange={(e) =>
-                  setData((prev) =>
-                    prev === undefined
-                      ? prev
-                      : {
-                          ...prev,
-                          days: prev.days.map((d) => (d.id === selectedDay.id ? {...d, dayNotes: e.target.value} : d)),
-                        },
-                  )
-                }
-                onBlur={() => void saveDayHeader()}
-                disabled={!canWrite}
-                rows={3}
-              />
-              <Field.Root>
-                <Field.Label>Primary destination (override)</Field.Label>
-                <NativeSelect.Root disabled={!canWrite}>
-                  <NativeSelect.Field
-                    value={selectedDay.primaryDestinationId ?? ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setData((prev) =>
-                        prev === undefined
-                          ? prev
-                          : {
-                              ...prev,
-                              days: prev.days.map((d) =>
-                                d.id === selectedDay.id
-                                  ? {...d, primaryDestinationId: value === '' ? undefined : value}
-                                  : d,
-                              ),
-                            },
-                      );
-                    }}
-                    onBlur={() => void saveDayHeader()}
-                  >
-                    <option value="">Auto from stay / travel</option>
-                    {data.destinations.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </NativeSelect.Field>
-                </NativeSelect.Root>
-              </Field.Root>
-            </Stack>
-          </Box>
+          <TripDayPlanPanel
+            key={selectedDay.id}
+            day={selectedDay}
+            destinations={data.destinations}
+            canWrite={canWrite}
+            onSaved={onEditorSaved}
+            onError={onEditorError}
+          />
           {activeDestinationIds.length > 0 ? (
             <TripTpCollapsible
               title={
@@ -644,17 +568,20 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             </TripTpCollapsible>
           ) : null}
           <Stack gap={2}>
-            <HStack justify="space-between">
-              <Heading size="sm">Actions</Heading>
-              {canWrite ? (
-                <HStack>
-                  <Button size="xs" onClick={() => void addAction(TpActionKind.ACTIVITY)}>+ Activity</Button>
-                  <Button size="xs" onClick={() => void addAction(TpActionKind.NOTE)}>+ Note</Button>
-                  <Button size="xs" onClick={() => void addAction(TpActionKind.STAY)}>+ Stay</Button>
-                  <Button size="xs" onClick={() => void addAction(TpActionKind.TRAVEL)}>+ Travel</Button>
-                </HStack>
-              ) : null}
-            </HStack>
+            <Stack gap={1}>
+              <HStack justify="space-between">
+                <Heading size="sm">Actions</Heading>
+                {canWrite ? (
+                  <HStack>
+                    <Button size="xs" onClick={() => void addAction(TpActionKind.ACTIVITY)}>+ Activity</Button>
+                    <Button size="xs" onClick={() => void addAction(TpActionKind.NOTE)}>+ Note</Button>
+                    <Button size="xs" onClick={() => void addAction(TpActionKind.STAY)}>+ Stay</Button>
+                    <Button size="xs" onClick={() => void addAction(TpActionKind.TRAVEL)}>+ Travel</Button>
+                  </HStack>
+                ) : null}
+              </HStack>
+              {canWrite ? <TripTpTravelLegOptionsHint /> : null}
+            </Stack>
             {timeline.length === 0 ? <Text color="fg.muted">No actions yet.</Text> : null}
             {timeline.map((entry) => {
               const action = data.actions.find((a) => a.id === entry.actionId);
@@ -836,58 +763,17 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
       <TripTpCollapsible title="Destinations (trip)">
         <Stack gap={4}>
           {data.destinations.map((d) => (
-            <Stack key={d.id} gap={2}>
-              <Text fontWeight="medium">
-                {d.name}
-                {d.activeStartDate !== undefined ? ` · ${d.activeStartDate}–${d.activeEndDate ?? '…'}` : ''}
-              </Text>
-              {canWrite ? (
-                <Textarea
-                  placeholder="Important / safety info (markdown)"
-                  value={d.importantInfo ?? ''}
-                  onChange={(e) =>
-                    setData((prev) =>
-                      prev === undefined
-                        ? prev
-                        : {
-                            ...prev,
-                            destinations: prev.destinations.map((x) =>
-                              x.id === d.id ? {...x, importantInfo: e.target.value} : x,
-                            ),
-                          },
-                    )
-                  }
-                  rows={3}
-                />
-              ) : (
-                <TripTpTruncateText lineClamp={6}>{d.importantInfo ?? ''}</TripTpTruncateText>
-              )}
-              {canWrite ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    void updateDbTpDestination(d.id, {importantInfo: d.importantInfo})
-                      .then(() => reload())
-                      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
-                  }
-                >
-                  Save destination info
-                </Button>
-              ) : null}
-              {trip !== undefined ? (
-                <TripTpAttachmentPanel
-                  podId={podId}
-                  tripId={trip.id}
-                  userId={userId}
-                  canWrite={canWrite}
-                  parent={{destinationId: d.id}}
-                  attachments={data.attachments}
-                  onChanged={onEditorSaved}
-                  onError={onEditorError}
-                />
-              ) : null}
-            </Stack>
+            <TripDestinationImportantPanel
+              key={d.id}
+              podId={podId}
+              tripId={trip.id}
+              userId={userId}
+              destination={d}
+              attachments={data.attachments}
+              canWrite={canWrite}
+              onSaved={onEditorSaved}
+              onError={onEditorError}
+            />
           ))}
         </Stack>
       </TripTpCollapsible>

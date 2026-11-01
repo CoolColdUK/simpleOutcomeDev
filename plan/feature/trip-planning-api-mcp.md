@@ -10,6 +10,8 @@ Expose the **trip planning** feature (merged from PR #9, tables `tp_*` / helpers
 
 **Catalog after PR #26:** [trip-day-card-mobile-layout.md](./trip-day-card-mobile-layout.md) adds `create_tp_travel_with_route`, transport-library `important` / `importantReason`, non-fatal travel `warnings`, and removes `link_tp_action_transport`, `update_tp_action_transport`, and `unlink_tp_action_transport` from MCP. The tables below are the pre-#26 baseline.
 
+**Agent modeling (Matthew, Travel HK JP):** one travel action per transfer/leg; alternate modes/paths = routes on that action (`create_tp_route`, `select_tp_route`), never a second travel card. Locked in [trip-planning.md](./trip-planning.md) decision #16; MCP tool blurbs live in `mcpCatalogByFeature.ts`.
+
 ---
 
 ## Implementation summary

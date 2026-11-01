@@ -29,6 +29,7 @@ import TripTpRouteOptionTitle from '@/components/tp/TripTpRouteOptionTitle';
 import TripTpLocationSelect from '@/components/tp/TripTpLocationSelect';
 import TripTpTimestampField from '@/components/tp/TripTpTimestampField';
 import TripTpTransportLibSelect from '@/components/tp/TripTpTransportLibSelect';
+import TripTpTravelLegOptionsHint from '@/components/tp/TripTpTravelLegOptionsHint';
 import type {DbTpAttachment} from '@/lib/api/db/tp/loadDbTpWorkspace';
 
 function locationPlaceName(locations: readonly DbTpLocation[], locationId: string, fallback: string): string {
@@ -330,12 +331,15 @@ export default function TripTravelActionEditor({
           <Alert.Description>{multimodalWarning}</Alert.Description>
         </Alert.Root>
       ) : null}
-      <HStack justify="space-between">
-        <Text fontWeight="medium">Routes</Text>
-        <Button size="xs" disabled={mutationsDisabled} onClick={() => void addRoute()}>
-          {pending === 'addRoute' ? 'Adding route…' : '+ Route'}
-        </Button>
-      </HStack>
+      <Stack gap={1}>
+        <HStack justify="space-between">
+          <Text fontWeight="medium">Routes</Text>
+          <Button size="xs" disabled={mutationsDisabled} onClick={() => void addRoute()}>
+            {pending === 'addRoute' ? 'Adding route…' : '+ Route'}
+          </Button>
+        </HStack>
+        <TripTpTravelLegOptionsHint />
+      </Stack>
       {actionRoutes.map((route) => {
         const routeTransports = transports.filter((t) => t.routeId === route.id).sort((a, b) => a.sortOrder - b.sortOrder);
         const routeLib = route.transportLibId !== undefined
