@@ -645,17 +645,20 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             </TripTpCollapsible>
           ) : null}
           <Stack gap={2}>
-            <HStack justify="space-between">
-              <Heading size="sm">Actions</Heading>
-              {canWrite ? (
-                <HStack>
-                  <Button size="xs" onClick={() => void addAction(TpActionKind.ACTIVITY)}>+ Activity</Button>
-                  <Button size="xs" onClick={() => void addAction(TpActionKind.NOTE)}>+ Note</Button>
-                  <Button size="xs" onClick={() => void addAction(TpActionKind.STAY)}>+ Stay</Button>
-                  <Button size="xs" onClick={() => void addAction(TpActionKind.TRAVEL)}>+ Travel</Button>
-                </HStack>
-              ) : null}
-            </HStack>
+            <Stack gap={1}>
+              <HStack justify="space-between">
+                <Heading size="sm">Actions</Heading>
+                {canWrite ? (
+                  <HStack>
+                    <Button size="xs" onClick={() => void addAction(TpActionKind.ACTIVITY)}>+ Activity</Button>
+                    <Button size="xs" onClick={() => void addAction(TpActionKind.NOTE)}>+ Note</Button>
+                    <Button size="xs" onClick={() => void addAction(TpActionKind.STAY)}>+ Stay</Button>
+                    <Button size="xs" onClick={() => void addAction(TpActionKind.TRAVEL)}>+ Travel</Button>
+                  </HStack>
+                ) : null}
+              </HStack>
+              {canWrite ? <TripTpTravelLegOptionsHint /> : null}
+            </Stack>
             {timeline.length === 0 ? <Text color="fg.muted">No actions yet.</Text> : null}
             {timeline.map((entry) => {
               const action = data.actions.find((a) => a.id === entry.actionId);
