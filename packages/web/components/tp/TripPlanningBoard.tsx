@@ -9,7 +9,6 @@ import {
   Heading,
   HStack,
   Input,
-  NativeSelect,
   Stack,
   Switch,
   Text,
@@ -539,6 +538,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
       {selectedDay !== undefined && data !== undefined ? (
         <Stack gap={4}>
           <TripDayPlanPanel
+            key={selectedDay.id}
             day={selectedDay}
             destinations={data.destinations}
             canWrite={canWrite}

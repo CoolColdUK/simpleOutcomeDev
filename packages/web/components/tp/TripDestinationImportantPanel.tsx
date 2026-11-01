@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {Stack, Text, Textarea} from '@chakra-ui/react';
 import type {DbTpAttachment, DbTpDestination} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import updateDbTpDestination from '@/lib/api/db/tp/updateDbTpDestination';
@@ -31,19 +31,11 @@ export default function TripDestinationImportantPanel({
 }: TripDestinationImportantPanelProps) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [importantInfo, setImportantInfo] = useState(destination.importantInfo ?? '');
+  const [importantInfo, setImportantInfo] = useState('');
 
   const resetDraft = (): void => {
     setImportantInfo(destination.importantInfo ?? '');
   };
-
-  useEffect(() => {
-    setImportantInfo(destination.importantInfo ?? '');
-  }, [destination.importantInfo]);
-
-  useEffect(() => {
-    setEditing(false);
-  }, [destination.id]);
 
   const save = async (): Promise<void> => {
     setBusy(true);

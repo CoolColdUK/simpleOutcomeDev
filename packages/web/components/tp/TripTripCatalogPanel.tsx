@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {Button, Checkbox, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
 import type {DbTpLocation, DbTpTransportLib} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
@@ -71,10 +71,10 @@ export default function TripTripCatalogPanel({
         <Stack gap={3} pt={2}>
           {sortedLocations.map((loc) => (
             <LocationRow
-              key={loc.id}
+              key={`${loc.id}:${editLocationId === loc.id}`}
               location={loc}
               canWrite={canWrite}
-              startEditing={editLocationId === loc.id}
+              initialEditing={editLocationId === loc.id}
               onEditingChange={(editing) => setEditLocationId(editing ? loc.id : undefined)}
               onSaved={onSaved}
               onError={onError}
@@ -91,12 +91,12 @@ export default function TripTripCatalogPanel({
         <Stack gap={3} pt={2}>
           {sortedTransports.map((t) => (
             <TransportLibRow
-              key={t.id}
+              key={`${t.id}:${editTransportId === t.id}`}
               transport={t}
               locations={sortedLocations}
               defaultCurrency={defaultCurrency}
               canWrite={canWrite}
-              startEditing={editTransportId === t.id}
+              initialEditing={editTransportId === t.id}
               onEditingChange={(editing) => setEditTransportId(editing ? t.id : undefined)}
               onSaved={onSaved}
               onError={onError}
@@ -142,14 +142,14 @@ function locationViewLines(location: DbTpLocation): {headline: string; details: 
 interface LocationRowProps {
   readonly location: DbTpLocation;
   readonly canWrite: boolean;
-  readonly startEditing: boolean;
+  readonly initialEditing: boolean;
   readonly onEditingChange: (editing: boolean) => void;
   readonly onSaved: () => void;
   readonly onError: (message: string) => void;
 }
 
-function LocationRow({location, canWrite, startEditing, onEditingChange, onSaved, onError}: LocationRowProps) {
-  const [editing, setEditing] = useState(false);
+function LocationRow({location, canWrite, initialEditing, onEditingChange, onSaved, onError}: LocationRowProps) {
+  const [editing, setEditing] = useState(initialEditing);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState(location.name);
   const [address, setAddress] = useState(location.address ?? '');
@@ -176,18 +176,6 @@ function LocationRow({location, canWrite, startEditing, onEditingChange, onSaved
     setCountry(location.country ?? '');
     setLocationType(location.locationType);
   };
-
-  useEffect(() => {
-    if (!editing) {
-      resetDraft();
-    }
-  }, [location, editing]);
-
-  useEffect(() => {
-    if (startEditing) {
-      setEditing(true);
-    }
-  }, [startEditing]);
 
   const setEditingMode = (next: boolean): void => {
     setEditing(next);
@@ -363,7 +351,7 @@ interface TransportLibRowProps {
   readonly locations: readonly DbTpLocation[];
   readonly defaultCurrency?: string;
   readonly canWrite: boolean;
-  readonly startEditing: boolean;
+  readonly initialEditing: boolean;
   readonly onEditingChange: (editing: boolean) => void;
   readonly onSaved: () => void;
   readonly onError: (message: string) => void;
@@ -374,12 +362,12 @@ function TransportLibRow({
   locations,
   defaultCurrency,
   canWrite,
-  startEditing,
+  initialEditing,
   onEditingChange,
   onSaved,
   onError,
 }: TransportLibRowProps) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing);
   const [busy, setBusy] = useState(false);
   const [label, setLabel] = useState(transport.label);
   const [mode, setMode] = useState(transport.mode ?? '');
@@ -402,18 +390,6 @@ function TransportLibRow({
     setImportant(transport.important);
     setImportantReason(transport.importantReason ?? '');
   };
-
-  useEffect(() => {
-    if (!editing) {
-      resetDraft();
-    }
-  }, [transport, editing]);
-
-  useEffect(() => {
-    if (startEditing) {
-      setEditing(true);
-    }
-  }, [startEditing]);
 
   const setEditingMode = (next: boolean): void => {
     setEditing(next);

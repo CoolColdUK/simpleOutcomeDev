@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {Box, Field, Heading, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
 import type {DbTpDay, DbTpDestination} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import updateDbTpDay from '@/lib/api/db/tp/updateDbTpDay';
@@ -28,25 +28,15 @@ function primaryDestinationLabel(
 export default function TripDayPlanPanel({day, destinations, canWrite, onSaved, onError}: TripDayPlanPanelProps) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [dayTitle, setDayTitle] = useState(day.dayTitle ?? '');
-  const [dayNotes, setDayNotes] = useState(day.dayNotes ?? '');
-  const [primaryDestinationId, setPrimaryDestinationId] = useState(day.primaryDestinationId ?? '');
+  const [dayTitle, setDayTitle] = useState('');
+  const [dayNotes, setDayNotes] = useState('');
+  const [primaryDestinationId, setPrimaryDestinationId] = useState('');
 
   const resetDraft = (): void => {
     setDayTitle(day.dayTitle ?? '');
     setDayNotes(day.dayNotes ?? '');
     setPrimaryDestinationId(day.primaryDestinationId ?? '');
   };
-
-  useEffect(() => {
-    setDayTitle(day.dayTitle ?? '');
-    setDayNotes(day.dayNotes ?? '');
-    setPrimaryDestinationId(day.primaryDestinationId ?? '');
-  }, [day.dayTitle, day.dayNotes, day.primaryDestinationId]);
-
-  useEffect(() => {
-    setEditing(false);
-  }, [day.id]);
 
   const startEdit = (): void => {
     resetDraft();
