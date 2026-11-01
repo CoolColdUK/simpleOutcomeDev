@@ -55,6 +55,7 @@ import TripActivityActionEditor from '@/components/tp/TripActivityActionEditor';
 import TripTripCatalogPanel from '@/components/tp/TripTripCatalogPanel';
 import TripTpAttachmentPanel from '@/components/tp/TripTpAttachmentPanel';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
+import TripTpTravelLegOptionsHint from '@/components/tp/TripTpTravelLegOptionsHint';
 import TripTpTruncateText from '@/components/tp/TripTpTruncateText';
 import useTpTripShowPastDays from '@/lib/tp/useTpTripShowPastDays';
 

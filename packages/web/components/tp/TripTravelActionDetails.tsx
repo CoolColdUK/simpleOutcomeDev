@@ -13,6 +13,7 @@ import type {
 } from '@/lib/api/db/tp/loadDbTpWorkspace';
 import TripTpDoneCheckbox from '@/components/tp/TripTpDoneCheckbox';
 import TripTpTruncateText from '@/components/tp/TripTpTruncateText';
+import TripTpTravelLegOptionsHint from '@/components/tp/TripTpTravelLegOptionsHint';
 import {tpIsoCountryName, tpRouteOptionSummary} from '@so/model';
 import tpFormatLocationTime from '@/components/tp/tpFormatLocationTime';
 import updateDbTpActionTransport from '@/lib/api/db/tp/updateDbTpActionTransport';
@@ -354,6 +355,7 @@ export default function TripTravelActionDetails({
           {actionRoutes.length > 0 ? (
             <Stack gap={2}>
               <Text fontWeight="medium">Route options</Text>
+              {canWrite ? <TripTpTravelLegOptionsHint /> : null}
               {actionRoutes.map((route) => (
                 <TripTravelRouteOptionDetails
                   key={route.id}
