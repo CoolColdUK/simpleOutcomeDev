@@ -77,7 +77,13 @@ function tool(
 // Trip planning MCP tools
 export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 1. Core workspace
-  tool('get_tp_workspace', 'Load complete trip workspace with all entities.', {podId}, ['podId'], (request, args) => getAgentTpWorkspace(request, args)),
+  tool(
+    'get_tp_workspace',
+    'Load complete trip workspace with all entities. Model each transfer/leg as one travel action; alternate modes or paths are routes on that action, not extra travel cards.',
+    {podId},
+    ['podId'],
+    (request, args) => getAgentTpWorkspace(request, args),
+  ),
 
   tool(
     'create_trip',
@@ -177,7 +183,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 8-10. Actions (stay/activity/note/travel)
   tool(
     'create_tp_travel_with_route',
-    'Primary way to add a travel card with a route and an optional first step. Set initialStep.transportLibId to attach a transport-library means. selectRoute defaults to true. Success may include non-fatal warnings.',
+    'Primary way to add one travel card per transfer/leg (one A→B move), with a route and optional first step. Do not add a second travel action for an alternate mode or path to the same endpoints — use create_tp_route on this action instead. Set initialStep.transportLibId to attach a transport-library means. selectRoute defaults to true. Success may include non-fatal warnings.',
     {
       podId,
       title: {type: 'string'},
@@ -239,7 +245,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'create_tp_action',
-    'Create a stay, activity, or note. For a new journey, prefer create_tp_travel_with_route. Use kind=travel only when routes will be added separately. Local times → checkInLocalTime/checkInTimezone.',
+    'Create a stay, activity, or note. For a new journey, prefer create_tp_travel_with_route. Use kind=travel only when routes will be added separately — never a second travel card for an alternate mode on the same transfer/leg. Local times → checkInLocalTime/checkInTimezone.',
     {
       podId,
       kind: {type: 'string'},
@@ -313,7 +319,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 11-14. Routes
   tool(
     'create_tp_route',
-    'Add another route option to an existing travel action. For a new journey, prefer create_tp_travel_with_route.',
+    'Add another route option (alternate mode or path) to an existing travel action for the same transfer/leg. Never create a separate travel action for alternates. For a new journey, prefer create_tp_travel_with_route.',
     {podId, actionId: {type: 'string'}, name: {type: 'string'}, notes: {type: 'string'}, sortOrder: {type: 'number'}},
     ['podId', 'actionId', 'name'],
     (request, args) => createAgentTpRoute(request, args),
@@ -340,7 +346,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'select_tp_route',
-    'Mark a route as selected for the travel action. Success may include warnings when the route has no steps.',
+    'Mark the route actually taken for this transfer/leg (e.g. limousine vs taxi). Success may include warnings when the route has no steps.',
     {podId, actionId: {type: 'string'}, routeId: {type: 'string'}},
     ['podId', 'actionId', 'routeId'],
     (request, args) => selectAgentTpRoute(request, args),
@@ -349,7 +355,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
   // 15-17. Transports
   tool(
     'create_tp_transport',
-    'Add a journey leg on a route. Set transportLibId to pick a library means (mode is copied from the library). Do not create legacy action-transport links. Local times → departLocalTime/departTimezone.',
+    'Add a journey step on a route (chain steps for one chosen route). Alternate modes belong on sibling routes via create_tp_route, not as separate travel actions. Set transportLibId to pick a library means (mode is copied from the library). Do not create legacy action-transport links. Local times → departLocalTime/departTimezone.',
     {
       podId,
       routeId: {type: 'string'},

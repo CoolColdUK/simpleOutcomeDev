@@ -45,6 +45,7 @@ Matthew confirmed in Technical Forum (Oct 2026). Do not re-litigate without a ne
 | 13 | **Cross-feature** | Todo / FP soft links → **phase 2**. |
 | 14 | **Map / bookings** | No map SDK; no booking marketplaces. |
 | 15 | **Travellers** | Multiple named travellers → **later**. |
+| 16 | **One travel per transfer/leg** | **Locked (Matthew, Travel HK JP):** Each transfer/move on the day strip (one A→B leg, e.g. DOTON PLAZA → KIX T1) gets **exactly one** travel **`tp_action`**. Alternate ways to make the same trip (taxi via OCAT vs limousine from DOTON PLAZA) are **route options** on that action (or notes on a route); **`select_tp_route`** marks the one taken. **Never** a second travel card for the same leg. |
 
 **Other defaults:** instants are canonical in UTC in Postgres; shortening trip dates with spanning content → confirm before `syncTpDaysForTrip`.
 
