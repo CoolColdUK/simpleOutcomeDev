@@ -6,7 +6,19 @@ Matthew wants the **day plan** and related trip surfaces to **read as text by de
 **Requirements:** [trip-planning.md](./trip-planning.md) (model unchanged)  
 **Related shipped UI:** [trip-day-ui-polish.md](./trip-day-ui-polish.md) (accordions, card Edit toggle), PR #27 one-travel-per-leg copy
 
-**Status:** **PLAN ONLY** on branch `cursor/trip-one-travel-per-leg-bb31` (PR #27). **No UI implementation** until Matthew approves in chat; follow-up commits land on the **same branch/PR**.
+**Status:** **Implemented** on branch `cursor/trip-one-travel-per-leg-bb31` (PR #27). Matthew approved in Technical Forum (Nov 2026).
+
+### What landed
+
+- Shared [`TripTpEditSaveBar`](../../packages/web/components/tp/TripTpEditSaveBar.tsx) (Edit / Save / Cancel).
+- [`TripDayPlanPanel`](../../packages/web/components/tp/TripDayPlanPanel.tsx) — day title, notes, primary destination; explicit Save (no blur-save).
+- [`TripDestinationImportantPanel`](../../packages/web/components/tp/TripDestinationImportantPanel.tsx) — important info text-first; attachments list/download in view, upload/delete only while editing.
+- [`TripTripCatalogPanel`](../../packages/web/components/tp/TripTripCatalogPanel.tsx) — location and transport library rows: compact view summary, Edit for full forms; new rows open in edit after create.
+- [`TripPlanningBoard`](../../packages/web/components/tp/TripPlanningBoard.tsx) wires day plan + destination panels.
+
+**Not in this pass:** inner view mode inside stay/activity/travel card editors (stretch deferred).
+
+**Defaults used (open questions):** blur-save removed; attachments view + edit-only mutations; new catalog rows enter edit after create.
 
 **Out of scope for this plan:** Telegram, map SDK, schema/API/MCP changes (unless implementation discovers a hard blocker — unlikely). **`pod_viewer`** stays read-only text everywhere (no Edit affordance).
 
@@ -124,12 +136,12 @@ Consider collapsing each location in a nested `TripTpCollapsible` (title = name)
 
 ## Acceptance criteria
 
-- [ ] With write access, **Day plan** shows text by default; **Edit** reveals fields; **Save** persists and returns to text; **Cancel** restores previous values without network write.
-- [ ] **Destinations (trip)** important info follows the same pattern for writers; viewers see text only (no disabled inputs).
-- [ ] Each **location** and **transport library** row: view summary by default; **Edit** / **Save** / **Cancel** / **Delete** behave as today for writes.
-- [ ] No new API fields or migrations.
+- [x] With write access, **Day plan** shows text by default; **Edit** reveals fields; **Save** persists and returns to text; **Cancel** restores previous values without network write.
+- [x] **Destinations (trip)** important info follows the same pattern for writers; viewers see text only (no disabled inputs).
+- [x] Each **location** and **transport library** row: view summary by default; **Edit** / **Save** / **Cancel** / **Delete** behave as today for writes.
+- [x] No new API fields or migrations.
 - [ ] Mobile: day plan and catalog remain usable without horizontal scroll regressions (manual check on a narrow viewport).
-- [ ] `pod_viewer`: no Edit buttons; all touched surfaces remain read-only text.
+- [x] `pod_viewer`: no Edit buttons; all touched surfaces remain read-only text.
 
 ---
 
