@@ -52,8 +52,8 @@ export default function TripDayPlanPanel({day, destinations, canWrite, onSaved, 
     setBusy(true);
     try {
       await updateDbTpDay(day.id, {
-        dayTitle: dayTitle === '' ? null : dayTitle,
-        dayNotes: dayNotes === '' ? null : dayNotes,
+        dayTitle: dayTitle === '' ? undefined : dayTitle,
+        dayNotes: dayNotes === '' ? undefined : dayNotes,
         primaryDestinationId: primaryDestinationId === '' ? null : primaryDestinationId,
       });
       await onSaved();

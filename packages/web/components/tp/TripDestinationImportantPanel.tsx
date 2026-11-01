@@ -40,7 +40,9 @@ export default function TripDestinationImportantPanel({
   const save = async (): Promise<void> => {
     setBusy(true);
     try {
-      await updateDbTpDestination(destination.id, {importantInfo: importantInfo === '' ? null : importantInfo});
+      await updateDbTpDestination(destination.id, {
+        importantInfo: importantInfo === '' ? undefined : importantInfo,
+      });
       await onSaved();
       setEditing(false);
     } catch (e) {
