@@ -1,5 +1,5 @@
 import {TP_ACTIVITY_LOCKED_CODE, TP_TRIP_LOCKED_CODE} from '@so/model';
-import {agentErr, agentOk, type AgentResult} from '@/lib/api/agent/agentResult';
+import {agentErr, agentOk, type AgentErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import type {AgentContext} from '@/lib/api/agent/loadAgentContext';
 import {
   assertTpActionContentUnlocked,
@@ -7,7 +7,7 @@ import {
   assertTpTripUnlockedByPodId,
 } from '@/lib/api/db/tp/tpDbLockChecks';
 
-function lockAgentErr(error: unknown): AgentResult<true> | undefined {
+function lockAgentErr(error: unknown): AgentErr | undefined {
   if (!(error instanceof Error)) {
     return undefined;
   }
@@ -22,7 +22,7 @@ function lockAgentErr(error: unknown): AgentResult<true> | undefined {
 
 export async function agentAssertTpTripUnlocked(ctx: AgentContext, tripId: string): Promise<AgentResult<true>> {
   try {
-    await assertTpTripUnlocked(ctx.data.supabase, tripId);
+    await assertTpTripUnlocked(ctx.supabase, tripId);
     return agentOk(true);
   } catch (e: unknown) {
     return lockAgentErr(e) ?? agentErr(500, 'internal_error', e instanceof Error ? e.message : String(e));
@@ -31,7 +31,7 @@ export async function agentAssertTpTripUnlocked(ctx: AgentContext, tripId: strin
 
 export async function agentAssertTpTripUnlockedByPodId(ctx: AgentContext, podId: string): Promise<AgentResult<string>> {
   try {
-    const tripId = await assertTpTripUnlockedByPodId(ctx.data.supabase, podId);
+    const tripId = await assertTpTripUnlockedByPodId(ctx.supabase, podId);
     return agentOk(tripId);
   } catch (e: unknown) {
     const locked = lockAgentErr(e);
@@ -47,7 +47,7 @@ export async function agentAssertTpActionContentUnlocked(
   actionId: string,
 ): Promise<AgentResult<true>> {
   try {
-    await assertTpActionContentUnlocked(ctx.data.supabase, actionId);
+    await assertTpActionContentUnlocked(ctx.supabase, actionId);
     return agentOk(true);
   } catch (e: unknown) {
     return lockAgentErr(e) ?? agentErr(500, 'internal_error', e instanceof Error ? e.message : String(e));
