@@ -44,3 +44,13 @@ export {TP_LOCATION_TYPES, isTpLocationType, tpLocationTypeLabel} from './tpLoca
 export type {TpLocationType} from './tpLocationType';
 export {default as tpSpanOverlapsTripDay} from './tpSpanOverlapsTripDay';
 export type {TpDestinationRef} from './tpDestinationRef';
+export {
+  TP_ACTIVITY_LOCKED_CODE,
+  TP_TRIP_LOCKED_CODE,
+  TpActivityLockedError,
+  TpTripLockedError,
+  tpThrowIfActivityLocked,
+  tpThrowIfTripLocked,
+} from './tpPlanLock';
+export {tpActionKindBackgroundColor, tpParseActionKindColors} from './tpActionKindColors';
+export type {TpActionKindColors} from './tpActionKindColors';

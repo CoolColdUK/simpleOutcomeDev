@@ -13,7 +13,7 @@ There is **no** separate “trip plan editor” product — when unlocked, editi
 **Requirements:** [trip-planning.md](./trip-planning.md)  
 **Shipped baseline:** [trip-text-first-edit-save.md](./trip-text-first-edit-save.md) — **implemented** in PR #27 (merge `3ab59aa` on `develop`).
 
-**Status:** **Plan only** — branch `cursor/trip-card-shell-activity-colours-f12f` (PR #28). **No implementation in this pass.** **Do not merge** until implementation is complete and Matthew confirms QA. **Implement on this same branch / PR** only after Matthew **approve / Go**.
+**Status:** **Implemented** — branch `cursor/trip-card-shell-activity-colours-f12f` (PR #28). Ready for Matthew QA; **do not merge** until Matthew confirms.
 
 ---
 
@@ -203,21 +203,21 @@ alter table public.tp_action
 
 ### UI shell & chrome
 
-- [ ] Icon Edit/Delete pattern on day plan, destination, catalog rows; expandable cards; hide empty Important/Attachments; hex colours in Trip settings Display.
-- [ ] **Trip settings** saves title, dates, timezone, status, budget, maps URL, notes, default currency via existing `updateDbTpTrip` when trip **unlocked**.
-- [ ] Trip **locked** → trip info/display saves refused; unlock in UI restores editing.
+- [x] Icon Edit/Delete pattern on day plan, destination, catalog rows; expandable cards; hide empty Important/Attachments; hex colours in Trip settings Display.
+- [x] **Trip settings** saves title, dates, timezone, status, budget, maps URL, notes, default currency via existing `updateDbTpTrip` when trip **unlocked**.
+- [x] Trip **locked** → trip info/display saves refused; unlock in UI restores editing.
 
 ### Locks (both UI-only toggles)
 
-- [ ] Migrations **`tp_trip.locked`**, **`tp_action.locked`**; workspace exposes flags.
-- [ ] Writers toggle **trip lock** and **activity lock** only in web UI; **no** MCP lock tools.
-- [ ] Trip locked → all MCP/REST plan writes + UI plan edits fail; activity lock toggles disabled.
-- [ ] Trip unlocked + activity locked → that activity’s MCP/REST/UI content writes fail; unlock on card restores edits; **trip unlock does not** clear activity lock.
-- [ ] `pod_viewer`: sees state; no toggles.
+- [x] Migrations **`tp_trip.locked`**, **`tp_action.locked`**; workspace exposes flags.
+- [x] Writers toggle **trip lock** and **activity lock** only in web UI; **no** MCP lock tools.
+- [x] Trip locked → all MCP/REST plan writes + UI plan edits fail; activity lock toggles disabled.
+- [x] Trip unlocked + activity locked → that activity’s MCP/REST/UI content writes fail; unlock on card restores edits; **trip unlock does not** clear activity lock.
+- [x] `pod_viewer`: sees state; no toggles.
 
 ### Migrations
 
-- [ ] `action_kind_colors`, `tp_trip.locked`, `tp_action.locked` via Production `db push`.
+- [x] `action_kind_colors`, `tp_trip.locked`, `tp_action.locked` via Production `db push`.
 
 ---
 
@@ -243,4 +243,4 @@ alter table public.tp_action
 
 ## After Matthew approves implementation
 
-**Implement on branch `cursor/trip-card-shell-activity-colours-f12f` in PR #28.** Update **Status**, check acceptance criteria, convert PR to ready for review. Do not merge until Matthew confirms QA.
+**Shipped on branch `cursor/trip-card-shell-activity-colours-f12f` in PR #28.** Production deploy requires **`db push`** for migration `20261102120000_trip_locks_and_display_colors.sql`. Do not merge until Matthew confirms QA.

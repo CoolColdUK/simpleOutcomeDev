@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpActionContentUnlocked, tryAssertTpActionContentUnlocked} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateDbTpActionInput {
   readonly title?: string;
@@ -109,6 +110,7 @@ function buildTpActionPatch(input: UpdateDbTpActionInput): Database['public']['T
 
 export default async function updateDbTpAction(actionId: string, input: UpdateDbTpActionInput): Promise<void> {
   const supabase = getSupabaseBrowserClient();
+  await assertTpActionContentUnlocked(supabase, actionId);
   const patch = buildTpActionPatch(input);
   if (Object.keys(patch).length === 0) {
     return;
@@ -127,6 +129,10 @@ export async function updateDbTpActionForAgent(
   input: UpdateTpActionInput,
 ) {
   const {actionId, ...updates} = input;
+  const lockErr = await tryAssertTpActionContentUnlocked(supabase, actionId);
+  if (lockErr !== undefined) {
+    return {data: null, error: lockErr};
+  }
 
   return supabase
     .from('tp_action')

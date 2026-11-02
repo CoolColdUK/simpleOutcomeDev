@@ -1,6 +1,7 @@
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import uploadStorageTpAttachment from '@/lib/api/storage/uploadStorageTpAttachment';
+import {assertTpTripUnlocked} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export default async function createDbTpAttachment(
   podId: string,
@@ -9,9 +10,10 @@ export default async function createDbTpAttachment(
   parent: {transportId: string} | {destinationId: string},
   file: File,
 ): Promise<void> {
+  const supabase = getSupabaseBrowserClient();
+  await assertTpTripUnlocked(supabase, tripId);
   const attachmentId = crypto.randomUUID();
   const storagePath = await uploadStorageTpAttachment(podId, parent, attachmentId, file);
-  const supabase = getSupabaseBrowserClient();
   const {error} = await supabase.from('tp_attachment').insert({
     id: attachmentId,
     pod_id: podId,

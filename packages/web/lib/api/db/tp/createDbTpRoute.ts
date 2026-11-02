@@ -2,10 +2,12 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import {assertTpActionContentUnlocked} from '@/lib/api/db/tp/tpDbLockChecks';
 
 // Client-side UI helper (from PR #14)
 export default async function createDbTpRoute(actionId: string, name: string, sortOrder: number): Promise<string> {
   const supabase = getSupabaseBrowserClient();
+  await assertTpActionContentUnlocked(supabase, actionId);
   const {data, error} = await supabase
     .from('tp_route')
     .insert({action_id: actionId, name, is_selected: false, sort_order: sortOrder})
@@ -30,6 +32,7 @@ export async function createDbTpRouteForAgent(
   supabase: SupabaseClient<Database>,
   input: CreateTpRouteInputForAgent,
 ) {
+  await assertTpActionContentUnlocked(supabase, input.actionId);
   return supabase
     .from('tp_route')
     .insert({

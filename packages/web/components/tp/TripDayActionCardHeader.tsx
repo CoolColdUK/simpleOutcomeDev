@@ -1,7 +1,7 @@
 'use client';
 
 import {Badge, Box, Button, HStack, IconButton, Stack} from '@chakra-ui/react';
-import {ArrowDownIcon, ArrowUpIcon, CrossIcon, DeleteIcon, EditIcon} from '@so/component';
+import {ArrowDownIcon, ArrowUpIcon, CrossIcon, DeleteIcon, EditIcon, LockIcon} from '@so/component';
 import type {TpTimelineDisplayMode, TpTimelinePin} from '@so/model';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import TripDayCardTags from '@/components/tp/TripDayCardTags';
@@ -28,6 +28,9 @@ export interface TripDayActionCardHeaderProps {
   readonly moveDownDisabled: boolean;
   readonly showImportant: boolean;
   readonly importantReason?: string;
+  readonly activityLocked?: boolean;
+  readonly showActivityLock?: boolean;
+  readonly onToggleActivityLock?: () => void;
   readonly onToggleDone: (done: boolean) => void;
   readonly onAnchorDay: () => void;
   readonly onMoveUp: () => void;
@@ -55,6 +58,9 @@ export default function TripDayActionCardHeader({
   moveDownDisabled,
   showImportant,
   importantReason,
+  activityLocked = false,
+  showActivityLock = false,
+  onToggleActivityLock,
   onToggleDone,
   onAnchorDay,
   onMoveUp,
@@ -63,6 +69,8 @@ export default function TripDayActionCardHeader({
   onToggleEdit,
 }: TripDayActionCardHeaderProps) {
   const showMove = displayMode === 'canonical' && pin === 'flow' && canWrite;
+  const editDisabled = !canWrite || (kind === 'activity' && activityLocked);
+  const deleteDisabled = editDisabled;
   return (
     <HStack align="flex-start" gap={2} minW={0} maxW="100%" wrap={{base: 'wrap', md: 'nowrap'}}>
       {showActionDone ? (
@@ -87,6 +95,11 @@ export default function TripDayActionCardHeader({
         <Box flexShrink={0}>
           <TripTpImportantReasonHint reason={importantReason} />
         </Box>
+      ) : null}
+      {activityLocked ? (
+        <Badge flexShrink={0} variant="outline" colorPalette="orange">
+          locked
+        </Badge>
       ) : null}
       <Stack order={{base: 1, md: 0}} flex={{base: '1 0 100%', md: '1'}} gap={1} minW={0} maxW="100%">
         <TripTpTruncateText fontWeight="medium" lineClamp={2}>
@@ -132,17 +145,34 @@ export default function TripDayActionCardHeader({
           </>
         ) : null}
         {canWrite ? (
-          <AppIconTooltip label={`Delete ${kind} ${title}`}>
-            <IconButton
-              aria-label={`Delete ${kind} ${title}`}
-              size="xs"
-              variant="ghost"
-              colorPalette="red"
-              onClick={onDelete}
-            >
-              <DeleteIcon size={14} />
-            </IconButton>
-          </AppIconTooltip>
+          <>
+            {showActivityLock && onToggleActivityLock !== undefined ? (
+              <AppIconTooltip
+                label={activityLocked ? `Unlock activity ${title}` : `Lock activity ${title}`}
+              >
+                <IconButton
+                  aria-label={activityLocked ? `Unlock activity ${title}` : `Lock activity ${title}`}
+                  size="xs"
+                  variant={activityLocked ? 'solid' : 'outline'}
+                  onClick={onToggleActivityLock}
+                >
+                  <LockIcon size={14} />
+                </IconButton>
+              </AppIconTooltip>
+            ) : null}
+            <AppIconTooltip label={`Delete ${kind} ${title}`}>
+              <IconButton
+                aria-label={`Delete ${kind} ${title}`}
+                size="xs"
+                variant="ghost"
+                colorPalette="red"
+                disabled={deleteDisabled}
+                onClick={onDelete}
+              >
+                <DeleteIcon size={14} />
+              </IconButton>
+            </AppIconTooltip>
+          </>
         ) : null}
         {showCardEdit ? (
           <AppIconTooltip label={expanded ? `Close editor ${title}` : `Edit ${kind} ${title}`}>
@@ -150,6 +180,7 @@ export default function TripDayActionCardHeader({
               aria-label={expanded ? `Close editor ${title}` : `Edit ${kind} ${title}`}
               size="xs"
               variant={expanded ? 'solid' : 'outline'}
+              disabled={editDisabled}
               onClick={onToggleEdit}
             >
               {expanded ? <CrossIcon size={14} /> : <EditIcon size={14} />}

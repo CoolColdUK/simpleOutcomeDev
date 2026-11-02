@@ -45,6 +45,9 @@ export function dbErr(error: AgentDbError | null | undefined): AgentErr | undefi
     hint: error.hint,
   });
   const code = error.code?.trim();
+  if (code === 'trip_locked' || code === 'activity_locked') {
+    return agentErr(409, code, error.message);
+  }
   return agentErr(500, 'database_error', code === undefined || code === '' ? 'Database request failed' : `Database request failed (${code})`);
 }
 

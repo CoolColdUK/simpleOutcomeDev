@@ -2,6 +2,10 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {
+  assertTpActionContentUnlocked,
+  assertTpTripUnlockedForActionTransportLink,
+} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface CreateDbTpActionTransportInput {
   readonly actionId: string;
@@ -19,6 +23,7 @@ export async function createDbTpActionTransportForAgent(
   supabase: SupabaseClient<Database>,
   input: CreateDbTpActionTransportInput,
 ) {
+  await assertTpActionContentUnlocked(supabase, input.actionId);
   return supabase
     .from('tp_action_transport')
     .insert({

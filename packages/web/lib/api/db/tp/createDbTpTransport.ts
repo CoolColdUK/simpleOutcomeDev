@@ -1,7 +1,9 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlockedForRoute} from '@/lib/api/db/tp/tpDbLockChecks';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import {assertTpTripUnlockedForRoute} from '@/lib/api/db/tp/tpDbLockChecks';
 
 // Client-side UI helper (from PR #14)
 export interface CreateDbTpTransportFromLib {
@@ -20,6 +22,7 @@ export default async function createDbTpTransport(
   lib?: CreateDbTpTransportFromLib,
 ): Promise<string> {
   const supabase = getSupabaseBrowserClient();
+  await assertTpTripUnlockedForRoute(supabase, routeId);
   const {data, error} = await supabase
     .from('tp_transport')
     .insert({
@@ -69,6 +72,7 @@ export async function createDbTpTransportForAgent(
   supabase: SupabaseClient<Database>,
   input: CreateTpTransportInputForAgent,
 ) {
+  await assertTpTripUnlockedForRoute(supabase, input.routeId);
   return supabase
     .from('tp_transport')
     .insert({

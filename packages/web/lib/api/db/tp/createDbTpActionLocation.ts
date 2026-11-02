@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpActionContentUnlocked} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface CreateDbTpActionLocationInput {
   readonly actionId: string;
@@ -14,6 +15,7 @@ export async function createDbTpActionLocationForAgent(
   supabase: SupabaseClient<Database>,
   input: CreateDbTpActionLocationInput,
 ) {
+  await assertTpActionContentUnlocked(supabase, input.actionId);
   return supabase
     .from('tp_action_location')
     .insert({

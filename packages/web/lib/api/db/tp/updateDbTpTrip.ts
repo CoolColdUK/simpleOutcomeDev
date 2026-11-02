@@ -1,6 +1,7 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
 import syncDbTpDaysForTrip from '@/lib/api/db/tp/syncDbTpDaysForTrip';
+import {assertTpTripUnlockedByPodId, tryAssertTpTripUnlockedByPodId} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateTpTripInput {
   readonly podId: string;
@@ -26,6 +27,11 @@ export default async function updateDbTpTrip(supabase: SupabaseClient<Database>,
   }
   if (existing.data === null) {
     return {data: null, error: null};
+  }
+
+  const tripLock = await tryAssertTpTripUnlockedByPodId(supabase, podId);
+  if ('lockError' in tripLock) {
+    return {data: null, error: tripLock.lockError};
   }
 
   const tripUpdates: Database['public']['Tables']['tp_trip']['Update'] = {

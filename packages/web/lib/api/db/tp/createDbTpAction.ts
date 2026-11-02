@@ -3,6 +3,7 @@ import type {Database} from '@/lib/supabase/database';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {TpActionKind} from '@so/model';
+import {assertTpTripUnlocked} from '@/lib/api/db/tp/tpDbLockChecks';
 
 // Client-side UI helper (from PR #14)
 export interface CreateDbTpActionInput {
@@ -15,6 +16,7 @@ export interface CreateDbTpActionInput {
 
 export default async function createDbTpAction(input: CreateDbTpActionInput): Promise<string> {
   const supabase = getSupabaseBrowserClient();
+  await assertTpTripUnlocked(supabase, input.tripId);
   const {data, error} = await supabase
     .from('tp_action')
     .insert({
@@ -69,6 +71,7 @@ export async function createDbTpActionForAgent(
   supabase: SupabaseClient<Database>,
   input: CreateTpActionInputForAgent,
 ) {
+  await assertTpTripUnlocked(supabase, input.tripId);
   return supabase
     .from('tp_action')
     .insert({

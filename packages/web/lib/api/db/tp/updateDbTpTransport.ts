@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlockedForTransport} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateDbTpTransportInput {
   readonly mode?: string;
@@ -85,6 +86,7 @@ function buildTpTransportPatch(input: UpdateDbTpTransportInput): Database['publi
 
 export default async function updateDbTpTransport(transportId: string, input: UpdateDbTpTransportInput): Promise<void> {
   const supabase = getSupabaseBrowserClient();
+  await assertTpTripUnlockedForTransport(supabase, transportId);
   const patch = buildTpTransportPatch(input);
   if (Object.keys(patch).length === 0) {
     return;
@@ -103,6 +105,7 @@ export async function updateDbTpTransportForAgent(
   input: UpdateTpTransportInput,
 ) {
   const {transportId, ...updates} = input;
+  await assertTpTripUnlockedForTransport(supabase, transportId);
 
   return supabase
     .from('tp_transport')

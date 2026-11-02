@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlockedForRoute} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateDbTpRouteInput {
   readonly name?: string;
@@ -18,6 +19,7 @@ export async function updateDbTpRouteForAgent(
   routeId: string,
   input: UpdateDbTpRouteInput,
 ) {
+  await assertTpTripUnlockedForRoute(supabase, routeId);
   const patch: Database['public']['Tables']['tp_route']['Update'] = {};
   if (input.name !== undefined) {
     patch.name = input.name;

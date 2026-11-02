@@ -514,9 +514,15 @@ export interface Database {
         Relationships: [];
       };
       tp_setting: {
-        Row: {pod_id: string; default_currency: string; created_at: string; updated_at: string};
-        Insert: {pod_id: string; default_currency?: string};
-        Update: {default_currency?: string};
+        Row: {
+          pod_id: string;
+          default_currency: string;
+          action_kind_colors: Record<string, unknown> | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {pod_id: string; default_currency?: string; action_kind_colors?: Record<string, unknown> | null};
+        Update: {default_currency?: string; action_kind_colors?: Record<string, unknown> | null};
         Relationships: [];
       };
       tp_trip: {
@@ -532,6 +538,7 @@ export interface Database {
           budget_currency: string | null;
           maps_url: string | null;
           notes: string | null;
+          locked: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -547,6 +554,7 @@ export interface Database {
           budget_currency?: string | null;
           maps_url?: string | null;
           notes?: string | null;
+          locked?: boolean;
         };
         Update: {
           title?: string;
@@ -558,6 +566,7 @@ export interface Database {
           budget_currency?: string | null;
           maps_url?: string | null;
           notes?: string | null;
+          locked?: boolean;
         };
         Relationships: [];
       };
@@ -668,6 +677,7 @@ export interface Database {
           to_location_id: string | null;
           duration_minutes: number | null;
           done: boolean;
+          locked: boolean;
           sort_order: number;
           created_at: string;
           updated_at: string;

@@ -2,12 +2,18 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpActionContentUnlocked} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export async function selectTpRouteInDatabase(
   supabase: SupabaseClient<Database>,
   actionId: string,
   routeId: string,
 ): Promise<{error: Error | null}> {
+  try {
+    await assertTpActionContentUnlocked(supabase, actionId);
+  } catch (e: unknown) {
+    return {error: e instanceof Error ? e : new Error(String(e))};
+  }
   const {data: route, error: routeErr} = await supabase
     .from('tp_route')
     .select('id, action_id')

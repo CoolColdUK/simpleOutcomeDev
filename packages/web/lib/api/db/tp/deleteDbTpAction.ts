@@ -2,11 +2,13 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
+import {assertTpActionContentUnlocked} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export default async function deleteDbTpAction(
   supabase: SupabaseClient<Database>,
   actionId: string,
 ) {
+  await assertTpActionContentUnlocked(supabase, actionId);
   return supabase
     .from('tp_action')
     .delete()
