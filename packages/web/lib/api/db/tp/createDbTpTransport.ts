@@ -1,6 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
-import {assertTpTripUnlockedForRoute} from '@/lib/api/db/tp/tpDbLockChecks';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import {assertTpTripUnlockedForRoute} from '@/lib/api/db/tp/tpDbLockChecks';
