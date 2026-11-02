@@ -1,4 +1,3 @@
-import {describe, expect, it} from 'vitest';
 import {
   TP_ACTIVITY_LOCKED_CODE,
   TP_TRIP_LOCKED_CODE,
