@@ -1,16 +1,19 @@
 'use client';
 
 import {useState} from 'react';
-import {Box, Field, Heading, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
+import {Field, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
 import type {DbTpDay, DbTpDestination} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import updateDbTpDay from '@/lib/api/db/tp/updateDbTpDay';
 import TripTpEditSaveBar from '@/components/tp/TripTpEditSaveBar';
+import TripTpExpandableCard from '@/components/tp/TripTpExpandableCard';
+import TripTpHeaderIconActions from '@/components/tp/TripTpHeaderIconActions';
 import TripTpTruncateText from '@/components/tp/TripTpTruncateText';
 
 export interface TripDayPlanPanelProps {
   readonly day: DbTpDay;
   readonly destinations: readonly DbTpDestination[];
   readonly canWrite: boolean;
+  readonly tripLocked: boolean;
   readonly onSaved: () => void | Promise<void>;
   readonly onError: (message: string) => void;
 }
@@ -25,27 +28,25 @@ function primaryDestinationLabel(
   return destinations.find((d) => d.id === primaryDestinationId)?.name ?? 'Unknown destination';
 }
 
-export default function TripDayPlanPanel({day, destinations, canWrite, onSaved, onError}: TripDayPlanPanelProps) {
+export default function TripDayPlanPanel({
+  day,
+  destinations,
+  canWrite,
+  tripLocked,
+  onSaved,
+  onError,
+}: TripDayPlanPanelProps) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dayTitle, setDayTitle] = useState('');
   const [dayNotes, setDayNotes] = useState('');
   const [primaryDestinationId, setPrimaryDestinationId] = useState('');
+  const writeDisabled = !canWrite || tripLocked;
 
   const resetDraft = (): void => {
     setDayTitle(day.dayTitle ?? '');
     setDayNotes(day.dayNotes ?? '');
     setPrimaryDestinationId(day.primaryDestinationId ?? '');
-  };
-
-  const startEdit = (): void => {
-    resetDraft();
-    setEditing(true);
-  };
-
-  const cancelEdit = (): void => {
-    resetDraft();
-    setEditing(false);
   };
 
   const save = async (): Promise<void> => {
@@ -68,11 +69,40 @@ export default function TripDayPlanPanel({day, destinations, canWrite, onSaved, 
   const primaryLabel = primaryDestinationLabel(day.primaryDestinationId, destinations);
 
   return (
-    <Box borderWidth="1px" borderRadius="md" p={4}>
-      <Heading size="sm" mb={2}>
-        Day plan
-      </Heading>
-      {editing && canWrite ? (
+    <TripTpExpandableCard
+      title="Day plan"
+      defaultExpanded
+      headerActions={
+        canWrite ? (
+          <TripTpHeaderIconActions
+            editLabel="Edit day plan"
+            disabled={writeDisabled}
+            onEdit={() => {
+              resetDraft();
+              setEditing(true);
+            }}
+          />
+        ) : null
+      }
+      footer={
+        <TripTpEditSaveBar
+          editing={editing}
+          canWrite={canWrite && !tripLocked}
+          busy={busy}
+          hideEditButton
+          onEdit={() => {
+            resetDraft();
+            setEditing(true);
+          }}
+          onSave={() => void save()}
+          onCancel={() => {
+            resetDraft();
+            setEditing(false);
+          }}
+        />
+      }
+    >
+      {editing && canWrite && !tripLocked ? (
         <Stack gap={2}>
           <Field.Root>
             <Field.Label>Day title</Field.Label>
@@ -125,16 +155,6 @@ export default function TripDayPlanPanel({day, destinations, canWrite, onSaved, 
           </Stack>
         </Stack>
       )}
-      <Box pt={3}>
-        <TripTpEditSaveBar
-          editing={editing}
-          canWrite={canWrite}
-          busy={busy}
-          onEdit={startEdit}
-          onSave={() => void save()}
-          onCancel={cancelEdit}
-        />
-      </Box>
-    </Box>
+    </TripTpExpandableCard>
   );
 }

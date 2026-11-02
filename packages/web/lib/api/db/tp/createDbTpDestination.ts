@@ -1,5 +1,6 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlocked} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface CreateTpDestinationInput {
   readonly tripId: string;
@@ -17,6 +18,7 @@ export default async function createDbTpDestination(
   supabase: SupabaseClient<Database>,
   input: CreateTpDestinationInput,
 ) {
+  await assertTpTripUnlocked(supabase, input.tripId);
   return supabase
     .from('tp_destination')
     .insert({

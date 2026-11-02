@@ -4,6 +4,8 @@ import {useState} from 'react';
 import {Button, Checkbox, Field, HStack, Input, NativeSelect, Stack, Text, Textarea} from '@chakra-ui/react';
 import type {DbTpLocation, DbTpTransportLib} from '@/lib/api/db/tp/loadDbTpWorkspace';
 import TripTpCollapsible from '@/components/tp/TripTpCollapsible';
+import TripTpExpandableCard from '@/components/tp/TripTpExpandableCard';
+import TripTpHeaderIconActions from '@/components/tp/TripTpHeaderIconActions';
 import createDbTpLocation from '@/lib/api/db/tp/createDbTpLocation';
 import updateDbTpLocation from '@/lib/api/db/tp/updateDbTpLocation';
 import deleteDbTpLocation from '@/lib/api/db/tp/deleteDbTpLocation';
@@ -22,6 +24,7 @@ export interface TripTripCatalogPanelProps {
   readonly transportLib: readonly DbTpTransportLib[];
   readonly defaultCurrency?: string;
   readonly canWrite: boolean;
+  readonly tripLocked: boolean;
   readonly onSaved: () => void;
   readonly onError: (message: string) => void;
 }
@@ -32,6 +35,7 @@ export default function TripTripCatalogPanel({
   transportLib,
   defaultCurrency,
   canWrite,
+  tripLocked,
   onSaved,
   onError,
 }: TripTripCatalogPanelProps) {
@@ -74,13 +78,14 @@ export default function TripTripCatalogPanel({
               key={`${loc.id}:${editLocationId === loc.id}`}
               location={loc}
               canWrite={canWrite}
+              tripLocked={tripLocked}
               initialEditing={editLocationId === loc.id}
               onEditingChange={(editing) => setEditLocationId(editing ? loc.id : undefined)}
               onSaved={onSaved}
               onError={onError}
             />
           ))}
-          {canWrite ? (
+          {canWrite && !tripLocked ? (
             <Button size="sm" variant="outline" onClick={() => void addLocation()}>
               + Location
             </Button>
@@ -96,13 +101,14 @@ export default function TripTripCatalogPanel({
               locations={sortedLocations}
               defaultCurrency={defaultCurrency}
               canWrite={canWrite}
+              tripLocked={tripLocked}
               initialEditing={editTransportId === t.id}
               onEditingChange={(editing) => setEditTransportId(editing ? t.id : undefined)}
               onSaved={onSaved}
               onError={onError}
             />
           ))}
-          {canWrite ? (
+          {canWrite && !tripLocked ? (
             <Button size="sm" variant="outline" onClick={() => void addTransport()}>
               + Transport
             </Button>
@@ -142,13 +148,22 @@ function locationViewLines(location: DbTpLocation): {headline: string; details: 
 interface LocationRowProps {
   readonly location: DbTpLocation;
   readonly canWrite: boolean;
+  readonly tripLocked: boolean;
   readonly initialEditing: boolean;
   readonly onEditingChange: (editing: boolean) => void;
   readonly onSaved: () => void;
   readonly onError: (message: string) => void;
 }
 
-function LocationRow({location, canWrite, initialEditing, onEditingChange, onSaved, onError}: LocationRowProps) {
+function LocationRow({
+  location,
+  canWrite,
+  tripLocked,
+  initialEditing,
+  onEditingChange,
+  onSaved,
+  onError,
+}: LocationRowProps) {
   const [editing, setEditing] = useState(initialEditing);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState(location.name);
@@ -208,6 +223,10 @@ function LocationRow({location, canWrite, initialEditing, onEditingChange, onSav
   };
 
   const remove = async (): Promise<void> => {
+    const ok = window.confirm(`Delete location “${location.name}”? This cannot be undone.`);
+    if (!ok) {
+      return;
+    }
     setBusy(true);
     try {
       await deleteDbTpLocation(location.id);
@@ -220,10 +239,45 @@ function LocationRow({location, canWrite, initialEditing, onEditingChange, onSav
   };
 
   const view = locationViewLines(location);
+  const writeDisabled = !canWrite || tripLocked;
 
   return (
-    <Stack gap={2} borderWidth="1px" borderRadius="md" p={3} fontSize="sm">
-      {editing && canWrite ? (
+    <TripTpExpandableCard
+      title={view.headline}
+      defaultExpanded={false}
+      headerActions={
+        canWrite ? (
+          <TripTpHeaderIconActions
+            editLabel={`Edit location ${location.name}`}
+            deleteLabel={`Delete location ${location.name}`}
+            disabled={writeDisabled}
+            onEdit={() => {
+              resetDraft();
+              setEditingMode(true);
+            }}
+            onDelete={() => void remove()}
+          />
+        ) : null
+      }
+      footer={
+        <TripTpEditSaveBar
+          editing={editing}
+          canWrite={canWrite && !tripLocked}
+          busy={busy}
+          hideEditButton
+          onEdit={() => {
+            resetDraft();
+            setEditingMode(true);
+          }}
+          onSave={() => void save()}
+          onCancel={() => {
+            resetDraft();
+            setEditingMode(false);
+          }}
+        />
+      }
+    >
+      {editing && canWrite && !tripLocked ? (
         <>
           <Field.Root>
             <Field.Label>Name</Field.Label>
@@ -296,28 +350,7 @@ function LocationRow({location, canWrite, initialEditing, onEditingChange, onSav
           ) : null}
         </Stack>
       )}
-      <TripTpEditSaveBar
-        editing={editing}
-        canWrite={canWrite}
-        busy={busy}
-        onEdit={() => {
-          resetDraft();
-          setEditingMode(true);
-        }}
-        onSave={() => void save()}
-        onCancel={() => {
-          resetDraft();
-          setEditingMode(false);
-        }}
-        trailing={
-          canWrite ? (
-            <Button size="sm" variant="outline" colorPalette="red" disabled={busy} onClick={() => void remove()}>
-              Delete
-            </Button>
-          ) : null
-        }
-      />
-    </Stack>
+    </TripTpExpandableCard>
   );
 }
 
@@ -351,6 +384,7 @@ interface TransportLibRowProps {
   readonly locations: readonly DbTpLocation[];
   readonly defaultCurrency?: string;
   readonly canWrite: boolean;
+  readonly tripLocked: boolean;
   readonly initialEditing: boolean;
   readonly onEditingChange: (editing: boolean) => void;
   readonly onSaved: () => void;
@@ -362,6 +396,7 @@ function TransportLibRow({
   locations,
   defaultCurrency,
   canWrite,
+  tripLocked,
   initialEditing,
   onEditingChange,
   onSaved,
@@ -425,6 +460,10 @@ function TransportLibRow({
   };
 
   const remove = async (): Promise<void> => {
+    const ok = window.confirm(`Delete transport “${transport.label}”? This cannot be undone.`);
+    if (!ok) {
+      return;
+    }
     setBusy(true);
     try {
       await deleteDbTpTransportLib(transport.id);
@@ -437,10 +476,46 @@ function TransportLibRow({
   };
 
   const view = transportViewLines(transport, locations);
+  const writeDisabled = !canWrite || tripLocked;
 
   return (
-    <Stack gap={2} borderWidth="1px" borderRadius="md" p={3} fontSize="sm">
-      {editing && canWrite ? (
+    <TripTpExpandableCard
+      title={view.headline}
+      subtitle={view.subline}
+      defaultExpanded={false}
+      headerActions={
+        canWrite ? (
+          <TripTpHeaderIconActions
+            editLabel={`Edit transport ${transport.label}`}
+            deleteLabel={`Delete transport ${transport.label}`}
+            disabled={writeDisabled}
+            onEdit={() => {
+              resetDraft();
+              setEditingMode(true);
+            }}
+            onDelete={() => void remove()}
+          />
+        ) : null
+      }
+      footer={
+        <TripTpEditSaveBar
+          editing={editing}
+          canWrite={canWrite && !tripLocked}
+          busy={busy}
+          hideEditButton
+          onEdit={() => {
+            resetDraft();
+            setEditingMode(true);
+          }}
+          onSave={() => void save()}
+          onCancel={() => {
+            resetDraft();
+            setEditingMode(false);
+          }}
+        />
+      }
+    >
+      {editing && canWrite && !tripLocked ? (
         <>
           <Field.Root>
             <Field.Label>Label</Field.Label>
@@ -513,27 +588,6 @@ function TransportLibRow({
           {view.subline !== undefined ? <Text color="fg.muted">{view.subline}</Text> : null}
         </Stack>
       )}
-      <TripTpEditSaveBar
-        editing={editing}
-        canWrite={canWrite}
-        busy={busy}
-        onEdit={() => {
-          resetDraft();
-          setEditingMode(true);
-        }}
-        onSave={() => void save()}
-        onCancel={() => {
-          resetDraft();
-          setEditingMode(false);
-        }}
-        trailing={
-          canWrite ? (
-            <Button size="sm" variant="outline" colorPalette="red" disabled={busy} onClick={() => void remove()}>
-              Delete
-            </Button>
-          ) : null
-        }
-      />
-    </Stack>
+    </TripTpExpandableCard>
   );
 }

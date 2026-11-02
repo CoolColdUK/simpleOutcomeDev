@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlockedForLocation} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateDbTpLocationInput {
   readonly name?: string;
@@ -23,6 +24,7 @@ export async function updateDbTpLocationForAgent(
   locationId: string,
   input: UpdateDbTpLocationInput,
 ) {
+  await assertTpTripUnlockedForLocation(supabase, locationId);
   const patch: Database['public']['Tables']['tp_location']['Update'] = {};
   if (input.name !== undefined) {
     patch.name = input.name;

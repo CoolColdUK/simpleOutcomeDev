@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlocked} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface CreateDbTpLocationInput {
   readonly tripId: string;
@@ -23,6 +24,7 @@ export async function createDbTpLocationForAgent(
   supabase: SupabaseClient<Database>,
   input: CreateDbTpLocationInput,
 ) {
+  await assertTpTripUnlocked(supabase, input.tripId);
   return supabase
     .from('tp_location')
     .insert({

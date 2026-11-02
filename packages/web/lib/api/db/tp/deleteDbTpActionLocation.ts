@@ -2,8 +2,10 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlockedForActionLocationLink} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export async function deleteDbTpActionLocationForAgent(supabase: SupabaseClient<Database>, linkId: string) {
+  await assertTpTripUnlockedForActionLocationLink(supabase, linkId);
   return supabase.from('tp_action_location').delete().eq('id', linkId);
 }
 

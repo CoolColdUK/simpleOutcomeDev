@@ -18,6 +18,7 @@ import {
   canWriteTpPod,
   TpActionKind,
   tpActionDayCardSummary,
+  tpActionKindBackgroundColor,
   tpActiveDestinationsForDay,
   tpBudgetRollup,
   tpDayTimelineEntries,
@@ -47,6 +48,8 @@ import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import TripDayPlanPanel from '@/components/tp/TripDayPlanPanel';
 import TripDestinationImportantPanel from '@/components/tp/TripDestinationImportantPanel';
+import TripTpTripSettingsPanel from '@/components/tp/TripTpTripSettingsPanel';
+import {updateDbTpActionLockedForBrowser} from '@/lib/api/db/tp/updateDbTpTripForBrowser';
 import TripStayActionEditor from '@/components/tp/TripStayActionEditor';
 import TripTravelActionEditor from '@/components/tp/TripTravelActionEditor';
 import TripSimpleActionEditor from '@/components/tp/TripSimpleActionEditor';
@@ -122,6 +125,8 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
     [trip?.budgetCurrency, data?.settings?.defaultCurrency],
   );
 
+  const tripLocked = trip?.locked ?? false;
+
   const activeDestinationIds = useMemo(() => {
     if (trip === undefined || selectedDay === undefined || data === undefined) {
       return [];
@@ -173,6 +178,16 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
       transports,
     });
   }, [data, selectedDay, trip]);
+
+  const showDayImportantInfo = useMemo(() => {
+    if (activeDestinationIds.length === 0 || data === undefined) {
+      return false;
+    }
+    return activeDestinationIds.some((destId) => {
+      const info = data.destinations.find((d) => d.id === destId)?.importantInfo ?? '';
+      return info.trim() !== '';
+    });
+  }, [activeDestinationIds, data]);
 
   const timeline = useMemo(() => {
     if (data === undefined || trip === undefined || selectedDay === undefined) {
@@ -307,7 +322,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
   };
 
   const addAction = async (kind: TpActionKind): Promise<void> => {
-    if (trip === undefined || selectedDay === undefined || !canWrite) {
+    if (trip === undefined || selectedDay === undefined || !canWrite || tripLocked) {
       return;
     }
     const title =
@@ -355,6 +370,18 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
         }
         return current;
       });
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const toggleActivityLock = async (actionId: string, locked: boolean): Promise<void> => {
+    if (!canWrite || tripLocked) {
+      return;
+    }
+    try {
+      await updateDbTpActionLockedForBrowser(actionId, locked);
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -468,11 +495,17 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
           <Alert.Description>{error}</Alert.Description>
         </Alert.Root>
       ) : null}
+      {tripLocked ? (
+        <Alert.Root status="warning">
+          <Alert.Description>Trip plan is locked. Unlock in Trip settings to edit.</Alert.Description>
+        </Alert.Root>
+      ) : null}
       <HStack justify="space-between" wrap="wrap">
         <Stack gap={0}>
           <Heading size="md">{trip.title}</Heading>
           <Text color="fg.muted">
             {trip.startDate} → {trip.endDate} · {trip.timezone} · {trip.status}
+            {tripLocked ? ' · locked' : ''}
           </Text>
           {trip.budgetAmount !== undefined ? (
             <Text>
@@ -482,17 +515,15 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             <Text>Planned spend: {budgetTotal.toFixed(2)}</Text>
           )}
         </Stack>
-        {canWrite ? (
-          <HStack>
-            <Button size="sm" variant="outline" onClick={() => void updateTripStatus(TpTripStatus.ACTIVE)}>
-              Mark active
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => void updateTripStatus(TpTripStatus.ARCHIVED)}>
-              Archive
-            </Button>
-          </HStack>
-        ) : null}
       </HStack>
+      <TripTpTripSettingsPanel
+        podId={podId}
+        trip={trip}
+        settings={data.settings}
+        canWrite={canWrite}
+        onSaved={onEditorSaved}
+        onError={onEditorError}
+      />
       <HStack gap={4} wrap="wrap" align="center" pb={2}>
         <HStack gap={2} overflowX="auto" flex="1" minW={0}>
           {visibleDayChips.map((chip) => {
@@ -542,10 +573,11 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             day={selectedDay}
             destinations={data.destinations}
             canWrite={canWrite}
+            tripLocked={tripLocked}
             onSaved={onEditorSaved}
             onError={onEditorError}
           />
-          {activeDestinationIds.length > 0 ? (
+          {showDayImportantInfo ? (
             <TripTpCollapsible
               title={
                 activeDestinationIds.length === 1
@@ -571,7 +603,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
             <Stack gap={1}>
               <HStack justify="space-between">
                 <Heading size="sm">Actions</Heading>
-                {canWrite ? (
+                {canWrite && !tripLocked ? (
                   <HStack>
                     <Button size="xs" onClick={() => void addAction(TpActionKind.ACTIVITY)}>+ Activity</Button>
                     <Button size="xs" onClick={() => void addAction(TpActionKind.NOTE)}>+ Note</Button>
@@ -598,11 +630,12 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                     )
                   : [];
               const showCardEdit =
-                action === undefined
+                action === undefined || tripLocked || (entry.kind === TpActionKind.ACTIVITY && action.locked)
                   ? false
                   : entry.kind === TpActionKind.ACTIVITY || entry.kind === TpActionKind.TRAVEL
                     ? canWrite && entry.displayMode === 'canonical'
-                    : true;
+                    : canWrite;
+              const cardBg = tpActionKindBackgroundColor(data.settings?.actionKindColors, entry.kind);
               const showActionDone =
                 action !== undefined &&
                 (entry.kind === TpActionKind.ACTIVITY ||
@@ -629,7 +662,16 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                       transportLib: data.transportLib,
                     });
               return (
-                <Box key={`${entry.actionId}-${entry.pin}`} borderWidth="1px" borderRadius="md" p={3} minW={0} maxW="100%" overflowX="clip">
+                <Box
+                  key={`${entry.actionId}-${entry.pin}`}
+                  borderWidth="1px"
+                  borderRadius="md"
+                  p={3}
+                  minW={0}
+                  maxW="100%"
+                  overflowX="clip"
+                  bg={cardBg}
+                >
                   <TripDayActionCardHeader
                     kind={entry.kind}
                     title={title}
@@ -638,17 +680,30 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
                     showActionDone={showActionDone}
                     done={action?.done ?? false}
                     doneBusy={action !== undefined && busyActionDoneId === action.id}
-                    canToggleDone={canWrite}
+                    canToggleDone={canWrite && !tripLocked}
                     displayMode={entry.displayMode}
                     pin={entry.pin}
-                    canWrite={canWrite}
+                    canWrite={canWrite && !tripLocked}
                     showCardEdit={showCardEdit}
                     expanded={expanded}
                     anchorDayId={action?.anchorDayId}
-                    moveUpDisabled={canonicalIdx <= 0}
-                    moveDownDisabled={canonicalIdx < 0 || canonicalIdx >= canonicalTimelineIds.length - 1}
+                    moveUpDisabled={canonicalIdx <= 0 || tripLocked}
+                    moveDownDisabled={canonicalIdx < 0 || canonicalIdx >= canonicalTimelineIds.length - 1 || tripLocked}
                     showImportant={importantHint.show}
                     importantReason={importantHint.reason}
+                    activityLocked={action?.kind === TpActionKind.ACTIVITY ? action.locked : false}
+                    showActivityLock={
+                      action !== undefined &&
+                      entry.kind === TpActionKind.ACTIVITY &&
+                      canWrite &&
+                      entry.displayMode === 'canonical' &&
+                      !tripLocked
+                    }
+                    onToggleActivityLock={
+                      action !== undefined
+                        ? () => void toggleActivityLock(action.id, !action.locked)
+                        : undefined
+                    }
                     onToggleDone={(checked) => {
                       if (action !== undefined) {
                         void toggleActionDone(action.id, checked);
@@ -756,6 +811,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
           transportLib={data.transportLib}
           defaultCurrency={moneyDefaultCurrency}
           canWrite={canWrite}
+          tripLocked={tripLocked}
           onSaved={() => void reload()}
           onError={(message) => setError(message)}
         />
@@ -771,6 +827,7 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
               destination={d}
               attachments={data.attachments}
               canWrite={canWrite}
+              tripLocked={tripLocked}
               onSaved={onEditorSaved}
               onError={onEditorError}
             />

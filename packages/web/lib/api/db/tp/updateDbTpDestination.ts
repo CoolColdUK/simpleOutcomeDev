@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlockedForDestination} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateDbTpDestinationInput {
   readonly name?: string;
@@ -15,6 +16,7 @@ export default async function updateDbTpDestination(
   input: UpdateDbTpDestinationInput,
 ): Promise<void> {
   const supabase = getSupabaseBrowserClient();
+  await assertTpTripUnlockedForDestination(supabase, destinationId);
   const {error} = await supabase
     .from('tp_destination')
     .update({
@@ -32,6 +34,7 @@ export async function updateDbTpDestinationForAgent(
   destinationId: string,
   updates: Record<string, unknown>,
 ) {
+  await assertTpTripUnlockedForDestination(supabase, destinationId);
   return supabase
     .from('tp_destination')
     .update(updates as Database['public']['Tables']['tp_destination']['Update'])

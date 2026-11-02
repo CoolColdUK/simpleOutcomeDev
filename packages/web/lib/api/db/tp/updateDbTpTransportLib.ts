@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlockedForTransportLib} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateDbTpTransportLibInput {
   readonly label?: string;
@@ -22,6 +23,7 @@ export async function updateDbTpTransportLibForAgent(
   transportLibId: string,
   input: UpdateDbTpTransportLibInput,
 ) {
+  await assertTpTripUnlockedForTransportLib(supabase, transportLibId);
   const patch: Database['public']['Tables']['tp_transport_lib']['Update'] = {};
   if (input.label !== undefined) {
     patch.label = input.label;

@@ -1,5 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {tpRouteIsSelected} from '@so/model';
+import {tpParseActionKindColors, tpRouteIsSelected} from '@so/model';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
@@ -14,7 +14,9 @@ export interface DbTpTrip {
   readonly status: string;
   readonly budgetAmount?: number;
   readonly budgetCurrency?: string;
+  readonly mapsUrl?: string;
   readonly notes?: string;
+  readonly locked: boolean;
 }
 
 export interface DbTpDay {
@@ -69,6 +71,7 @@ export interface DbTpAction {
   readonly toLocationId?: string;
   readonly durationMinutes?: number;
   readonly done: boolean;
+  readonly locked: boolean;
 }
 
 export interface DbTpLocation {
@@ -170,6 +173,7 @@ export interface DbTpAttachment {
 
 export interface DbTpSettings {
   readonly defaultCurrency: string;
+  readonly actionKindColors?: ReturnType<typeof tpParseActionKindColors>;
 }
 
 export interface DbTpWorkspace {
@@ -223,7 +227,11 @@ export async function loadDbTpWorkspace(
   if (tripErr !== null) {
     return {data: null, error: tripErr};
   }
-  const settingRes = await supabase.from('tp_setting').select('default_currency').eq('pod_id', podId).maybeSingle();
+  const settingRes = await supabase
+    .from('tp_setting')
+    .select('default_currency, action_kind_colors')
+    .eq('pod_id', podId)
+    .maybeSingle();
   if (settingRes.error !== null) {
     return {data: null, error: settingRes.error};
   }
@@ -232,6 +240,7 @@ export async function loadDbTpWorkspace(
       ? undefined
       : {
           defaultCurrency: settingRes.data.default_currency,
+          actionKindColors: tpParseActionKindColors(settingRes.data.action_kind_colors),
         };
 
   if (tripRow === null) {
@@ -318,7 +327,9 @@ export async function loadDbTpWorkspace(
     status: tripRow.status,
     budgetAmount: num(tripRow.budget_amount),
     budgetCurrency: tripRow.budget_currency ?? undefined,
+    mapsUrl: tripRow.maps_url ?? undefined,
     notes: tripRow.notes ?? undefined,
+    locked: tripRow.locked,
   };
 
   return {
@@ -376,6 +387,7 @@ export async function loadDbTpWorkspace(
         toLocationId: a.to_location_id ?? undefined,
         durationMinutes: a.duration_minutes ?? undefined,
         done: a.done,
+        locked: a.locked,
       })),
       routes: (routesRes.data ?? []).map((r) => ({
         id: r.id,

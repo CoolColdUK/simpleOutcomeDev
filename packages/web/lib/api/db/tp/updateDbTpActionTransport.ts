@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlockedForActionTransportLink} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateDbTpActionTransportInput {
   readonly sortOrder?: number;
@@ -18,6 +19,7 @@ export async function updateDbTpActionTransportForAgent(
   linkId: string,
   input: UpdateDbTpActionTransportInput,
 ) {
+  await assertTpTripUnlockedForActionTransportLink(supabase, linkId);
   const patch: Database['public']['Tables']['tp_action_transport']['Update'] = {};
   if (input.sortOrder !== undefined) {
     patch.sort_order = input.sortOrder;

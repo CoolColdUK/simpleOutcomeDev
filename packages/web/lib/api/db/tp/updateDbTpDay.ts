@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import type {Database} from '@/lib/supabase/database';
+import {assertTpTripUnlockedForDay} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateDbTpDayInput {
   readonly dayTitle?: string;
@@ -11,6 +12,7 @@ export interface UpdateDbTpDayInput {
 
 export default async function updateDbTpDay(dayId: string, input: UpdateDbTpDayInput): Promise<void> {
   const supabase = getSupabaseBrowserClient();
+  await assertTpTripUnlockedForDay(supabase, dayId);
   const {error} = await supabase
     .from('tp_day')
     .update({
@@ -34,6 +36,7 @@ export async function updateDbTpDayForAgent(
   input: UpdateTpDayInput,
 ) {
   const {dayId, ...updates} = input;
+  await assertTpTripUnlockedForDay(supabase, dayId);
 
   return supabase
     .from('tp_day')

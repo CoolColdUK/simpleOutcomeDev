@@ -6,6 +6,7 @@ export interface TripTpEditSaveBarProps {
   readonly canWrite: boolean;
   readonly saveLabel?: string;
   readonly busy?: boolean;
+  readonly hideEditButton?: boolean;
   readonly onEdit: () => void;
   readonly onSave: () => void;
   readonly onCancel: () => void;
@@ -17,6 +18,7 @@ export default function TripTpEditSaveBar({
   canWrite,
   saveLabel = 'Save',
   busy = false,
+  hideEditButton = false,
   onEdit,
   onSave,
   onCancel,
@@ -37,6 +39,9 @@ export default function TripTpEditSaveBar({
         {trailing}
       </HStack>
     );
+  }
+  if (hideEditButton) {
+    return trailing !== undefined ? <HStack wrap="wrap">{trailing}</HStack> : null;
   }
   return (
     <HStack wrap="wrap">

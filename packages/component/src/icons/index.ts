@@ -31,6 +31,7 @@ export * from './InfoIcon';
 export * from './JournalIcon';
 export * from './LightbulbAddIcon';
 export * from './LightbulbIcon';
+export * from './LockIcon';
 export * from './MemoEditIcon';
 export * from './MessageIcon';
 export * from './MoreVertIcon';
