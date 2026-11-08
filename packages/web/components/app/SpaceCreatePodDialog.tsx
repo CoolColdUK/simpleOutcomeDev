@@ -19,7 +19,7 @@ import {
   Stack,
   Textarea,
 } from '@chakra-ui/react';
-import {FeatureKind, PodVisibility} from '@so/model';
+import {FeatureKind, PodVisibility, creatablePodFeatureKinds} from '@so/model';
 import createDbPod from '@/lib/api/db/createDbPod';
 import featureKindLabel from '@/lib/pod/featureKindLabel';
 
@@ -68,7 +68,7 @@ export default function SpaceCreatePodDialog({open, spaceId, onClose, onCreated}
                 <Field.Label>Pod type</Field.Label>
                 <NativeSelect.Root>
                   <NativeSelect.Field value={feature} onChange={(e) => setFeature(e.target.value as FeatureKind)}>
-                    {Object.values(FeatureKind).map((kind) => (
+                    {creatablePodFeatureKinds().map((kind) => (
                       <option key={kind} value={kind}>
                         {featureKindLabel(kind)}
                       </option>

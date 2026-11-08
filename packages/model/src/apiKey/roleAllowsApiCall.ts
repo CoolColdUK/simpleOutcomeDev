@@ -114,9 +114,6 @@ export default function roleAllowsApiCall(call: ApiKeyCall, access: ApiKeyOwnerA
   if (call.resource === ApiKeyResource.TODO) {
     return todoRoleAllows(call, access, pod);
   }
-  if (call.resource === ApiKeyResource.SHOPPING) {
-    return isSpaceOwner(access.spaceRole) || pod.role !== undefined;
-  }
   if (call.resource === ApiKeyResource.FP) {
     if (call.fpResource === undefined) {
       return false;

@@ -5,6 +5,7 @@ export {default as podRoleLabel} from './podRoleLabel';
 export {PodVisibility} from './podVisibility';
 export {PodStatus} from './podStatus';
 export {FeatureKind} from './featureKind';
+export {default as creatablePodFeatureKinds} from './creatablePodFeatureKinds';
 export {default as parseFeatureKind} from './parseFeatureKind';
 export {default as filterAccessiblePods} from './filterAccessiblePods';
 export {default as canManageSpace} from './canManageSpace';

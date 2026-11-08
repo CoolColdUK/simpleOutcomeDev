@@ -155,6 +155,10 @@ function fpGrant(actions: readonly ApiKeyAction[], deleteAll: boolean): ApiKeyFp
   return {...grant, delete_all: [ApiKeyAction.CREATE]};
 }
 
+function apiKeyMatrixPods(pods: readonly ApiKeyMatrixPodInput[]): readonly ApiKeyMatrixPodInput[] {
+  return pods.filter((pod) => pod.feature !== FeatureKind.SHOPPING_LIST);
+}
+
 function podGrant(row: ApiKeyMatrixPodRow): ApiKeyPodGrant | undefined {
   const actions = actionsFromCells(row.cells);
   const deleteAll = row.feature === FeatureKind.FINANCIAL_PLANNING && row.deleteAll;
@@ -163,9 +167,6 @@ function podGrant(row: ApiKeyMatrixPodRow): ApiKeyPodGrant | undefined {
   }
   if (row.feature === FeatureKind.TODO_LIST) {
     return {todo: actions};
-  }
-  if (row.feature === FeatureKind.SHOPPING_LIST) {
-    return {shopping: actions};
   }
   if (row.feature === FeatureKind.TRIP_PLANNING) {
     return {trip: actions};
@@ -223,7 +224,8 @@ export function apiKeyMatrixForPreset(
   pods: readonly ApiKeyMatrixPodInput[],
   spaces: readonly ApiKeyMatrixSpaceInput[],
 ): ApiKeyPermissionMatrix {
-  const podRows = [...pods]
+  const eligiblePods = apiKeyMatrixPods(pods);
+  const podRows = [...eligiblePods]
     .sort((left, right) => compareName(left.spaceName, right.spaceName) || compareName(left.podName, right.podName))
     .map((pod) => ({...pod, cells: podCells(preset), deleteAll: deleteAllFor(preset, pod.feature)}));
   const spaceRows = [...spaces]
@@ -284,9 +286,6 @@ function podRowFromGrant(row: ApiKeyMatrixPodRow, grant: ApiKeyPodGrant | undefi
   }
   if (row.feature === FeatureKind.TODO_LIST) {
     return {...row, cells: cellsFromActions(grant.todo), deleteAll: false};
-  }
-  if (row.feature === FeatureKind.SHOPPING_LIST) {
-    return {...row, cells: cellsFromActions(grant.shopping), deleteAll: false};
   }
   if (row.feature === FeatureKind.TRIP_PLANNING) {
     return {...row, cells: cellsFromActions(grant.trip), deleteAll: false};

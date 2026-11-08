@@ -5,7 +5,9 @@ import type {ApiKeyFpGrant, ApiKeyPermissions, ApiKeyPodGrant, ApiKeySpaceGrant}
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const TOP_LEVEL = ['profile', 'pods', 'spaces'] as const;
-const POD_GRANT_KEYS = ['todo', 'shopping', 'fp', 'trip'] as const;
+const POD_GRANT_KEYS = ['todo', 'fp', 'trip'] as const;
+/** Legacy shopping grants are ignored (no shopping API surface). */
+const DEPRECATED_POD_GRANT_KEYS = ['shopping'] as const;
 const SPACE_GRANT_KEYS = ['space', 'group'] as const;
 const FP_RESOURCES = Object.values(FpResource).filter((resource) => resource !== FpResource.DELETE_ALL);
 
@@ -73,15 +75,18 @@ function parsePodGrant(input: unknown): ApiKeyPodGrant | undefined {
   if (!isRecord(input)) {
     return undefined;
   }
-  const unknown = Object.keys(input).find((key) => !POD_GRANT_KEYS.includes(key as (typeof POD_GRANT_KEYS)[number]));
+  const unknown = Object.keys(input).find(
+    (key) =>
+      !POD_GRANT_KEYS.includes(key as (typeof POD_GRANT_KEYS)[number]) &&
+      !DEPRECATED_POD_GRANT_KEYS.includes(key as (typeof DEPRECATED_POD_GRANT_KEYS)[number]),
+  );
   if (unknown !== undefined) {
     return undefined;
   }
   const todo = input['todo'] === undefined ? undefined : parseActions(input['todo']);
-  const shopping = input['shopping'] === undefined ? undefined : parseActions(input['shopping']);
   const fp = input['fp'] === undefined ? undefined : parseFpGrant(input['fp']);
   const trip = input['trip'] === undefined ? undefined : parseActions(input['trip']);
-  if ((input['todo'] !== undefined && todo === undefined) || (input['shopping'] !== undefined && shopping === undefined)) {
+  if (input['todo'] !== undefined && todo === undefined) {
     return undefined;
   }
   if (input['fp'] !== undefined && fp === undefined) {
@@ -92,7 +97,6 @@ function parsePodGrant(input: unknown): ApiKeyPodGrant | undefined {
   }
   return {
     ...(todo === undefined ? {} : {todo}),
-    ...(shopping === undefined ? {} : {shopping}),
     ...(fp === undefined ? {} : {fp}),
     ...(trip === undefined ? {} : {trip}),
   };

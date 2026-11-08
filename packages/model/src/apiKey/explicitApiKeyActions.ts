@@ -15,9 +15,6 @@ function featureActions(grant: ApiKeyPodGrant, call: ApiKeyCall): readonly ApiKe
   if (call.resource === ApiKeyResource.TODO) {
     return grant.todo;
   }
-  if (call.resource === ApiKeyResource.SHOPPING) {
-    return grant.shopping;
-  }
   if (call.resource === ApiKeyResource.FP) {
     return fpActions(grant.fp, call);
   }
