@@ -58,6 +58,7 @@ export {
   agentTodoCardUpdateSchema,
   agentTodoCommentCreateSchema,
   agentTodoCommentUpdateSchema,
+  agentTodoCommentImageSchema,
   agentTodoIdSchema,
 } from './agentTodoSchema';
 export {agentSpaceUpdateSchema, agentSpaceInviteCreateSchema, agentSpaceMemberRoleSchema, agentSpaceInviteDeleteSchema} from './agentSpaceSchema';

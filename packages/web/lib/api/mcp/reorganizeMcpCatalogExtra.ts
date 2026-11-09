@@ -72,6 +72,7 @@ import {
   reorderAgentTodoCards,
   reorderAgentTodoColumns,
 } from '@/lib/api/agent/todoAgentBoard';
+import {addAgentTodoCommentImage} from '@/lib/api/agent/todoAgentComments';
 import {clearAgentTodoCardIcon, replaceAgentTodoCardIcon} from '@/lib/api/agent/todoAgentIcons';
 import type {McpTool} from '@/lib/api/mcp/mcpCatalog';
 
@@ -187,6 +188,13 @@ export const TODO_EXTRA_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool('clear_todo_card_icon', 'Remove a todo card icon.', {podId, cardId: {type: 'string'}}, ['podId', 'cardId'], (request, args) =>
     clearAgentTodoCardIcon(request, args),
+  ),
+  tool(
+    'add_todo_comment_image',
+    'Upload a JPEG or PNG into your todo comment. The image is stored and appended as markdown.',
+    {podId, cardId: {type: 'string'}, commentId: {type: 'string'}, contentType: {type: 'string'}, contentBase64: {type: 'string'}},
+    ['podId', 'cardId', 'commentId', 'contentType', 'contentBase64'],
+    (request, args) => addAgentTodoCommentImage(request, args),
   ),
 ];
 

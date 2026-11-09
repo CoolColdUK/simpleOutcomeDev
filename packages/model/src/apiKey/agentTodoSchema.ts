@@ -56,6 +56,14 @@ export const agentTodoCommentUpdateSchema = v.object({
   body: todoCardCommentBodySchema,
 });
 
+export const agentTodoCommentImageSchema = v.object({
+  podId: uuid(),
+  cardId: uuid(),
+  commentId: uuid(),
+  contentType: v.picklist(['image/jpeg', 'image/png', 'image/jpg']),
+  contentBase64: v.pipe(v.string(), v.minLength(1), v.maxLength(7_000_000)),
+});
+
 export const agentTodoIdSchema = v.object({
   podId: uuid(),
   cardId: v.optional(uuid()),

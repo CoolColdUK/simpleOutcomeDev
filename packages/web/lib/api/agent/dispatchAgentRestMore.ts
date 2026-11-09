@@ -74,6 +74,7 @@ import {
   updateAgentPod,
 } from '@/lib/api/agent/spaceLifecycleAgent';
 import {archiveAgentTodoColumnCards, archiveAgentTodoColumnCompleted, reorderAgentTodoCards, reorderAgentTodoColumns} from '@/lib/api/agent/todoAgentBoard';
+import {addAgentTodoCommentImage} from '@/lib/api/agent/todoAgentComments';
 import {clearAgentTodoCardIcon, replaceAgentTodoCardIcon} from '@/lib/api/agent/todoAgentIcons';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -220,6 +221,21 @@ export default async function dispatchAgentRestMore(method: string, request: Req
   }
   if (root === 'pods' && isUuid(id) && third === 'todo' && fourth === 'columns' && isUuid(fifth) && sixth === 'archive-completed') {
     return method === 'POST' ? agentResultResponse(await archiveAgentTodoColumnCompleted(request, {podId: id, columnId: fifth})) : methodNotAllowed();
+  }
+  if (
+    root === 'pods' &&
+    isUuid(id) &&
+    third === 'todo' &&
+    fourth === 'cards' &&
+    isUuid(fifth) &&
+    sixth === 'comments' &&
+    isUuid(path[6]) &&
+    path[7] === 'image' &&
+    path[8] === undefined
+  ) {
+    return method === 'POST'
+      ? agentResultResponse(await addAgentTodoCommentImage(request, await bodyWith(request, {podId: id, cardId: fifth, commentId: path[6]})))
+      : methodNotAllowed();
   }
   if (root === 'pods' && isUuid(id) && third === 'todo' && fourth === 'cards' && isUuid(fifth) && sixth === 'icon') {
     if (method === 'POST') {

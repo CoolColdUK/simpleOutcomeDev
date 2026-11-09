@@ -1,12 +1,21 @@
 import {
   agentTodoCommentCreateSchema,
+  agentTodoCommentImageSchema,
   agentTodoCommentUpdateSchema,
   agentTodoIdSchema,
   ApiKeyAction,
   ApiKeyResource,
   authorizeApiKeyCall,
+  BUCKET_POD_PRIVATE,
+  buildTodoCardImageObjectPath,
+  countSoImageMarkdownUrisInBody,
+  encodeSoImageMarkdownUri,
+  normalizeTodoImageMimeFromBlobType,
   parseApiPage,
+  parseTodoCardCommentBody,
   safeParseSchema,
+  TODO_MAX_ICON_BYTES,
+  TODO_MAX_INLINE_IMAGES,
 } from '@so/model';
 import {agentErr, agentOk, dbErr, type AgentResult} from '@/lib/api/agent/agentResult';
 import {requirePodAgent, type AgentContext} from '@/lib/api/agent/loadAgentContext';
@@ -155,6 +164,82 @@ export async function updateAgentTodoComment(request: Request, input: unknown): 
     return updatedErr;
   }
   return agentOk({id: parsed.value.commentId});
+}
+
+function commentBodyWithImage(body: string, objectPath: string): string {
+  const fragment = `![](${encodeSoImageMarkdownUri(objectPath)})`;
+  return body.endsWith('\n') ? `${body}${fragment}` : `${body}\n${fragment}`;
+}
+
+function storedCommentBody(body: string): string | undefined {
+  try {
+    return parseTodoCardCommentBody(body);
+  } catch {
+    return undefined;
+  }
+}
+
+export async function addAgentTodoCommentImage(
+  request: Request,
+  input: unknown,
+): Promise<AgentResult<{readonly id: string; readonly objectPath: string; readonly body: string}>> {
+  const parsed = safeParseSchema(agentTodoCommentImageSchema, input);
+  if (!parsed.ok) {
+    return validation(parsed.message);
+  }
+  const mime = normalizeTodoImageMimeFromBlobType(parsed.value.contentType === 'image/jpg' ? 'image/jpeg' : parsed.value.contentType);
+  if (mime === undefined) {
+    return validation('Only JPEG or PNG images are supported.');
+  }
+  const bytes = Buffer.from(parsed.value.contentBase64, 'base64');
+  if (bytes.length === 0 || bytes.length > TODO_MAX_ICON_BYTES) {
+    return validation('Image must be 5MB or smaller.');
+  }
+  const ctx = await requirePodAgent(request, {
+    podId: parsed.value.podId,
+    resource: ApiKeyResource.TODO,
+    action: ApiKeyAction.UPDATE,
+    todoTarget: 'comment',
+  });
+  if (!ctx.ok) {
+    return ctx;
+  }
+  const current = await ctx.data.supabase
+    .from('todo_card_comment')
+    .select('id, body, created_by')
+    .eq('id', parsed.value.commentId)
+    .eq('card_id', parsed.value.cardId)
+    .eq('pod_id', parsed.value.podId)
+    .maybeSingle();
+  const currentErr = dbErr(current.error);
+  if (currentErr !== undefined) {
+    return currentErr;
+  }
+  if (current.data === null) {
+    return agentErr(404, 'not_found', 'Comment not found');
+  }
+  if (current.data.created_by !== ctx.data.record.ownerUserId) {
+    return agentErr(403, 'forbidden', 'You can only edit your own comment');
+  }
+  if (countSoImageMarkdownUrisInBody(current.data.body) >= TODO_MAX_INLINE_IMAGES) {
+    return validation(`At most ${TODO_MAX_INLINE_IMAGES} images per comment`);
+  }
+  const objectPath = buildTodoCardImageObjectPath(parsed.value.podId, parsed.value.cardId, mime);
+  const nextBody = storedCommentBody(commentBodyWithImage(current.data.body, objectPath));
+  if (nextBody === undefined) {
+    return validation('Comment is too long');
+  }
+  const uploaded = await ctx.data.supabase.storage.from(BUCKET_POD_PRIVATE).upload(objectPath, bytes, {contentType: mime, upsert: false});
+  if (uploaded.error !== null) {
+    return dbErr(uploaded.error) ?? agentErr(500, 'error', 'Request failed');
+  }
+  const updated = await ctx.data.supabase.from('todo_card_comment').update({body: nextBody}).eq('id', parsed.value.commentId);
+  const updatedErr = dbErr(updated.error);
+  if (updatedErr !== undefined) {
+    await ctx.data.supabase.storage.from(BUCKET_POD_PRIVATE).remove([objectPath]);
+    return updatedErr;
+  }
+  return agentOk({id: parsed.value.commentId, objectPath, body: nextBody});
 }
 
 export async function deleteAgentTodoComment(request: Request, input: unknown): Promise<AgentResult<{readonly id: string}>> {
