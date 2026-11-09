@@ -1,7 +1,7 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
 import syncDbTpDaysForTrip from '@/lib/api/db/tp/syncDbTpDaysForTrip';
-import {assertTpTripUnlockedByPodId, tryAssertTpTripUnlockedByPodId} from '@/lib/api/db/tp/tpDbLockChecks';
+import {tryAssertTpTripUnlockedByPodId} from '@/lib/api/db/tp/tpDbLockChecks';
 
 export interface UpdateTpTripInput {
   readonly podId: string;
@@ -18,8 +18,19 @@ export interface UpdateTpTripInput {
 }
 
 export default async function updateDbTpTrip(supabase: SupabaseClient<Database>, input: UpdateTpTripInput) {
-  const {podId, defaultCurrency, title, timezone, startDate, endDate, status, budgetAmount, budgetCurrency, mapsUrl, notes} =
-    input;
+  const {
+    podId,
+    defaultCurrency,
+    title,
+    timezone,
+    startDate,
+    endDate,
+    status,
+    budgetAmount,
+    budgetCurrency,
+    mapsUrl,
+    notes,
+  } = input;
 
   const existing = await supabase.from('tp_trip').select('id, start_date, end_date').eq('pod_id', podId).maybeSingle();
   if (existing.error !== null) {
