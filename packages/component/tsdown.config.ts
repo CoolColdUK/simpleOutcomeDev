@@ -5,5 +5,7 @@ export default defineConfig({
   format: ['esm', 'cjs'],
   clean: true,
   dts: true,
-  external: ['react', 'react/jsx-runtime'],
+  deps: {
+    neverBundle: ['react', 'react/jsx-runtime'],
+  },
 });
