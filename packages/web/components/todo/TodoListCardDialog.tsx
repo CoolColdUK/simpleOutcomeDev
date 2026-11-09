@@ -39,6 +39,10 @@ import pickImageFileFromDataTransfer from '@/lib/todo/pickImageFileFromDataTrans
 import replaceTodoCardIcon from '@/lib/todo/replaceTodoCardIcon';
 import runTodoPrint from '@/lib/todo/runTodoPrint';
 
+function isTodoCommentComposerTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('[data-todo-comment-composer]') !== null;
+}
+
 export interface TodoListCardDialogProps {
   readonly open: boolean;
   readonly card: DbTodoCard | undefined;
@@ -143,6 +147,9 @@ function TodoListCardDialogBody({
                   }
                 }}
                 onDrop={(e) => {
+                  if (isTodoCommentComposerTarget(e.target)) {
+                    return;
+                  }
                   const file = pickImageFileFromDataTransfer(e.dataTransfer);
                   if (file === undefined) {
                     return;
@@ -155,7 +162,7 @@ function TodoListCardDialogBody({
                     });
                 }}
                 onPaste={(e) => {
-                  if (e.target instanceof HTMLTextAreaElement) {
+                  if (e.target instanceof HTMLTextAreaElement || isTodoCommentComposerTarget(e.target) || isTodoCommentComposerTarget(document.activeElement)) {
                     return;
                   }
                   const file = pickImageFileFromDataTransfer(e.clipboardData);
