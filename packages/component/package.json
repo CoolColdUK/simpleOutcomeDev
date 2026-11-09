@@ -39,7 +39,7 @@
   "devDependencies": {
     "@coolcolduk/jest-config": "^6",
     "@coolcolduk/ts-config": "^6",
-    "@types/node": "^24.13.2",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "react": "^19.3.1",
@@ -47,7 +47,7 @@
     "typescript": "^6"
   },
   "engines": {
-    "node": "24"
+    "node": "26"
   },
   "jest": {
     "preset": "@coolcolduk/jest-config",
