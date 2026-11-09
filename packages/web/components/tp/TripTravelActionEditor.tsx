@@ -71,7 +71,6 @@ export default function TripTravelActionEditor({
   destinations,
   locations,
   transportLib,
-  actionTransports: _actionTransports,
   tripTimezone,
   defaultCurrency,
   canWrite,
@@ -88,8 +87,6 @@ export default function TripTravelActionEditor({
   const [title, setTitle] = useState(action.title);
   const [fromPlace, setFromPlace] = useState(action.fromPlace ?? '');
   const [toPlace, setToPlace] = useState(action.toPlace ?? '');
-  const [fromMapsUrl, setFromMapsUrl] = useState(action.fromMapsUrl ?? '');
-  const [toMapsUrl, setToMapsUrl] = useState(action.toMapsUrl ?? '');
   const [fromDestinationId, setFromDestinationId] = useState(action.fromDestinationId ?? '');
   const [toDestinationId, setToDestinationId] = useState(action.toDestinationId ?? '');
   const [notes, setNotes] = useState(action.notes ?? '');
@@ -132,8 +129,8 @@ export default function TripTravelActionEditor({
         title,
         fromPlace: resolvedFrom === '' ? null : resolvedFrom,
         toPlace: resolvedTo === '' ? null : resolvedTo,
-        fromMapsUrl: fromMapsUrl === '' ? null : fromMapsUrl,
-        toMapsUrl: toMapsUrl === '' ? null : toMapsUrl,
+        fromMapsUrl: action.fromMapsUrl ?? null,
+        toMapsUrl: action.toMapsUrl ?? null,
         fromDestinationId: fromDestinationId === '' ? null : fromDestinationId,
         toDestinationId: toDestinationId === '' ? null : toDestinationId,
         notes,

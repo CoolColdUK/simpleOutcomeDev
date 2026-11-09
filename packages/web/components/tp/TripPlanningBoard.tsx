@@ -28,7 +28,6 @@ import {
   tpTagsFromLocationNotes,
   tpTravelCardImportantHint,
   tpVisibleTripDayChips,
-  TpTripStatus,
   type PodRole,
   type TpTimelinePin,
 } from '@so/model';
@@ -43,8 +42,6 @@ import updateDbTpAction from '@/lib/api/db/tp/updateDbTpAction';
 import updateDbTpActionSortOrders from '@/lib/api/db/tp/updateDbTpActionSortOrders';
 import createDbTpRoute from '@/lib/api/db/tp/createDbTpRoute';
 import selectDbTpRoute from '@/lib/api/db/tp/selectDbTpRoute';
-import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
-import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import TripDayPlanPanel from '@/components/tp/TripDayPlanPanel';
 import TripDestinationImportantPanel from '@/components/tp/TripDestinationImportantPanel';
@@ -436,16 +433,6 @@ export default function TripPlanningBoard({podId, podRole, isSpaceOwner}: TripPl
     }
     const prefix = `${action.title} · `;
     return summary.startsWith(prefix) ? summary.slice(prefix.length) : summary;
-  };
-
-  const updateTripStatus = async (status: TpTripStatus): Promise<void> => {
-    if (trip === undefined || !canWrite) {
-      return;
-    }
-    const supabase = getSupabaseBrowserClient();
-    const {error: err} = await supabase.from('tp_trip').update({status}).eq('id', trip.id);
-    throwIfSupabaseError(err);
-    await reload();
   };
 
   if (data === undefined) {

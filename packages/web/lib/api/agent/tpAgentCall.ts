@@ -37,8 +37,9 @@ export async function ownedTpRow(
     | 'tp_transport_lib'
     | 'tp_action_transport',
   id: string,
-  _podId: string,
+  podId: string,
 ): Promise<AgentResult<true>> {
+  void podId;
   const row = await ctx.supabase.from(table).select('id').eq('id', id).maybeSingle();
   const rowErr = dbErr(row.error);
   if (rowErr !== undefined) {

@@ -3,7 +3,6 @@
 import {useState} from 'react';
 import {
   Box,
-  Button,
   Field,
   HStack,
   Input,
@@ -69,7 +68,6 @@ export default function TripTpTripSettingsPanel({
   });
 
   const tripLocked = trip.locked;
-  const settingsDisabled = !canWrite || tripLocked;
 
   const resetDraft = (): void => {
     setTitle(trip.title);
