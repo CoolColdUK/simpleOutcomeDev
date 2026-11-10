@@ -94,7 +94,7 @@ export const BOOK_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'create_book_asset_type',
-    'Create a custom asset type (characters/items/locations are seeded).',
+    'Create a custom asset type (characters, items, locations, and other are seeded).',
     {podId, label: {type: 'string'}, slug: {type: 'string'}},
     ['podId', 'label'],
     (request, args) => createAgentBookAssetType(request, argsRecord(args)),

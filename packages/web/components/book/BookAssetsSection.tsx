@@ -2,29 +2,40 @@
 
 import {useEffect, useMemo, useState} from 'react';
 import {Button, HStack, Input, NativeSelect, SimpleGrid, Stack, Text} from '@chakra-ui/react';
-import type {DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
-import createDbBkAsset from '@/lib/api/db/book/createDbBkAsset';
+import type {DbBkAsset, DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
 import createDbBkAssetType from '@/lib/api/db/book/createDbBkAssetType';
+import deleteDbBkAsset from '@/lib/api/db/book/deleteDbBkAsset';
 import deleteDbBkAssetType from '@/lib/api/db/book/deleteDbBkAssetType';
 import BookAssetReadOnlyCard from '@/components/book/BookAssetReadOnlyCard';
 import BookAddAssetTypeDialog from '@/components/book/BookAddAssetTypeDialog';
+import BookConfirmDeleteDialog from '@/components/book/BookConfirmDeleteDialog';
 
 export interface BookAssetsSectionProps {
   readonly workspace: DbBookWorkspace;
   readonly podId: string;
   readonly canWrite: boolean;
   readonly onEditAsset: (assetId: string) => void;
+  readonly onCreateAsset: (assetTypeId: string) => void;
   readonly onReload: () => Promise<void>;
   readonly onError: (message: string) => void;
 }
 
 const ALL_TYPES = '';
 
-export default function BookAssetsSection({workspace, podId, canWrite, onEditAsset, onReload, onError}: BookAssetsSectionProps) {
+export default function BookAssetsSection({
+  workspace,
+  podId,
+  canWrite,
+  onEditAsset,
+  onCreateAsset,
+  onReload,
+  onError,
+}: BookAssetsSectionProps) {
   const [typeFilter, setTypeFilter] = useState(ALL_TYPES);
   const [search, setSearch] = useState('');
   const [assetTypeDialogOpen, setAssetTypeDialogOpen] = useState(false);
   const [addTypeId, setAddTypeId] = useState(workspace.assetTypes[0]?.id ?? '');
+  const [deleteTarget, setDeleteTarget] = useState<DbBkAsset | undefined>(undefined);
 
   useEffect(() => {
     if (addTypeId === '' && workspace.assetTypes[0] !== undefined) {
@@ -71,9 +82,7 @@ export default function BookAssetsSection({workspace, podId, canWrite, onEditAss
               if (addTypeId === '') {
                 return;
               }
-              void createDbBkAsset(podId, addTypeId, 'New asset')
-                .then(() => onReload())
-                .catch((err: unknown) => onError(err instanceof Error ? err.message : String(err)));
+              onCreateAsset(addTypeId);
             }}
           >
             Add asset
@@ -136,7 +145,9 @@ export default function BookAssetsSection({workspace, podId, canWrite, onEditAss
                 key={asset.id}
                 asset={asset}
                 typeLabel={typeLabel}
+                canWrite={canWrite}
                 onEdit={() => onEditAsset(asset.id)}
+                onDelete={() => setDeleteTarget(asset)}
               />
             );
           })}
@@ -149,6 +160,26 @@ export default function BookAssetsSection({workspace, podId, canWrite, onEditAss
           const slug = label.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
           await createDbBkAssetType(podId, label, slug);
           await onReload();
+        }}
+      />
+      <BookConfirmDeleteDialog
+        open={deleteTarget !== undefined}
+        title="Delete asset?"
+        description={
+          deleteTarget === undefined
+            ? ''
+            : `“${deleteTarget.name}” and its images will be removed permanently.`
+        }
+        onCancel={() => setDeleteTarget(undefined)}
+        onConfirm={() => {
+          if (deleteTarget === undefined) {
+            return;
+          }
+          const assetId = deleteTarget.id;
+          setDeleteTarget(undefined);
+          void deleteDbBkAsset(assetId, podId)
+            .then(() => onReload())
+            .catch((err: unknown) => onError(err instanceof Error ? err.message : String(err)));
         }}
       />
     </Stack>

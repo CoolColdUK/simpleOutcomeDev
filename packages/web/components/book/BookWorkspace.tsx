@@ -13,8 +13,8 @@ import {
 } from '@dnd-kit/core';
 import {SortableContext, arrayMove, useSortable, verticalListSortingStrategy} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
-import {BookOutlineKind, bookOutlineListLabel} from '@so/model';
-import type {DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
+import {BookChapterStatus, BookOutlineKind, bookOutlineListLabel} from '@so/model';
+import type {DbBkAsset, DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
 import type {DbBkOutlineEntry} from '@/lib/api/db/book/mapDbBkOutlineRow';
 import loadDbBookWorkspace from '@/lib/api/db/book/loadDbBookWorkspace';
 import updateDbBkBook from '@/lib/api/db/book/updateDbBkBook';
@@ -24,6 +24,8 @@ import deleteDbBkOutlineEntry from '@/lib/api/db/book/deleteDbBkOutlineEntry';
 import reorderDbBkOutline from '@/lib/api/db/book/reorderDbBkOutline';
 import deleteDbBkAsset from '@/lib/api/db/book/deleteDbBkAsset';
 import updateDbBkAsset from '@/lib/api/db/book/updateDbBkAsset';
+import createDbBkAsset from '@/lib/api/db/book/createDbBkAsset';
+import syncDbBkAssetImagesFromPaths from '@/lib/api/db/book/syncDbBkAssetImagesFromPaths';
 import buildDbBookOfflineBundle from '@/lib/api/db/book/buildDbBookOfflineBundle';
 import buildDbBookEpub, {type BookEpubExportScope} from '@/lib/api/db/book/buildDbBookEpub';
 import {loadBookOfflineBundle, saveBookOfflineBundle} from '@/lib/book/bookOfflineStore';
@@ -43,6 +45,14 @@ export interface BookWorkspaceProps {
 }
 
 type OutlineFilter = 'all' | 'chapters' | 'notes' | 'assets';
+
+type OutlineEditorTarget =
+  | {readonly mode: 'edit'; readonly entryId: string}
+  | {readonly mode: 'create'; readonly draft: DbBkOutlineEntry};
+
+type AssetEditorTarget =
+  | {readonly mode: 'edit'; readonly assetId: string}
+  | {readonly mode: 'create'; readonly draft: DbBkAsset};
 
 function SortableOutlineRow({entry, onEdit}: {readonly entry: DbBkOutlineEntry; readonly onEdit: () => void}) {
   const {attributes, listeners, setNodeRef, transform, transition} = useSortable({id: entry.id});
@@ -66,14 +76,43 @@ function SortableOutlineRow({entry, onEdit}: {readonly entry: DbBkOutlineEntry; 
   );
 }
 
+function newOutlineDraft(podId: string, kind: BookOutlineKind): DbBkOutlineEntry {
+  return {
+    id: crypto.randomUUID(),
+    podId,
+    kind,
+    sortOrder: 0,
+    chapterNumber: undefined,
+    noteNumber: undefined,
+    title: kind === BookOutlineKind.CHAPTER ? 'New chapter' : 'New note',
+    summaryMd: '',
+    contentMd: '',
+    status: kind === BookOutlineKind.CHAPTER ? BookChapterStatus.OUTLINE : undefined,
+    chapterImageStoragePath: undefined,
+  };
+}
+
+function newAssetDraft(podId: string, assetTypeId: string): DbBkAsset {
+  return {
+    id: crypto.randomUUID(),
+    podId,
+    assetTypeId,
+    name: 'New asset',
+    descriptionMd: '',
+    sortOrder: 0,
+    images: [],
+  };
+}
+
 export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookWorkspaceProps) {
   const router = useRouter();
   const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 6}}));
   const [workspace, setWorkspace] = useState<DbBookWorkspace | undefined>(undefined);
   const [filter, setFilter] = useState<OutlineFilter>('all');
-  const [editorEntryId, setEditorEntryId] = useState<string | undefined>(undefined);
-  const [editorSaving, setEditorSaving] = useState(false);
-  const [assetEditorId, setAssetEditorId] = useState<string | undefined>(undefined);
+  const [outlineEditor, setOutlineEditor] = useState<OutlineEditorTarget | undefined>(undefined);
+  const [assetEditor, setAssetEditor] = useState<AssetEditorTarget | undefined>(undefined);
+  const [outlineSaving, setOutlineSaving] = useState(false);
+  const [assetSaving, setAssetSaving] = useState(false);
   const [summaryMd, setSummaryMd] = useState('');
   const [error, setError] = useState('');
   const [offlineReady, setOfflineReady] = useState(false);
@@ -94,8 +133,26 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
     });
   }, [load]);
 
-  const editorEntry = workspace?.outline.find((entry) => entry.id === editorEntryId);
-  const editAsset = workspace?.assets.find((asset) => asset.id === assetEditorId);
+  const editorEntry = useMemo((): DbBkOutlineEntry | undefined => {
+    if (outlineEditor === undefined || workspace === undefined) {
+      return undefined;
+    }
+    if (outlineEditor.mode === 'create') {
+      return outlineEditor.draft;
+    }
+    return workspace.outline.find((entry) => entry.id === outlineEditor.entryId);
+  }, [outlineEditor, workspace]);
+
+  const editAsset = useMemo((): DbBkAsset | undefined => {
+    if (assetEditor === undefined || workspace === undefined) {
+      return undefined;
+    }
+    if (assetEditor.mode === 'create') {
+      return assetEditor.draft;
+    }
+    return workspace.assets.find((asset) => asset.id === assetEditor.assetId);
+  }, [assetEditor, workspace]);
+
   const editAssetType = editAsset === undefined ? undefined : workspace?.assetTypes.find((type) => type.id === editAsset.assetTypeId);
 
   const filteredOutline = useMemo(() => {
@@ -146,12 +203,6 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   const saveBookSummary = async (): Promise<void> => {
     await updateDbBkBook(podId, {summaryMd});
     await load();
-  };
-
-  const addEntry = async (kind: BookOutlineKind): Promise<void> => {
-    const created = await createDbBkOutlineEntry(podId, {kind, title: kind === BookOutlineKind.CHAPTER ? 'New chapter' : 'New note'});
-    await load();
-    setEditorEntryId(created.id);
   };
 
   const downloadOffline = async (): Promise<void> => {
@@ -245,10 +296,10 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
         <Stack gap={2}>
           {canWrite ? (
             <HStack>
-              <Button size="sm" onClick={() => void addEntry(BookOutlineKind.CHAPTER)}>
+              <Button size="sm" onClick={() => setOutlineEditor({mode: 'create', draft: newOutlineDraft(podId, BookOutlineKind.CHAPTER)})}>
                 Add chapter
               </Button>
-              <Button size="sm" onClick={() => void addEntry(BookOutlineKind.NOTE)}>
+              <Button size="sm" onClick={() => setOutlineEditor({mode: 'create', draft: newOutlineDraft(podId, BookOutlineKind.NOTE)})}>
                 Add note
               </Button>
             </HStack>
@@ -256,7 +307,7 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => void onDragEnd(event)}>
             <SortableContext items={filteredOutline.map((entry) => entry.id)} strategy={verticalListSortingStrategy}>
               {filteredOutline.map((entry) => (
-                <SortableOutlineRow key={entry.id} entry={entry} onEdit={() => setEditorEntryId(entry.id)} />
+                <SortableOutlineRow key={entry.id} entry={entry} onEdit={() => setOutlineEditor({mode: 'edit', entryId: entry.id})} />
               ))}
             </SortableContext>
           </DndContext>
@@ -266,72 +317,111 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
           workspace={workspace}
           podId={podId}
           canWrite={canWrite}
-          onEditAsset={setAssetEditorId}
+          onEditAsset={(assetId) => setAssetEditor({mode: 'edit', assetId})}
+          onCreateAsset={(assetTypeId) => setAssetEditor({mode: 'create', draft: newAssetDraft(podId, assetTypeId)})}
           onReload={load}
           onError={(message) => setError(message)}
         />
       )}
       <BookOutlineEntryDialog
         open={editorEntry !== undefined}
+        isCreate={outlineEditor?.mode === 'create'}
         entry={editorEntry}
         podId={podId}
         canWrite={canWrite}
-        saving={editorSaving}
-        onClose={() => setEditorEntryId(undefined)}
+        saving={outlineSaving}
+        onClose={() => setOutlineEditor(undefined)}
         onSave={async (draft) => {
           if (editorEntry === undefined) {
             return;
           }
-          setEditorSaving(true);
+          setOutlineSaving(true);
           try {
-            await updateDbBkOutlineEntry(editorEntry.id, {
-              title: draft.title,
-              summaryMd: draft.summaryMd,
-              contentMd: draft.contentMd,
-              status: draft.status,
-              chapterImageStoragePath:
-                editorEntry.kind === BookOutlineKind.CHAPTER ? (draft.chapterImageStoragePath ?? null) : undefined,
-            });
+            if (outlineEditor?.mode === 'create') {
+              await createDbBkOutlineEntry(podId, {
+                id: editorEntry.id,
+                kind: editorEntry.kind,
+                title: draft.title,
+                summaryMd: draft.summaryMd,
+                contentMd: draft.contentMd,
+                status: draft.status,
+                chapterImageStoragePath: draft.chapterImageStoragePath,
+              });
+            } else {
+              await updateDbBkOutlineEntry(editorEntry.id, {
+                title: draft.title,
+                summaryMd: draft.summaryMd,
+                contentMd: draft.contentMd,
+                status: draft.status,
+                chapterImageStoragePath:
+                  editorEntry.kind === BookOutlineKind.CHAPTER ? (draft.chapterImageStoragePath ?? null) : undefined,
+              });
+            }
             await load();
-            setEditorEntryId(undefined);
+            setOutlineEditor(undefined);
           } finally {
-            setEditorSaving(false);
+            setOutlineSaving(false);
           }
         }}
-        onDelete={async () => {
-          if (editorEntry === undefined) {
-            return;
-          }
-          await deleteDbBkOutlineEntry(editorEntry.id, podId);
-          await load();
-          setEditorEntryId(undefined);
-        }}
+        onDelete={
+          outlineEditor?.mode === 'edit'
+            ? async () => {
+                if (editorEntry === undefined) {
+                  return;
+                }
+                await deleteDbBkOutlineEntry(editorEntry.id, podId);
+                await load();
+                setOutlineEditor(undefined);
+              }
+            : undefined
+        }
       />
       <BookAssetEditDialog
         open={editAsset !== undefined}
+        isCreate={assetEditor?.mode === 'create'}
         asset={editAsset}
         podId={podId}
         typeLabel={editAssetType?.label ?? 'Asset'}
         canWrite={canWrite}
-        onClose={() => setAssetEditorId(undefined)}
-        onSave={async (name, descriptionMd) => {
+        saving={assetSaving}
+        onClose={() => setAssetEditor(undefined)}
+        onSave={async (name, descriptionMd, pendingImagePaths) => {
           if (editAsset === undefined) {
             return;
           }
-          await updateDbBkAsset(editAsset.id, {name, descriptionMd});
-          await load();
-          setAssetEditorId(undefined);
-        }}
-        onDelete={async () => {
-          if (editAsset === undefined) {
-            return;
+          setAssetSaving(true);
+          try {
+            if (assetEditor?.mode === 'create') {
+              await createDbBkAsset(podId, {
+                id: editAsset.id,
+                assetTypeId: editAsset.assetTypeId,
+                name,
+                descriptionMd,
+              });
+              if (pendingImagePaths.length > 0) {
+                await syncDbBkAssetImagesFromPaths(podId, editAsset.id, pendingImagePaths);
+              }
+            } else {
+              await updateDbBkAsset(editAsset.id, {name, descriptionMd});
+            }
+            await load();
+            setAssetEditor(undefined);
+          } finally {
+            setAssetSaving(false);
           }
-          await deleteDbBkAsset(editAsset.id, podId);
-          await load();
-          setAssetEditorId(undefined);
         }}
-        onReload={load}
-        onError={(message) => setError(message)}
+        onDelete={
+          assetEditor?.mode === 'edit'
+            ? async () => {
+                if (editAsset === undefined) {
+                  return;
+                }
+                await deleteDbBkAsset(editAsset.id, podId);
+                await load();
+                setAssetEditor(undefined);
+              }
+            : undefined
+        }
       />
     </Stack>
   );
