@@ -1,4 +1,15 @@
-import {tool, type McpTool} from '@/lib/api/mcp/mcpCatalog';
+import type {AgentResult} from '@/lib/api/agent/agentResult';
+import type {McpTool} from '@/lib/api/mcp/mcpCatalog';
+
+function tool(
+  name: string,
+  description: string,
+  properties: Record<string, unknown>,
+  required: readonly string[],
+  run: McpTool['run'],
+): McpTool {
+  return {name, description, inputSchema: {type: 'object', properties, required}, run};
+}
 import {
   createAgentBookOutlineEntry,
   deleteAgentBookOutlineEntry,
