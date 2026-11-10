@@ -13,7 +13,6 @@ export interface ApiKeyFpGrant {
 
 export interface ApiKeyPodGrant {
   readonly todo?: readonly ApiKeyAction[];
-  readonly shopping?: readonly ApiKeyAction[];
   readonly fp?: ApiKeyFpGrant;
   readonly trip?: readonly ApiKeyAction[];
 }

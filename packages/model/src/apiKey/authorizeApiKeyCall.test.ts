@@ -133,11 +133,11 @@ describe('authorizeApiKeyCall', () => {
     expect(groupCall.ok).toBe(false);
   });
 
-  it('allows one key to grant a todo pod and a shopping pod in another space', () => {
+  it('allows one key to grant a todo pod and a trip pod in another space', () => {
     const shared = key({
       pods: {
         [podA]: {todo: [ApiKeyAction.READ]},
-        [podShop]: {shopping: [ApiKeyAction.CREATE]},
+        [podShop]: {trip: [ApiKeyAction.CREATE]},
       },
     });
     const todo = authorizeApiKeyCall({
@@ -146,11 +146,11 @@ describe('authorizeApiKeyCall', () => {
       nowIso: now,
       call: {spaceId: space, podId: podA, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
     });
-    const shopping = authorizeApiKeyCall({
+    const trip = authorizeApiKeyCall({
       key: shared,
-      access: access(SpaceRole.USER, [pod(podShop, FeatureKind.SHOPPING_LIST, PodRole.USER)]),
+      access: access(SpaceRole.USER, [pod(podShop, FeatureKind.TRIP_PLANNING, PodRole.USER)]),
       nowIso: now,
-      call: {spaceId: spaceB, podId: podShop, resource: ApiKeyResource.SHOPPING, action: ApiKeyAction.CREATE},
+      call: {spaceId: spaceB, podId: podShop, resource: ApiKeyResource.TRIP, action: ApiKeyAction.CREATE},
     });
     const otherPod = authorizeApiKeyCall({
       key: shared,
@@ -159,7 +159,7 @@ describe('authorizeApiKeyCall', () => {
       call: {spaceId: spaceB, podId: podB, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
     });
     expect(todo.ok).toBe(true);
-    expect(shopping.ok).toBe(true);
+    expect(trip.ok).toBe(true);
     expect(otherPod).toEqual({ok: false, code: 'forbidden', message: 'API key has no grant for this pod'});
   });
 
@@ -213,16 +213,6 @@ describe('authorizeApiKeyCall', () => {
       },
     });
     expect(result).toEqual({ok: false, code: 'forbidden', message: 'API key does not grant this action'});
-  });
-
-  it('denies a todo action on a shopping pod', () => {
-    const result = authorizeApiKeyCall({
-      key: key({pods: {[podA]: {todo: [ApiKeyAction.READ]}}}),
-      access: access(SpaceRole.USER, [pod(podA, FeatureKind.SHOPPING_LIST, PodRole.USER)]),
-      nowIso: now,
-      call: {spaceId: space, podId: podA, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
-    });
-    expect(result).toEqual({ok: false, code: 'forbidden', message: 'Pod feature does not match this action'});
   });
 
   it('denies a key whose owner left the space', () => {
@@ -360,12 +350,12 @@ describe('effectiveApiKeyPermissions', () => {
   it('reports grants from more than one space', () => {
     const result = effectiveApiKeyPermissions(
       key({
-        pods: {[podA]: {todo: [ApiKeyAction.READ]}, [podShop]: {shopping: [ApiKeyAction.READ]}},
+        pods: {[podA]: {todo: [ApiKeyAction.READ]}, [podShop]: {trip: [ApiKeyAction.READ]}},
         spaces: {[space]: {space: [ApiKeyAction.READ]}, [spaceB]: {group: [ApiKeyAction.READ]}},
       }),
       [
         {spaceId: space, access: access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER)])},
-        {spaceId: spaceB, access: access(SpaceRole.USER, [pod(podShop, FeatureKind.SHOPPING_LIST, PodRole.USER)])},
+        {spaceId: spaceB, access: access(SpaceRole.USER, [pod(podShop, FeatureKind.TRIP_PLANNING, PodRole.USER)])},
       ],
       now,
     );

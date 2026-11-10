@@ -164,9 +164,6 @@ function podGrant(row: ApiKeyMatrixPodRow): ApiKeyPodGrant | undefined {
   if (row.feature === FeatureKind.TODO_LIST) {
     return {todo: actions};
   }
-  if (row.feature === FeatureKind.SHOPPING_LIST) {
-    return {shopping: actions};
-  }
   if (row.feature === FeatureKind.TRIP_PLANNING) {
     return {trip: actions};
   }
@@ -284,9 +281,6 @@ function podRowFromGrant(row: ApiKeyMatrixPodRow, grant: ApiKeyPodGrant | undefi
   }
   if (row.feature === FeatureKind.TODO_LIST) {
     return {...row, cells: cellsFromActions(grant.todo), deleteAll: false};
-  }
-  if (row.feature === FeatureKind.SHOPPING_LIST) {
-    return {...row, cells: cellsFromActions(grant.shopping), deleteAll: false};
   }
   if (row.feature === FeatureKind.TRIP_PLANNING) {
     return {...row, cells: cellsFromActions(grant.trip), deleteAll: false};
