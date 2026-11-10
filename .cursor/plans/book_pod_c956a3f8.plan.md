@@ -24,7 +24,7 @@ todos:
     content: Download-for-offline manifest + IndexedDB; SW read-only cache hook (phased)
     status: pending
   - id: export-epub
-    content: EPUB 3 export job/route (post-v1 or late v1 — see phasing)
+    content: EPUB 3 export in first release (placeholder cover when missing; notes toggle)
     status: pending
 isProject: true
 ---
@@ -32,7 +32,7 @@ isProject: true
 # Book pod — implementation plan (plan-only)
 
 **Repo:** [CoolColdUK/simpleOutcomeDev](https://github.com/CoolColdUK/simpleOutcomeDev)  
-**Status:** Awaiting Matthew approval — implementation lands on branch `cursor/book-pod-plan-c956` after approval (per workflow).  
+**Status:** Matthew locked product decisions (Nov 2026) — see **Decisions (locked)**. Plan-only on this branch until implementation PR; post–PR #29 base (no `shopping_list`).  
 **Related:** [api-mcp.md](../plan/feature/api-mcp.md), [trip-planning.md](../plan/feature/trip-planning.md), [todo_list_kanban_213294b6.plan.md](./todo_list_kanban_213294b6.plan.md), [so_app_spaces_pwa_188a72d7.plan.md](./so_app_spaces_pwa_188a72d7.plan.md)
 
 ---
@@ -41,17 +41,17 @@ isProject: true
 
 | Area | Requirement |
 | --- | --- |
-| Pod | One **book** per pod: **name** (`pod.name`), **markdown summary**, **cover image** (required for publish-ready export; optional while drafting). Shown in a **collapsed accordion** at top of workspace. |
+| Pod | One **book** per pod: **name** (`pod.name`), **markdown summary**, optional **subtitle** (`bk_book.subtitle`), **cover image** (optional while drafting; EPUB uses **placeholder** if missing). Shown in a **collapsed accordion** at top of workspace. |
 | Outline | **Chapters**: number, title, summary, content (markdown), status `outline` \| `draft` \| `done`. **Notes**: only other entry type; inserted **after any chapter** in the global order; labeled Note 1, Note 2 (independent of chapter numbers). |
 | Ordering | **Drag-and-drop** reorder of the combined outline; **chapter numbers** and **note numbers** **renumber automatically** (dense 1..n within each kind). |
 | List UI | Pod outline list shows **chapter number + title** or **note label**; **filter** by type: chapters / notes / assets. |
 | Assets | Separate **library**, not linked to chapters. Default types: **characters**, **items**, **locations**; user may add **custom types** per book. Each asset: name, markdown description, one or more images. |
 | Markdown | Summaries, chapter summary/content, assets — all markdown with **inline images**. **Paste image** in editor → upload **Supabase Storage** → insert `soimg:` markdown link (same pattern as todo). |
-| Reading | **One chapter per page**, next/previous navigation (notes in reading flow — **proposed** below). |
+| Reading | **One chapter per page**, next/previous navigation; **chapters only by default**, notes via optional toggle (locked D7). |
 | Offline | **Read-only**, per book, via **Download** button (service worker + IndexedDB — **proposed** below). |
 | Sharing | Same **space/pod** model as existing features (`open` / `request` / `private`, roles). |
 | Agents | **MCP only** for AI generation: read/write books, chapters, notes, assets; list/get/create/update/reorder; bots use **summaries** to generate full content. |
-| Export | **EPUB 3** for KDP (DOCX later); cover, HTML TOC from chapters, embedded images; notes exclusion — **proposed** below. |
+| Export | **EPUB 3** in **first release**; cover or generated placeholder, HTML TOC from chapters, embedded images; **notes excluded by default**, export-time toggle for back matter (locked D8). |
 
 ---
 
@@ -59,9 +59,9 @@ isProject: true
 
 ### Pod kinds and schema evolution
 
-[`FeatureKind`](packages/model/src/space/featureKind.ts) today: `todo_list`, `shopping_list`, `financial_planning`, `trip_planning`. Postgres `pod.feature` is **text + CHECK**; each new kind extends the check and `create_pod` (see [`20261022150000_pod_viewer_trip_planning.sql`](supabase/migrations/20261022150000_pod_viewer_trip_planning.sql)).
+[`FeatureKind`](packages/model/src/space/featureKind.ts) today: `todo_list`, `financial_planning`, `trip_planning` (`shopping_list` removed in [`20261110180000_remove_shopping_list_feature.sql`](supabase/migrations/20261110180000_remove_shopping_list_feature.sql)). Postgres `pod.feature` is **text + CHECK**; extend the check and **`create_pod` / `create_agent_pod` / `app_private.api_key_pod_grant_ok`** from that migration’s definitions — not older files that still mention shopping.
 
-**Shopping list** is catalog-only (stub UI; API key resource reserved). **Todo**, **FP**, and **trip** are the reference implementations.
+**Todo**, **FP**, and **trip** are the reference implementations.
 
 ### Sharing and roles
 
@@ -72,13 +72,13 @@ isProject: true
 - **Todo write:** any member via `can_manage_todo_cards`.
 - **FP write:** owner-customisable matrix (`fp_setting.permission`); viewer is read-mostly.
 
-**Proposal for book (v1):** mirror **trip/todo**, not FP matrix.
+**Book (v1):** mirror **trip/todo**, not FP matrix.
 
 | Role | Book access |
 | --- | --- |
 | `pod_viewer` | Read outline, assets, reading view, offline download, storage **select** (signed URLs). No writes/uploads. |
-| `pod_user` | Create/edit/reorder chapters, notes, assets, asset types, cover, summaries; paste-upload images. |
-| `pod_admin` / `pod_owner` | Same as user; plus delete asset types with assets? (see open questions). Space owner retains manage-pod/delete. |
+| `pod_user` | Full edit surface: create/edit/reorder/**delete** chapters, notes, assets; manage asset types (delete custom type only when **empty**); cover, summaries, subtitle; paste-upload images. Rationale (Matthew): a malicious member could blank content anyway — delete is not materially worse. |
+| `pod_admin` / `pod_owner` | Same write/delete as `pod_user`. Space owner retains manage-pod/delete pod. |
 
 Assign **`pod_viewer`** when sharing read-only manuscripts; **`pod_user`** for co-authors and AI operators with write keys.
 
@@ -102,7 +102,7 @@ Book needs **one global ordered list** (chapters + notes interleaved) — closer
 
 - Hosted MCP: [`POST /api/mcp/[[...feature]]`](packages/web/app/api/mcp/[[...feature]]/route.ts) — per-feature catalogs (`todo`, `fp`, `trip`).
 - Trip pattern: [`trip-planning-api-mcp.md`](../plan/feature/trip-planning-api-mcp.md) — `lib/api/db/*` + `lib/api/agent/*` + `mcpCatalogByFeature.ts` + REST in `dispatchAgentRestMore.ts`.
-- API key pod grants: `todo`, `shopping`, `fp`, `trip` — add **`book`** with CRUD actions aligned to [`api-mcp.md`](../plan/feature/api-mcp.md).
+- API key pod grants: `todo`, `fp`, `trip` — add **`book`** (locked) with CRUD actions aligned with [`api-mcp.md`](../plan/feature/api-mcp.md); extend `app_private.api_key_pod_grant_ok` like post–#29 migration.
 
 Product rule: **AI generation via MCP only** in v1 (no in-app “Generate chapter” button required; optional later).
 
@@ -113,22 +113,27 @@ Product rule: **AI generation via MCP only** in v1 (no in-app “Generate chapte
 
 ---
 
-## Decisions (proposed for v1 — confirm with Matthew)
+## Decisions (locked — Matthew, Nov 2026)
 
-| # | Topic | Proposal |
+| # | Topic | Decision |
 | --- | --- | --- |
 | D1 | **Feature kind string** | `book` (`FeatureKind.BOOK = 'book'`). |
 | D2 | **Cardinality** | One book metadata row per pod (like one trip per trip pod). |
-| D3 | **Outline storage** | Single table `bk_outline_entry` with `kind` `chapter` \| `note`, global `sort_order`, denormalized `chapter_number` / `note_number` updated on reorder (fast list UI; trigger or service-layer renumber). |
-| D4 | **Chapter status** | Only on `kind = chapter`. Notes have no status (or ignore if set). |
-| D5 | **Pod title vs book** | `pod.name` = book title; `pod.description` unused or one-line subtitle; long **summary** on `bk_book.summary_md`. |
-| D6 | **Cover** | `bk_book.cover_storage_path` in `pod-private`; required before **Export EPUB**; optional in editor. |
-| D7 | **Reading flow & notes** | **Default:** reader navigates **chapters only** (notes hidden). Toggle in reader: “Include notes” → notes appear as extra pages in sequence position (after the chapter they follow in outline). |
-| D8 | **EPUB notes** | **Default exclude** notes from EPUB body; optional checkbox “Include notes as back matter” at export (notes section after last chapter). |
-| D9 | **Asset images** | Multiple images per asset; gallery in UI; markdown description may also reference `soimg:` paths. |
-| D10 | **Inline image caps** | Per-field caps in `@so/model` (e.g. 20 inline images per chapter content, 10 per summary) — tune in implementation. |
-| D11 | **Permissions** | Trip-style viewer read / member write; **no** FP-style matrix in v1. |
-| D12 | **Realtime** | Off (consistent with todo/trip). |
+| D3 | **Outline storage** | Single table `bk_outline_entry` with `kind` `chapter` \| `note`, global `sort_order`, denormalized `chapter_number` / `note_number` updated on reorder. |
+| D4 | **Chapter status** | Only on `kind = chapter`. Notes have no status in UI. |
+| D5 | **Title / subtitle / summary** | `pod.name` = book title. **`bk_book.subtitle`** = separate subtitle field (used on cover/EPUB metadata) — **not** `pod.description`. Long **summary** on `bk_book.summary_md`. |
+| D6 | **Cover & export** | `bk_book.cover_storage_path` optional in editor. **Export allowed without cover** — generate a **placeholder cover** image in the EPUB (and warn on KDP marketing cover separately). |
+| D7 | **Reading flow & notes** | **Locked:** reader shows **chapters only** by default. Toggle “Include notes” → notes as extra pages at their outline position. |
+| D8 | **EPUB notes** | **Locked:** excluded from body by default; **export-time checkbox** to include notes as **back matter**. |
+| D9 | **Asset images** | Multiple images per asset; gallery in UI; markdown may use `soimg:` paths. |
+| D10 | **Inline images** | **No hard per-chapter count in v1.** Rely on **`pod-private`** `file_size_limit` and `allowed_mime_types` (JPEG/PNG/WebP per self-check below). |
+| D11 | **Destructive actions** | **`pod_user` may delete** chapters, notes, and assets (any writer). |
+| D12 | **Custom asset types** | Deleting a custom type when it still has assets is **blocked** (no cascade) — must move/delete assets first. |
+| D13 | **API key grant** | Pod grant key **`book`** — confirmed. |
+| D14 | **EPUB timing** | **Ships in first release** (same v1 as core workspace), not a fast-follow. |
+| D15 | **Permissions model** | Trip-style viewer read / member write; **no** FP matrix in v1. |
+| D16 | **Realtime** | Off. |
+| D17 | **moddatetime** | Extension **already enabled** on Supabase — use `moddatetime` triggers on new tables; no new extension enablement step. |
 
 ---
 
@@ -150,18 +155,19 @@ flowchart TB
   asset --> ai
 ```
 
-### Tables (new migration `*_book_pod.sql`)
+### Tables (new migration `20261110200000_book_pod.sql` or later — **must sort after** [`20261110180000_remove_shopping_list_feature.sql`](supabase/migrations/20261110180000_remove_shopping_list_feature.sql))
 
 **Catalog**
 
-- Extend `pod_feature_check` and `create_pod` to accept `'book'`.
-- On `create_pod` for `book`: insert `bk_book` row + seed `bk_asset_type` rows: `characters`, `items`, `locations` (stable slugs).
+- Patch **`pod_feature_check`**, **`public.create_pod`**, **`public.create_agent_pod`**, and **`app_private.api_key_pod_grant_ok`** starting from the **post–#29** bodies (features: `todo_list`, `financial_planning`, `trip_planning` → add `'book'`; grant key `'book'` when `p_feature = 'book'`).
+- On `create_pod` for `book`: insert `bk_book` row + seed `bk_asset_type` rows: `characters`, `items`, `locations` (stable slugs). Mirror trip’s pattern if trip pod creates `tp_trip` in trigger.
 
 **`bk_book`**
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `pod_id` | uuid PK FK → `pod` ON DELETE CASCADE | |
+| `subtitle` | text default `''` | Short line for cover/EPUB — **not** `pod.description` |
 | `summary_md` | text default `''` | Markdown |
 | `cover_storage_path` | text nullable | `pod-private` object path |
 | `offline_bundle_version` | int default 1 | Bump on any content change affecting offline manifest |
@@ -198,7 +204,7 @@ flowchart TB
 | `slug` | text | Unique per pod; built-in slugs reserved |
 | `label` | text | Display name |
 | `sort_order` | int | |
-| `is_system` | boolean | true for the three defaults (cannot delete slug, can rename label) |
+| `is_system` | boolean | true for the three defaults (cannot delete slug, can rename label). **Delete custom type:** RPC/app checks **no** `bk_asset` rows for that type (D12); DB may add trigger or rely on service layer. |
 
 **`bk_asset`**
 
@@ -234,9 +240,9 @@ Policies: SELECT on all `bk_*` = `can_read_book_pod`; INSERT/UPDATE/DELETE = `ca
 
 | Asset | Path pattern | MIME | Limit |
 | --- | --- | --- | --- |
-| Cover | `{pod_id}/book/cover-{uuid}.{jpg\|png}` | JPEG/PNG | 5 MB |
-| Outline inline | `{pod_id}/book/outline/{entry_id}/img-{unix}.{ext}` | JPEG/PNG | 5 MB |
-| Asset gallery | `{pod_id}/book/assets/{asset_id}/img-{unix}.{ext}` | JPEG/PNG | 5 MB |
+| Cover | `{pod_id}/book/cover-{uuid}.{jpg\|png\|webp}` | JPEG/PNG/WebP | bucket limit |
+| Outline inline | `{pod_id}/book/outline/{entry_id}/img-{unix}.{ext}` | JPEG/PNG/WebP | bucket limit |
+| Asset gallery | `{pod_id}/book/assets/{asset_id}/img-{unix}.{ext}` | JPEG/PNG/WebP | bucket limit |
 
 **Policies:** extend `pod_private_objects_*` to allow access when `app_private.can_read_book_pod(pod_id_from_path)` (select) and `can_write_book_pod` (insert/update/delete). Reuse `app_private.pod_id_from_storage_object_name` (first path segment = `pod_id`).
 
@@ -251,7 +257,7 @@ interface BookOfflineBundle {
   podId: string;
   version: number; // bk_book.offline_bundle_version
   syncedAt: string; // ISO
-  book: { name: string; summaryMd: string; coverPath?: string };
+  book: { name: string; subtitle: string; summaryMd: string; coverPath?: string };
   outline: Array<{...}>;
   assets: Array<{...}>;
   signedUrlMap: Record<string, string>; // storage path → url at sync time
@@ -271,9 +277,9 @@ New package area `packages/model/src/book/`:
 - `buildBookCoverObjectPath`, `buildBookOutlineImageObjectPath`, `buildBookAssetImageObjectPath`.
 - `renumberBookOutline(entries)` — pure function + tests (chapter/note sequences).
 - `bookOutlineListLabel(entry)` → `"3 · Title"` or `"Note 2 · …"`.
-- Re-export limits: `BOOK_MAX_INLINE_IMAGES_PER_FIELD`, etc.
+- **No** per-field inline image count export in v1 (bucket limits only).
 
-Extend [`FeatureKind`](packages/model/src/space/featureKind.ts), `parseFeatureKind`, API key types (`book` grant), `ApiKeyResource.BOOK`.
+Extend [`FeatureKind`](packages/model/src/space/featureKind.ts), `parseFeatureKind`, API key types (`book` grant), `ApiKeyResource.BOOK`, `ApiKeyPodResource.BOOK`, `featureKindForApiResource`, `parseApiKeyPermissions` pod grant keys (`todo` \| `fp` \| `trip` \| `book`).
 
 ---
 
@@ -283,13 +289,13 @@ One function per file (repo convention):
 
 | Area | Functions |
 | --- | --- |
-| Book | `getDbBook`, `updateDbBook` (summary, cover path clear) |
+| Book | `getDbBook`, `updateDbBook` (subtitle, summary, cover path clear) |
 | Outline | `listDbBookOutline`, `createDbBookOutlineEntry`, `updateDbBookOutlineEntry`, `deleteDbBookOutlineEntry`, `reorderDbBookOutline` |
 | Assets | `listDbBookAssetTypes`, `createDbBookAssetType`, `updateDbBookAssetType`, `deleteDbBookAssetType`, CRUD assets + images |
 | Workspace | `loadDbBookWorkspace` — single payload for UI + agents |
 | Storage | `uploadDbBookCover`, `resolveStorageBookImageSignedUrls` (generalise todo resolver) |
 | Offline | `buildDbBookOfflineBundle` — server-built JSON for Download (authenticated) |
-| Export | `buildDbBookEpub` — phase 2 / late v1 (see phasing) |
+| Export | `buildDbBookEpub` — **v1** (placeholder cover, notes toggle) |
 
 **Reorder:** accept ordered `entryId[]`; transaction: update `sort_order`, call `bk_renumber_outline` (SQL function via RPC or sequential updates from TS using `mapPromiseSeries`).
 
@@ -325,8 +331,8 @@ Wire [`PodWorkspace`](packages/web/components/app/PodWorkspace.tsx): `FeatureKin
 
 ### Layout
 
-1. **Collapsed accordion (top):** cover thumbnail, title (`pod.name`), markdown summary preview, edit actions for writers.
-2. **Toolbar:** filter chips — **Chapters** | **Notes** | **Assets** | **All outline**; **Download for offline**; **Read**; **Export** (when shipped).
+1. **Collapsed accordion (top):** cover thumbnail, title (`pod.name`), **subtitle**, markdown summary preview, edit actions for writers.
+2. **Toolbar:** filter chips — **Chapters** | **Notes** | **Assets** | **All outline**; **Download for offline**; **Read**; **Export EPUB** (v1).
 3. **Main pane (filtered):**
    - Outline: sortable list (`@dnd-kit`) showing chapter `n · title` or `Note n · title` + status chip for chapters.
    - Assets: grouped by type; sub-list sortable within type; add custom type (writers).
@@ -370,9 +376,10 @@ Extend create-pod dialog: feature **Book**; name = working title.
 
 | Source | EPUB |
 | --- | --- |
-| Cover | `bk_book.cover_storage_path` → `cover-image` (JPEG embedded) |
+| Cover | User cover, or **generated placeholder** (title + subtitle on solid background) → `cover-image` |
 | Title | `pod.name` |
-| Description | `summary_md` → optional metadata / introductory section |
+| Subtitle | `bk_book.subtitle` → EPUB metadata / cover placeholder |
+| Description | `summary_md` → optional introductory section |
 | Chapters | Each `kind=chapter` → one HTML section in spine order (by `chapter_number` / `sort_order`) |
 | TOC | Nav document (`nav` epub:type) listing chapters only |
 | Images | Resolve `soimg:` → embed as `images/*` with relative `src` |
@@ -404,34 +411,41 @@ Extend create-pod dialog: feature **Book**; name = working title.
 - Cover: single PDF, bleed **0.125"**, spine width from page count ([Paperback Submission Guidelines](https://kdp.amazon.com/en_US/help/topic/G201857950); [Print Publishing Guidelines PDF](https://images-na.ssl-images-amazon.com/images/G/01/00/01/00/02/17/60/10002176030.pdf)).
 - Out of v1 unless Matthew prioritises print wrap export.
 
-**Export UX guardrails:** warn if cover missing or below 2560×1600; warn if any chapter `status !== done` (optional override).
+**Export UX guardrails:** if user cover present but below KDP **recommended** 2560×1600, warn (export still proceeds). Warn if chapters `status !== done` (optional override). Notes only when export checkbox set (D8).
 
 ---
 
 ## Phasing
 
-| Phase | Deliverable |
+**First release (v1)** ships the full surface below in one implementation pass (Matthew: EPUB is not deferred).
+
+| Slice | Deliverable |
 | --- | --- |
-| **v1a** | Migration, model, db API, workspace UI (accordion, outline CRUD, DnD renumber, filters), markdown + paste upload, asset library, reading view (chapters default), sharing via existing pod roles, unit tests in `@so/model` |
-| **v1b** | MCP + REST + API key `book` grant; agent upload image tool |
-| **v1c** | Offline download bundle + IDB reader |
-| **v1d or v2** | EPUB export; KDP-oriented validation messages |
-| **Later** | DOCX export; print PDF cover calculator; in-app AI draft button; FP-style permission matrix; link asset `@mentions` in chapters |
+| **Schema** | `20261110200000_book_pod.sql` (+ patches from post–#29 catalog), RLS, storage policy updates |
+| **Model + API** | `@so/model/book/*`, `lib/api/db/book/*`, storage upload/resolve, reorder |
+| **UI** | Workspace (accordion w/ subtitle), outline DnD + filters, asset library, reading view (D7), markdown paste upload |
+| **Agents** | REST + `POST /api/mcp/book` + API key `book` grant |
+| **Offline** | Download bundle + IDB reader |
+| **Export** | EPUB 3 download, placeholder cover, notes back-matter toggle (D8), KDP validation hints |
+| **Tests** | `@so/model` unit tests per project rules |
+
+**Later:** DOCX export; print PDF cover calculator; in-app AI draft button; FP-style permission matrix; asset `@mentions` in chapters.
 
 ---
 
-## Acceptance criteria (v1a–v1b)
+## Acceptance criteria (v1)
 
 1. Space admin can create a **Book** pod; member sees book workspace.
-2. Accordion shows name, summary, cover; writers can edit all three.
+2. Accordion shows name, **subtitle**, summary, cover; writers can edit all four.
 3. Add chapters and notes; drag to reorder; chapter and note numbers update correctly after every reorder.
 4. Chapter status transitions; notes have no status in UI.
 5. Filter outline list by chapters / notes / assets.
-6. Asset types: defaults present; custom type creatable; assets with multiple images.
-7. Paste PNG into summary/content uploads to `pod-private` and renders in preview.
-8. `pod_viewer` can read but cannot mutate; `pod_user` can write.
-9. Reading view: chapter-by-chapter navigation; notes excluded unless toggle on.
-10. MCP: key with `book` grant on pod can `get_book_workspace`, `create_book_chapter`, `reorder_book_outline`, `update_book_outline_entry` (content), denied without grant or on wrong feature kind.
+6. Asset types: defaults present; custom type creatable; **cannot delete type with assets**; assets with multiple images.
+7. Paste image into summary/content uploads to `pod-private` and renders in preview (no per-chapter image cap).
+8. `pod_viewer` read-only; `pod_user` can write **and delete** outline/assets.
+9. Reading view: chapters only by default; notes when toggle on (D7).
+10. EPUB export works without user cover (placeholder); notes only when export checkbox set (D8).
+11. MCP: key with `book` grant can workspace CRUD + reorder; denied without grant or wrong feature kind.
 
 ---
 
@@ -439,7 +453,7 @@ Extend create-pod dialog: feature **Book**; name = working title.
 
 | Layer | Tests |
 | --- | --- |
-| `@so/model` | Renumber logic; path builders; valibot parse; label helpers; image count limits |
+| `@so/model` | Renumber logic; path builders; valibot parse; label helpers; delete-asset-type guard (pure) |
 | SQL (manual / integration) | RLS: viewer read, non-member deny; writer insert; cross-pod deny |
 | Agent (optional jest) | Authorize matrix for `book` resource |
 | E2E (manual browser) | DnD reorder numbers; paste image; reader nav; offline download open airplane mode |
@@ -448,29 +462,34 @@ No application unit tests by default (project rule); E2E only if Matthew request
 
 ---
 
-## Manual tasks (post-migration push)
+## Implementer self-checks (migration + storage)
 
-Same checklist as todo plan ([AGENTS.md](AGENTS.md)):
+Run during implementation; not product questions.
 
-1. Confirm `moddatetime` extension if used on new tables.
-2. Confirm `pod-private` bucket limits/MIME after migration.
-3. Verify storage policies for new path prefixes.
-4. Local: `supabase db reset`.
+### A. `pod-private` bucket limits and MIME
+
+1. Query current bucket: `select file_size_limit, allowed_mime_types from storage.buckets where id = 'pod-private';` (or Dashboard → Storage → `pod-private`).
+2. Confirm book cover, outline inline, and asset gallery uploads (JPEG/PNG/**WebP**) are allowed — **extend `allowed_mime_types` in the book migration** if WebP (or larger limit) is missing, matching todo/trip precedent (trip added PDF in its migration).
+3. Document chosen limit in migration comment; client validation should match bucket `file_size_limit` (no separate per-chapter cap).
+
+### B. Storage RLS for `{pod_id}/book/...` paths
+
+1. Read current `pod_private_objects_*` policies (todo/trip already gate on `pod_id` first path segment).
+2. Ensure **SELECT** uses `app_private.can_read_book_pod(app_private.pod_id_from_storage_object_name(name))` (or shared read helper that includes book pods).
+3. Ensure **INSERT/UPDATE/DELETE** use `app_private.can_write_book_pod(...)` for paths under `{pod_id}/book/` — same membership model as todo paste uploads (`is_pod_writer`).
+4. Smoke test: member upload inline image → non-member 403; `pod_viewer` can fetch signed URL but cannot upload.
+
+### C. Clean migration apply
+
+1. Local: `supabase db reset` (or CI migration job) from empty — must apply through `20261110180000_*` then `20261110200000_book_pod.sql` with no errors.
+2. Regenerate / refresh Supabase types used by `packages/web` if the repo does so in CI.
+3. Production: still **GitHub Actions** `db push` only ([AGENTS.md](AGENTS.md)); **`moddatetime` already enabled** (D17) — no Dashboard extension step unless a fresh project lacks it.
 
 ---
 
-## Open questions for Matthew
+## Open questions
 
-1. **Co-author destructive actions:** Can `pod_user` delete chapters/notes/assets, or only admin/owner?
-2. **Custom asset types:** Can members delete a custom type that still has assets (cascade vs block)?
-3. **Book subtitle:** Use `pod.description` for subtitle/tagline on cover export, or ignore?
-4. **Reading flow default:** Confirm D7 (chapters-only default, notes optional toggle).
-5. **EPUB notes default:** Confirm D8 (exclude; optional back matter).
-6. **Cover required:** Block export without cover, or allow placeholder?
-7. **Inline image cap** per chapter (20?) and total book size budget for offline download.
-8. **API key naming:** Resource key `book` on pod grant — OK?
-9. **v1 EPUB:** Ship in first release (v1d) or fast-follow PR after core UI?
-10. **Shopping list:** Any interaction with book pods (none planned)?
+_None blocking v1 after Matthew’s decisions (Nov 2026). Implementation may still need a one-time call on **EPUB build approach** (hand-rolled ZIP vs approved npm dependency) before adding packages._
 
 ---
 
@@ -480,9 +499,8 @@ Same checklist as todo plan ([AGENTS.md](AGENTS.md)):
 2. `@so/model` + tests  
 3. `lib/api/db/book/*` + storage helpers  
 4. `BookWorkspace` UI + reading routes  
-5. MCP/REST + API keys UI row for book pods  
-6. Offline bundle  
-7. EPUB export  
+5. MCP/REST + API key `book` grant + settings UI row  
+6. Offline bundle + EPUB export (same v1 pass)  
 
 ---
 
