@@ -206,7 +206,7 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   }
 
   return (
-  <Stack gap={4}>
+    <Stack gap={4}>
       <SoToaster />
       {error !== '' ? <Text color="fg.error">{error}</Text> : null}
       <Accordion.Root collapsible defaultValue={[]}>
