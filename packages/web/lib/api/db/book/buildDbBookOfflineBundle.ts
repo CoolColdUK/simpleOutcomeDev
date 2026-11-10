@@ -1,6 +1,6 @@
 import type {DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
 import resolveStorageBookImageSignedUrls from '@/lib/api/storage/resolveStorageBookImageSignedUrls';
-import {extractSoImageObjectPathsFromBody} from '@so/model';
+import {collectBookOfflineImagePaths} from '@so/model';
 
 export interface DbBookOfflineBundle {
   readonly podId: string;
@@ -18,20 +18,18 @@ export interface DbBookOfflineBundle {
 }
 
 export default async function buildDbBookOfflineBundle(podId: string, workspace: DbBookWorkspace): Promise<DbBookOfflineBundle> {
-  const bodies = [
-    workspace.book.summaryMd,
-    ...workspace.outline.flatMap((entry) => [entry.summaryMd, entry.contentMd]),
-    ...workspace.assets.map((asset) => asset.descriptionMd),
-  ];
-  const paths = new Set<string>();
-  bodies.forEach((body) => extractSoImageObjectPathsFromBody(body).forEach((path) => paths.add(path)));
-  if (workspace.book.coverStoragePath !== undefined) {
-    paths.add(workspace.book.coverStoragePath);
-  }
-  workspace.assets.forEach((asset) => asset.images.forEach((img) => paths.add(img.storagePath)));
+  const paths = collectBookOfflineImagePaths({
+    coverStoragePath: workspace.book.coverStoragePath,
+    markdownBodies: [
+      workspace.book.summaryMd,
+      ...workspace.outline.flatMap((entry) => [entry.summaryMd, entry.contentMd]),
+      ...workspace.assets.map((asset) => asset.descriptionMd),
+    ],
+    assetGalleryStoragePaths: workspace.assets.flatMap((asset) => asset.images.map((img) => img.storagePath)),
+  });
   const signedUrlMap: Record<string, string> = {};
   await Promise.all(
-    [...paths].map(async (path) => {
+    paths.map(async (path) => {
       const resolved = await resolveStorageBookImageSignedUrls(`![](soimg:${encodeURIComponent(path)})`);
       const match = resolved.match(/\]\(<([^>]+)>\)/);
       if (match?.[1] !== undefined) {

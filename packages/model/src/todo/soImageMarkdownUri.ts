@@ -30,6 +30,16 @@ export function replaceSoImageMarkdownSrc(markdown: string, objectPath: string, 
   return markdown.split(encodedNeedle).join(dest).split(rawNeedle).join(dest);
 }
 
+export function applySoImageUrlMapToMarkdown(
+  markdown: string,
+  urlByObjectPath: Readonly<Record<string, string>>,
+): string {
+  return Object.entries(urlByObjectPath).reduce(
+    (acc, [objectPath, href]) => replaceSoImageMarkdownSrc(acc, objectPath, href),
+    markdown,
+  );
+}
+
 export function extractSoImageObjectPathsFromBody(body: string): string[] {
   const paths: string[] = [];
   const seen = new Set<string>();

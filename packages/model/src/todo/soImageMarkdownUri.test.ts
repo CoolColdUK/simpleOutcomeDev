@@ -2,6 +2,7 @@ import {
   encodeSoImageMarkdownUri,
   decodeSoImageMarkdownUri,
   countSoImageMarkdownUrisInBody,
+  applySoImageUrlMapToMarkdown,
   extractSoImageObjectPathsFromBody,
   replaceSoImageMarkdownSrc,
 } from './soImageMarkdownUri';
@@ -29,5 +30,15 @@ describe('soImageMarkdownUri', () => {
     const body = 'x ![a](soimg:pod%2Fc.png) y ![b](soimg:pod%2Fc.png)';
     expect(countSoImageMarkdownUrisInBody(body)).toBe(2);
     expect(extractSoImageObjectPathsFromBody(body)).toEqual(['pod/c.png']);
+  });
+
+  it('applies a url map across multiple paths', () => {
+    const body = '![a](soimg:pod%2Fone.png) ![b](soimg:pod%2Ftwo.png)';
+    const next = applySoImageUrlMapToMarkdown(body, {
+      'pod/one.png': 'https://cdn/1',
+      'pod/two.png': 'https://cdn/2',
+    });
+    expect(next).toContain('](<https://cdn/1>)');
+    expect(next).toContain('](<https://cdn/2>)');
   });
 });

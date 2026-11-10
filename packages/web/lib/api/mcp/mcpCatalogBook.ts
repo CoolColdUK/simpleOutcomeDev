@@ -14,12 +14,17 @@ function tool(
   return {name, description, inputSchema: {type: 'object', properties, required}, run};
 }
 import {
+  createAgentBookAsset,
+  createAgentBookAssetType,
   createAgentBookOutlineEntry,
+  deleteAgentBookAsset,
+  deleteAgentBookAssetType,
   deleteAgentBookOutlineEntry,
   exportAgentBookEpub,
   getAgentBookOfflineBundle,
   getAgentBookWorkspace,
   reorderAgentBookOutline,
+  updateAgentBookAsset,
   updateAgentBookMetadata,
   updateAgentBookOutlineEntry,
 } from '@/lib/api/agent/bookAgent';
@@ -73,5 +78,36 @@ export const BOOK_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool('get_book_offline_bundle', 'Offline read bundle with signed image URLs.', {podId}, ['podId'], (request, args) =>
     getAgentBookOfflineBundle(request, argsRecord(args)),
+  ),
+  tool(
+    'create_book_asset_type',
+    'Create a custom asset type (characters/items/locations are seeded).',
+    {podId, label: {type: 'string'}, slug: {type: 'string'}},
+    ['podId', 'label'],
+    (request, args) => createAgentBookAssetType(request, argsRecord(args)),
+  ),
+  tool(
+    'delete_book_asset_type',
+    'Delete a custom asset type when it has no assets.',
+    {podId, assetTypeId: {type: 'string'}},
+    ['podId', 'assetTypeId'],
+    (request, args) => deleteAgentBookAssetType(request, argsRecord(args)),
+  ),
+  tool(
+    'create_book_asset',
+    'Create an asset in an asset type.',
+    {podId, assetTypeId: {type: 'string'}, name: {type: 'string'}, descriptionMd: {type: 'string'}},
+    ['podId', 'assetTypeId'],
+    (request, args) => createAgentBookAsset(request, argsRecord(args)),
+  ),
+  tool(
+    'update_book_asset',
+    'Update asset name or description markdown.',
+    {podId, assetId: {type: 'string'}, name: {type: 'string'}, descriptionMd: {type: 'string'}},
+    ['podId', 'assetId'],
+    (request, args) => updateAgentBookAsset(request, argsRecord(args)),
+  ),
+  tool('delete_book_asset', 'Delete an asset.', {podId, assetId: {type: 'string'}}, ['podId', 'assetId'], (request, args) =>
+    deleteAgentBookAsset(request, argsRecord(args)),
   ),
 ];

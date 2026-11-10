@@ -74,14 +74,19 @@ import {
   updateAgentPod,
 } from '@/lib/api/agent/spaceLifecycleAgent';
 import {
+  createAgentBookAsset,
+  createAgentBookAssetType,
+  createAgentBookOutlineEntry,
+  deleteAgentBookAsset,
+  deleteAgentBookAssetType,
+  deleteAgentBookOutlineEntry,
   exportAgentBookEpub,
   getAgentBookOfflineBundle,
   getAgentBookWorkspace,
   reorderAgentBookOutline,
+  updateAgentBookAsset,
   updateAgentBookMetadata,
   updateAgentBookOutlineEntry,
-  createAgentBookOutlineEntry,
-  deleteAgentBookOutlineEntry,
 } from '@/lib/api/agent/bookAgent';
 import {archiveAgentTodoColumnCards, archiveAgentTodoColumnCompleted, reorderAgentTodoCards, reorderAgentTodoColumns} from '@/lib/api/agent/todoAgentBoard';
 import {addAgentTodoCommentImage} from '@/lib/api/agent/todoAgentComments';
@@ -293,6 +298,30 @@ async function dispatchBook(method: string, request: Request, path: readonly str
   }
   if (fourth === 'export' && fifth === 'epub') {
     return method === 'POST' ? agentResultResponse(await exportAgentBookEpub(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+  }
+  if (fourth === 'asset-types' && fifth === undefined) {
+    return method === 'POST'
+      ? agentResultResponse(await createAgentBookAssetType(request, await bodyWith(request, {podId})))
+      : methodNotAllowed();
+  }
+  if (fourth === 'asset-types' && isUuid(fifth) && path[5] === undefined) {
+    return method === 'DELETE'
+      ? agentResultResponse(await deleteAgentBookAssetType(request, {podId, assetTypeId: fifth}))
+      : methodNotAllowed();
+  }
+  if (fourth === 'assets' && fifth === undefined) {
+    return method === 'POST'
+      ? agentResultResponse(await createAgentBookAsset(request, await bodyWith(request, {podId})))
+      : methodNotAllowed();
+  }
+  if (fourth === 'assets' && isUuid(fifth) && path[5] === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentBookAsset(request, await bodyWith(request, {podId, assetId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentBookAsset(request, {podId, assetId: fifth}));
+    }
+    return methodNotAllowed();
   }
   return methodNotAllowed();
 }

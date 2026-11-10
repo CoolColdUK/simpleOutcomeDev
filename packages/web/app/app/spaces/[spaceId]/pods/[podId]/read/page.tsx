@@ -6,7 +6,8 @@ import {Button, HStack, Stack, Switch, Text} from '@chakra-ui/react';
 import {BookOutlineKind} from '@so/model';
 import loadDbBookWorkspace from '@/lib/api/db/book/loadDbBookWorkspace';
 import BookMarkdownBody from '@/components/book/BookMarkdownBody';
-import {loadBookOfflineBundle} from '@/lib/book/bookOfflineStore';
+import {extractSoImageObjectPathsFromBody} from '@so/model';
+import {loadBookOfflineBundle, loadOfflineImageBlobUrlMap} from '@/lib/book/bookOfflineStore';
 
 const NOTES_STORAGE_KEY = 'so-book-reader-include-notes';
 
@@ -24,8 +25,10 @@ export default function BookReadPage() {
   const [index, setIndex] = useState(0);
   const [outline, setOutline] = useState<{id: string; title: string; contentMd: string; kind: BookOutlineKind}[]>([]);
   const [title, setTitle] = useState('');
+  const [offlineImageUrlByPath, setOfflineImageUrlByPath] = useState<Record<string, string> | undefined>(undefined);
 
   useEffect(() => {
+    const blobUrls: string[] = [];
     void (async () => {
       const offline = await loadBookOfflineBundle(params.podId);
       if (offline !== undefined) {
@@ -39,8 +42,17 @@ export default function BookReadPage() {
           }));
         setOutline(items);
         setTitle('Offline copy');
+        const paths = new Set<string>();
+        items.forEach((entry) => extractSoImageObjectPathsFromBody(entry.contentMd).forEach((path) => paths.add(path)));
+        if (offline.book.coverStoragePath !== undefined) {
+          paths.add(offline.book.coverStoragePath);
+        }
+        const blobMap = await loadOfflineImageBlobUrlMap(params.podId, [...paths]);
+        blobUrls.push(...Object.values(blobMap));
+        setOfflineImageUrlByPath(blobMap);
         return;
       }
+      setOfflineImageUrlByPath(undefined);
       const workspace = await loadDbBookWorkspace(params.podId);
       if (workspace === undefined) {
         return;
@@ -56,6 +68,9 @@ export default function BookReadPage() {
       setOutline(items);
       setTitle('Book');
     })();
+    return () => {
+      blobUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
   }, [includeNotes, params.podId]);
 
   const current = useMemo(() => outline[index], [index, outline]);
@@ -85,7 +100,7 @@ export default function BookReadPage() {
       <Text fontSize="lg" fontWeight="bold">
         {current.title}
       </Text>
-      <BookMarkdownBody markdown={current.contentMd} />
+      <BookMarkdownBody markdown={current.contentMd} offlineImageUrlByPath={offlineImageUrlByPath} />
       <HStack>
         <Button disabled={index <= 0} onClick={() => setIndex((value) => Math.max(0, value - 1))}>
           Previous

@@ -10,6 +10,7 @@ export {
   countSoImageMarkdownUrisInBody,
   extractSoImageObjectPathsFromBody,
   replaceSoImageMarkdownSrc,
+  applySoImageUrlMapToMarkdown,
 } from './soImageMarkdownUri';
 export {default as todoCardStatusLabel} from './todoCardStatusLabel';
 export {default as canManageTodoColumns} from './canManageTodoColumns';

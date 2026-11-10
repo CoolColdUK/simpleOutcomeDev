@@ -44,6 +44,7 @@ import buildDbBookOfflineBundle from '@/lib/api/db/book/buildDbBookOfflineBundle
 import buildDbBookEpub from '@/lib/api/db/book/buildDbBookEpub';
 import {saveBookOfflineBundle} from '@/lib/book/bookOfflineStore';
 import BookMarkdownBody from '@/components/book/BookMarkdownBody';
+import BookAssetImageGallery from '@/components/book/BookAssetImageGallery';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import insertAtCaret from '@/components/todo/insertAtCaret';
 
@@ -98,10 +99,15 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   const [includeNotesExport, setIncludeNotesExport] = useState(false);
   const [error, setError] = useState('');
   const [contentDraftById, setContentDraftById] = useState<Record<string, string>>({});
+  const [summaryDraftById, setSummaryDraftById] = useState<Record<string, string>>({});
   const contentDraft =
     selectedId === undefined
       ? ''
       : (contentDraftById[selectedId] ?? workspace?.outline.find((entry) => entry.id === selectedId)?.contentMd ?? '');
+  const summaryDraft =
+    selectedId === undefined
+      ? ''
+      : (summaryDraftById[selectedId] ?? workspace?.outline.find((entry) => entry.id === selectedId)?.summaryMd ?? '');
 
   const load = useCallback(async (): Promise<void> => {
     const data = await loadDbBookWorkspace(podId);
@@ -170,7 +176,7 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
     if (selected === undefined) {
       return;
     }
-    await updateDbBkOutlineEntry(selected.id, {contentMd: contentDraft});
+    await updateDbBkOutlineEntry(selected.id, {contentMd: contentDraft, summaryMd: summaryDraft});
     await load();
   };
 
@@ -308,6 +314,21 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
                   </NativeSelect.Field>
                 </NativeSelect.Root>
               ) : null}
+              <Text fontSize="sm" fontWeight="medium">
+                Summary
+              </Text>
+              <Textarea
+                key={`${selected.id}-summary`}
+                value={summaryDraft}
+                onChange={(e) => setSummaryDraftById((prev) => ({...prev, [selected.id]: e.target.value}))}
+                rows={4}
+                placeholder="Chapter or note summary (markdown)"
+                disabled={!canWrite}
+              />
+              {summaryDraft !== '' ? <BookMarkdownBody markdown={summaryDraft} /> : null}
+              <Text fontSize="sm" fontWeight="medium">
+                Content
+              </Text>
               <Textarea
                 key={selected.id}
                 value={contentDraft}
@@ -374,6 +395,14 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
                       rows={3}
                       onChange={(e) => void updateDbBkAsset(asset.id, {descriptionMd: e.target.value}).then(() => load())}
                       disabled={!canWrite}
+                    />
+                    <BookAssetImageGallery
+                      podId={podId}
+                      assetId={asset.id}
+                      images={asset.images}
+                      canWrite={canWrite}
+                      onChanged={load}
+                      onError={(message) => setError(message)}
                     />
                     {canWrite ? (
                       <Button
