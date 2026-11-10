@@ -36,3 +36,4 @@ packages/web/.vercel
 
 # Supabase
 .supabase
+log.txt
