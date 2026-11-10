@@ -26,6 +26,9 @@ export default async function buildDbBookOfflineBundle(podId: string, workspace:
       ...workspace.assets.map((asset) => asset.descriptionMd),
     ],
     assetGalleryStoragePaths: workspace.assets.flatMap((asset) => asset.images.map((img) => img.storagePath)),
+    outlineChapterImagePaths: workspace.outline
+      .map((entry) => entry.chapterImageStoragePath)
+      .filter((path): path is string => path !== undefined),
   });
   const signedUrlMap: Record<string, string> = {};
   await Promise.all(

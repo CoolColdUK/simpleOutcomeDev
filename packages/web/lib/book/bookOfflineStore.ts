@@ -27,7 +27,12 @@ function imageKey(podId: string, storagePath: string): string {
   return `${podId}\0${storagePath}`;
 }
 
-export async function saveBookOfflineBundle(podId: string, bundle: DbBookOfflineBundle): Promise<void> {
+export interface SaveBookOfflineBundleResult {
+  readonly imageCount: number;
+  readonly bytesCached: number;
+}
+
+export async function saveBookOfflineBundle(podId: string, bundle: DbBookOfflineBundle): Promise<SaveBookOfflineBundleResult> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(BUNDLE_STORE, 'readwrite');
@@ -44,8 +49,13 @@ export async function saveBookOfflineBundle(podId: string, bundle: DbBookOffline
       ...bundle.assets.map((asset) => asset.descriptionMd),
     ],
     assetGalleryStoragePaths: bundle.assets.flatMap((asset) => asset.images.map((img) => img.storagePath)),
+    outlineChapterImagePaths: bundle.outline
+      .map((entry) => entry.chapterImageStoragePath)
+      .filter((path): path is string => path !== undefined),
   });
 
+  let bytesCached = 0;
+  let imageCount = 0;
   await Promise.all(
     paths.map(async (path) => {
       const signedUrl = bundle.signedUrlMap[path];
@@ -57,6 +67,8 @@ export async function saveBookOfflineBundle(podId: string, bundle: DbBookOffline
         return;
       }
       const blob = await response.blob();
+      bytesCached += blob.size;
+      imageCount += 1;
       await new Promise<void>((resolve, reject) => {
         const tx = db.transaction(IMAGE_STORE, 'readwrite');
         tx.objectStore(IMAGE_STORE).put(blob, imageKey(podId, path));
@@ -67,6 +79,7 @@ export async function saveBookOfflineBundle(podId: string, bundle: DbBookOffline
   );
 
   db.close();
+  return {imageCount, bytesCached};
 }
 
 export async function loadBookOfflineBundle(podId: string): Promise<DbBookOfflineBundle | undefined> {

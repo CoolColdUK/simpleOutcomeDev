@@ -163,6 +163,7 @@ export default function PodWorkspace() {
             onArchive={() => void archive()}
             onDelete={() => void remove()}
             onSaved={() => void load()}
+            canWritePod={myRole !== PodRole.VIEWER && myRole !== undefined}
           />
         </Tabs.Content>
       </Tabs.Root>

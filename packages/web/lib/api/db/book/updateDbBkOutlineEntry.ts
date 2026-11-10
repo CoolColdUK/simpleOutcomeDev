@@ -8,6 +8,7 @@ export interface UpdateDbBkOutlineEntryInput {
   readonly summaryMd?: string;
   readonly contentMd?: string;
   readonly status?: BookChapterStatus;
+  readonly chapterImageStoragePath?: string | null;
 }
 
 export default async function updateDbBkOutlineEntry(
@@ -22,6 +23,9 @@ export default async function updateDbBkOutlineEntry(
       ...(input.summaryMd === undefined ? {} : {summary_md: input.summaryMd}),
       ...(input.contentMd === undefined ? {} : {content_md: input.contentMd}),
       ...(input.status === undefined ? {} : {status: input.status}),
+      ...(input.chapterImageStoragePath === undefined
+        ? {}
+        : {chapter_image_storage_path: input.chapterImageStoragePath}),
     })
     .eq('id', entryId);
   throwIfSupabaseError(error);

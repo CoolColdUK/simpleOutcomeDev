@@ -121,6 +121,11 @@ export async function updateAgentBookOutlineEntry(request: Request, args: unknow
       ...(typeof record.summaryMd === 'string' ? {summary_md: record.summaryMd} : {}),
       ...(typeof record.contentMd === 'string' ? {content_md: record.contentMd} : {}),
       ...(typeof record.status === 'string' ? {status: record.status} : {}),
+      ...(record.chapterImageStoragePath === null
+        ? {chapter_image_storage_path: null}
+        : typeof record.chapterImageStoragePath === 'string'
+          ? {chapter_image_storage_path: record.chapterImageStoragePath}
+          : {}),
     })
     .eq('id', entryId)
     .eq('pod_id', podId);
@@ -199,8 +204,13 @@ export async function exportAgentBookEpub(request: Request, args: unknown): Prom
   }
   const pod = await ctx.data.supabase.from('pod').select('name').eq('id', podId).maybeSingle();
   const title = pod.data?.name ?? 'Book';
-  const includeNotes = record.includeNotes === true;
-  const bytes = await buildDbBookEpub(ctx.data.supabase, workspace, {title, includeNotes});
+  const exportScope =
+    record.exportScope === 'chapters' || record.exportScope === 'notes' || record.exportScope === 'all'
+      ? record.exportScope
+      : record.includeNotes === true
+        ? 'all'
+        : 'chapters';
+  const bytes = await buildDbBookEpub(ctx.data.supabase, workspace, {title, exportScope});
   return agentOk({contentBase64: Buffer.from(bytes).toString('base64'), mimeType: 'application/epub+zip'});
 }
 

@@ -2,18 +2,7 @@
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {
-  Accordion,
-  Box,
-  Button,
-  Checkbox,
-  HStack,
-  Input,
-  NativeSelect,
-  Stack,
-  Text,
-  Textarea,
-} from '@chakra-ui/react';
+import {Accordion, Box, Button, HStack, Stack, Text, Textarea} from '@chakra-ui/react';
 import {
   DndContext,
   PointerSensor,
@@ -24,7 +13,7 @@ import {
 } from '@dnd-kit/core';
 import {SortableContext, arrayMove, useSortable, verticalListSortingStrategy} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
-import {BookChapterStatus, BookOutlineKind, bookOutlineListLabel} from '@so/model';
+import {BookOutlineKind, bookOutlineListLabel} from '@so/model';
 import type {DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
 import type {DbBkOutlineEntry} from '@/lib/api/db/book/mapDbBkOutlineRow';
 import loadDbBookWorkspace from '@/lib/api/db/book/loadDbBookWorkspace';
@@ -38,15 +27,17 @@ import deleteDbBkAsset from '@/lib/api/db/book/deleteDbBkAsset';
 import createDbBkAssetType from '@/lib/api/db/book/createDbBkAssetType';
 import deleteDbBkAssetType from '@/lib/api/db/book/deleteDbBkAssetType';
 import updateDbBkAsset from '@/lib/api/db/book/updateDbBkAsset';
-import uploadStorageBookCover from '@/lib/api/storage/uploadStorageBookCover';
-import uploadStorageBookInlineImageMarkdownFragment from '@/lib/api/storage/uploadStorageBookInlineImageMarkdownFragment';
 import buildDbBookOfflineBundle from '@/lib/api/db/book/buildDbBookOfflineBundle';
-import buildDbBookEpub from '@/lib/api/db/book/buildDbBookEpub';
-import {saveBookOfflineBundle} from '@/lib/book/bookOfflineStore';
+import buildDbBookEpub, {type BookEpubExportScope} from '@/lib/api/db/book/buildDbBookEpub';
+import {loadBookOfflineBundle, saveBookOfflineBundle} from '@/lib/book/bookOfflineStore';
 import BookMarkdownBody from '@/components/book/BookMarkdownBody';
-import BookAssetImageGallery from '@/components/book/BookAssetImageGallery';
+import BookOutlineEntryDialog from '@/components/book/BookOutlineEntryDialog';
+import BookAssetEditDialog from '@/components/book/BookAssetEditDialog';
+import BookAssetReadOnlyCard from '@/components/book/BookAssetReadOnlyCard';
+import BookAddAssetTypeDialog from '@/components/book/BookAddAssetTypeDialog';
+import SoToaster from '@/components/ui/SoToaster';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
-import insertAtCaret from '@/components/todo/insertAtCaret';
+import {soToaster} from '@/lib/ui/soToaster';
 
 export interface BookWorkspaceProps {
   readonly spaceId: string;
@@ -57,15 +48,7 @@ export interface BookWorkspaceProps {
 
 type OutlineFilter = 'all' | 'chapters' | 'notes' | 'assets';
 
-function SortableOutlineRow({
-  entry,
-  selected,
-  onSelect,
-}: {
-  readonly entry: DbBkOutlineEntry;
-  readonly selected: boolean;
-  readonly onSelect: () => void;
-}) {
+function SortableOutlineRow({entry, onEdit}: {readonly entry: DbBkOutlineEntry; readonly onEdit: () => void}) {
   const {attributes, listeners, setNodeRef, transform, transition} = useSortable({id: entry.id});
   const style = {transform: CSS.Transform.toString(transform), transition};
   return (
@@ -73,17 +56,16 @@ function SortableOutlineRow({
       ref={setNodeRef}
       style={style}
       borderWidth="1px"
-      borderColor={selected ? 'colorPalette.solid' : 'border.subtle'}
+      borderColor="border.subtle"
       borderRadius="md"
       p={2}
       mb={2}
-      cursor="pointer"
-      onClick={onSelect}
       {...attributes}
       {...listeners}
     >
-      <Text fontWeight="medium">{bookOutlineListLabel(entry.kind, entry.title, entry.chapterNumber, entry.noteNumber)}</Text>
-      {entry.kind === BookOutlineKind.CHAPTER && entry.status !== undefined ? <Text fontSize="sm">Status: {entry.status}</Text> : null}
+      <Button variant="ghost" w="full" justifyContent="start" onClick={onEdit}>
+        {bookOutlineListLabel(entry.kind, entry.title, entry.chapterNumber, entry.noteNumber)}
+      </Button>
     </Box>
   );
 }
@@ -93,28 +75,21 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 6}}));
   const [workspace, setWorkspace] = useState<DbBookWorkspace | undefined>(undefined);
   const [filter, setFilter] = useState<OutlineFilter>('all');
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
-  const [subtitle, setSubtitle] = useState('');
+  const [editorEntryId, setEditorEntryId] = useState<string | undefined>(undefined);
+  const [editorSaving, setEditorSaving] = useState(false);
+  const [assetEditorId, setAssetEditorId] = useState<string | undefined>(undefined);
+  const [assetTypeDialogOpen, setAssetTypeDialogOpen] = useState(false);
   const [summaryMd, setSummaryMd] = useState('');
-  const [includeNotesExport, setIncludeNotesExport] = useState(false);
   const [error, setError] = useState('');
-  const [contentDraftById, setContentDraftById] = useState<Record<string, string>>({});
-  const [summaryDraftById, setSummaryDraftById] = useState<Record<string, string>>({});
-  const contentDraft =
-    selectedId === undefined
-      ? ''
-      : (contentDraftById[selectedId] ?? workspace?.outline.find((entry) => entry.id === selectedId)?.contentMd ?? '');
-  const summaryDraft =
-    selectedId === undefined
-      ? ''
-      : (summaryDraftById[selectedId] ?? workspace?.outline.find((entry) => entry.id === selectedId)?.summaryMd ?? '');
+  const [offlineReady, setOfflineReady] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     const data = await loadDbBookWorkspace(podId);
     setWorkspace(data);
     if (data !== undefined) {
-      setSubtitle(data.book.subtitle);
       setSummaryMd(data.book.summaryMd);
+      const offline = await loadBookOfflineBundle(podId);
+      setOfflineReady(offline !== undefined && offline.version === data.book.offlineBundleVersion);
     }
   }, [podId]);
 
@@ -124,7 +99,9 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
     });
   }, [load]);
 
-  const selected = workspace?.outline.find((entry) => entry.id === selectedId);
+  const editorEntry = workspace?.outline.find((entry) => entry.id === editorEntryId);
+  const editAsset = workspace?.assets.find((asset) => asset.id === assetEditorId);
+  const editAssetType = editAsset === undefined ? undefined : workspace?.assetTypes.find((type) => type.id === editAsset.assetTypeId);
 
   const filteredOutline = useMemo(() => {
     if (workspace === undefined) {
@@ -142,6 +119,16 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
     return workspace.outline;
   }, [filter, workspace]);
 
+  const epubScope = useMemo((): BookEpubExportScope => {
+    if (filter === 'notes') {
+      return 'notes';
+    }
+    if (filter === 'chapters') {
+      return 'chapters';
+    }
+    return 'all';
+  }, [filter]);
+
   const onDragEnd = async (event: DragEndEvent): Promise<void> => {
     if (workspace === undefined || !canWrite) {
       return;
@@ -153,7 +140,7 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
     const ids = workspace.outline.map((entry) => entry.id);
     const oldIndex = ids.indexOf(String(active.id));
     const newIndex = ids.indexOf(String(over.id));
-  if (oldIndex < 0 || newIndex < 0) {
+    if (oldIndex < 0 || newIndex < 0) {
       return;
     }
     const nextIds = arrayMove(ids, oldIndex, newIndex);
@@ -161,46 +148,62 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
     await load();
   };
 
-  const saveMeta = async (): Promise<void> => {
-    await updateDbBkBook(podId, {subtitle, summaryMd});
+  const saveBookSummary = async (): Promise<void> => {
+    await updateDbBkBook(podId, {summaryMd});
     await load();
   };
 
   const addEntry = async (kind: BookOutlineKind): Promise<void> => {
     const created = await createDbBkOutlineEntry(podId, {kind, title: kind === BookOutlineKind.CHAPTER ? 'New chapter' : 'New note'});
     await load();
-    setSelectedId(created.id);
-  };
-
-  const saveEntry = async (): Promise<void> => {
-    if (selected === undefined) {
-      return;
-    }
-    await updateDbBkOutlineEntry(selected.id, {contentMd: contentDraft, summaryMd: summaryDraft});
-    await load();
+    setEditorEntryId(created.id);
   };
 
   const downloadOffline = async (): Promise<void> => {
     if (workspace === undefined) {
       return;
     }
-    const bundle = await buildDbBookOfflineBundle(podId, workspace);
-    await saveBookOfflineBundle(podId, bundle);
+    soToaster.create({title: 'Downloading offline copy…', type: 'info'});
+    try {
+      const bundle = await buildDbBookOfflineBundle(podId, workspace);
+      const result = await saveBookOfflineBundle(podId, bundle);
+      setOfflineReady(true);
+      soToaster.create({
+        title: 'Offline copy ready',
+        description: `${result.imageCount} images (${Math.round(result.bytesCached / 1024)} KB)`,
+        type: 'success',
+      });
+    } catch (unknown: unknown) {
+      soToaster.create({
+        title: 'Offline download failed',
+        description: unknown instanceof Error ? unknown.message : String(unknown),
+        type: 'error',
+      });
+    }
   };
 
   const exportEpub = async (): Promise<void> => {
     if (workspace === undefined) {
       return;
     }
-    const supabase = getSupabaseBrowserClient();
-    const bytes = await buildDbBookEpub(supabase, workspace, {title: podName, includeNotes: includeNotesExport});
-    const blob = new Blob([Uint8Array.from(bytes)], {type: 'application/epub+zip'});
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${podName.replaceAll(/\s+/g, '-').toLowerCase() || 'book'}.epub`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const bytes = await buildDbBookEpub(supabase, workspace, {title: podName, exportScope: epubScope});
+      const blob = new Blob([Uint8Array.from(bytes)], {type: 'application/epub+zip'});
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${podName.replaceAll(/\s+/g, '-').toLowerCase() || 'book'}.epub`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      soToaster.create({title: 'EPUB exported', type: 'success'});
+    } catch (unknown: unknown) {
+      soToaster.create({
+        title: 'EPUB export failed',
+        description: unknown instanceof Error ? unknown.message : String(unknown),
+        type: 'error',
+      });
+    }
   };
 
   if (workspace === undefined) {
@@ -208,43 +211,21 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   }
 
   return (
-    <Stack gap={4}>
+  <Stack gap={4}>
+      <SoToaster />
       {error !== '' ? <Text color="fg.error">{error}</Text> : null}
       <Accordion.Root collapsible defaultValue={[]}>
         <Accordion.Item value="book-info">
-          <Accordion.ItemTrigger>Book info</Accordion.ItemTrigger>
+          <Accordion.ItemTrigger>Book summary</Accordion.ItemTrigger>
           <Accordion.ItemContent>
             <Stack gap={3} pt={2}>
               <Text fontWeight="semibold">{podName}</Text>
-              <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Subtitle" disabled={!canWrite} />
-              <Textarea value={summaryMd} onChange={(e) => setSummaryMd(e.target.value)} placeholder="Summary (markdown)" rows={4} disabled={!canWrite} />
+              <Text fontSize="sm" color="fg.muted">
+                Subtitle and cover are in pod Settings.
+              </Text>
+              <Textarea value={summaryMd} onChange={(event) => setSummaryMd(event.target.value)} placeholder="Summary (markdown)" rows={4} disabled={!canWrite} />
               {summaryMd !== '' ? <BookMarkdownBody markdown={summaryMd} /> : null}
-              {canWrite ? (
-                <HStack>
-                  <Button onClick={() => void saveMeta()}>Save info</Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/jpeg,image/png,image/webp';
-                      input.onchange = () => {
-                        const file = input.files?.[0];
-                        if (file === undefined) {
-                          return;
-                        }
-                        void uploadStorageBookCover(podId, file)
-                          .then((path) => updateDbBkBook(podId, {coverStoragePath: path}))
-                          .then(() => load())
-                          .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-                      };
-                      input.click();
-                    }}
-                  >
-                    Upload cover
-                  </Button>
-                </HStack>
-              ) : null}
+              {canWrite ? <Button onClick={() => void saveBookSummary()}>Save summary</Button> : null}
             </Stack>
           </Accordion.ItemContent>
         </Accordion.Item>
@@ -255,168 +236,63 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
             {value}
           </Button>
         ))}
-        <Button size="sm" variant="outline" onClick={() => void downloadOffline()}>
-          Download offline
+        <Button size="sm" variant={offlineReady ? 'solid' : 'outline'} onClick={() => void downloadOffline()}>
+          {offlineReady ? 'Offline ready' : 'Download offline'}
         </Button>
         <Button size="sm" variant="outline" onClick={() => router.push(`/app/spaces/${spaceId}/pods/${podId}/read`)}>
           Read
         </Button>
-        <Checkbox.Root checked={includeNotesExport} onCheckedChange={(d) => setIncludeNotesExport(d.checked === true)}>
-          <Checkbox.HiddenInput />
-          <Checkbox.Control />
-          <Checkbox.Label>Include notes in EPUB</Checkbox.Label>
-        </Checkbox.Root>
         <Button size="sm" onClick={() => void exportEpub()}>
           Export EPUB
         </Button>
       </HStack>
       {filter !== 'assets' ? (
-        <HStack align="start" gap={4}>
-          <Box flex="1">
-            {canWrite ? (
-              <HStack mb={2}>
-                <Button size="sm" onClick={() => void addEntry(BookOutlineKind.CHAPTER)}>
-                  Add chapter
-                </Button>
-                <Button size="sm" onClick={() => void addEntry(BookOutlineKind.NOTE)}>
-                  Add note
-                </Button>
-              </HStack>
-            ) : null}
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => void onDragEnd(e)}>
-              <SortableContext items={filteredOutline.map((entry) => entry.id)} strategy={verticalListSortingStrategy}>
-                {filteredOutline.map((entry) => (
-                  <SortableOutlineRow key={entry.id} entry={entry} selected={selectedId === entry.id} onSelect={() => setSelectedId(entry.id)} />
-                ))}
-              </SortableContext>
-            </DndContext>
-          </Box>
-          {selected !== undefined ? (
-            <Stack flex="2" gap={2}>
-              <Input
-                value={selected.title}
-                onChange={(e) => void updateDbBkOutlineEntry(selected.id, {title: e.target.value}).then(() => load())}
-                disabled={!canWrite}
-              />
-              {selected.kind === BookOutlineKind.CHAPTER ? (
-                <NativeSelect.Root size="sm" disabled={!canWrite}>
-                  <NativeSelect.Field
-                    value={selected.status ?? BookChapterStatus.OUTLINE}
-                    onChange={(e) =>
-                      void updateDbBkOutlineEntry(selected.id, {status: e.target.value as BookChapterStatus}).then(() => load())
-                    }
-                  >
-                    {Object.values(BookChapterStatus).map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </NativeSelect.Field>
-                </NativeSelect.Root>
-              ) : null}
-              <Text fontSize="sm" fontWeight="medium">
-                Summary
-              </Text>
-              <Textarea
-                key={`${selected.id}-summary`}
-                value={summaryDraft}
-                onChange={(e) => setSummaryDraftById((prev) => ({...prev, [selected.id]: e.target.value}))}
-                rows={4}
-                placeholder="Chapter or note summary (markdown)"
-                disabled={!canWrite}
-              />
-              {summaryDraft !== '' ? <BookMarkdownBody markdown={summaryDraft} /> : null}
-              <Text fontSize="sm" fontWeight="medium">
-                Content
-              </Text>
-              <Textarea
-                key={selected.id}
-                value={contentDraft}
-                onChange={(e) => setContentDraftById((prev) => ({...prev, [selected.id]: e.target.value}))}
-                rows={14}
-                disabled={!canWrite}
-                onPaste={(e) => {
-                  const file = [...e.clipboardData.items].map((item) => item.getAsFile()).find((picked) => picked?.type.startsWith('image/') ?? false);
-                  if (file === undefined || file === null || !canWrite) {
-                    return;
-                  }
-                  e.preventDefault();
-                  void uploadStorageBookInlineImageMarkdownFragment(podId, selected.id, file).then((fragment) => {
-                    const ta = e.target as HTMLTextAreaElement;
-                    const {next} = insertAtCaret(contentDraft, ta, fragment);
-                    setContentDraftById((prev) => ({...prev, [selected.id]: next}));
-                  });
-                }}
-              />
-              <BookMarkdownBody markdown={contentDraft} />
-              {canWrite ? (
-                <HStack>
-                  <Button onClick={() => void saveEntry()}>Save content</Button>
-                  <Button
-                    colorPalette="red"
-                    variant="outline"
-                    onClick={() => void deleteDbBkOutlineEntry(selected.id, podId).then(() => load()).then(() => setSelectedId(undefined))}
-                  >
-                    Delete
-                  </Button>
-                </HStack>
-              ) : null}
-            </Stack>
+        <Stack gap={2}>
+          {canWrite ? (
+            <HStack>
+              <Button size="sm" onClick={() => void addEntry(BookOutlineKind.CHAPTER)}>
+                Add chapter
+              </Button>
+              <Button size="sm" onClick={() => void addEntry(BookOutlineKind.NOTE)}>
+                Add note
+              </Button>
+            </HStack>
           ) : null}
-        </HStack>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => void onDragEnd(event)}>
+            <SortableContext items={filteredOutline.map((entry) => entry.id)} strategy={verticalListSortingStrategy}>
+              {filteredOutline.map((entry) => (
+                <SortableOutlineRow key={entry.id} entry={entry} onEdit={() => setEditorEntryId(entry.id)} />
+              ))}
+            </SortableContext>
+          </DndContext>
+        </Stack>
       ) : (
         <Stack gap={4}>
           {workspace.assetTypes.map((type) => (
             <Box key={type.id} borderWidth="1px" borderRadius="md" p={3}>
-              <HStack justify="space-between">
+              <HStack justify="space-between" mb={2}>
                 <Text fontWeight="semibold">{type.label}</Text>
                 {canWrite && !type.isSystem ? (
                   <Button
                     size="xs"
                     variant="outline"
-                    onClick={() => void deleteDbBkAssetType(podId, type.id).then(() => load()).catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))}
+                    onClick={() =>
+                      void deleteDbBkAssetType(podId, type.id)
+                        .then(() => load())
+                        .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
+                    }
                   >
                     Delete type
                   </Button>
                 ) : null}
               </HStack>
-              {workspace.assets
-                .filter((asset) => asset.assetTypeId === type.id)
-                .map((asset) => (
-                  <Box key={asset.id} mt={2} p={2} bg="bg.subtle" borderRadius="sm">
-                    <Input
-                      value={asset.name}
-                      onChange={(e) => void updateDbBkAsset(asset.id, {name: e.target.value}).then(() => load())}
-                      disabled={!canWrite}
-                    />
-                    <Textarea
-                      mt={2}
-                      value={asset.descriptionMd}
-                      rows={3}
-                      onChange={(e) => void updateDbBkAsset(asset.id, {descriptionMd: e.target.value}).then(() => load())}
-                      disabled={!canWrite}
-                    />
-                    <BookAssetImageGallery
-                      podId={podId}
-                      assetId={asset.id}
-                      images={asset.images}
-                      canWrite={canWrite}
-                      onChanged={load}
-                      onError={(message) => setError(message)}
-                    />
-                    {canWrite ? (
-                      <Button
-                        size="xs"
-                        mt={2}
-                        colorPalette="red"
-                        variant="outline"
-                        onClick={() => void deleteDbBkAsset(asset.id, podId).then(() => load())}
-                      >
-                        Delete asset
-                      </Button>
-                    ) : null}
-                  </Box>
-                ))}
+              <Stack gap={2}>
+                {workspace.assets
+                  .filter((asset) => asset.assetTypeId === type.id)
+                  .map((asset) => (
+                    <BookAssetReadOnlyCard key={asset.id} asset={asset} typeLabel={type.label} onEdit={() => setAssetEditorId(asset.id)} />
+                  ))}
+              </Stack>
               {canWrite ? (
                 <Button size="sm" mt={2} onClick={() => void createDbBkAsset(podId, type.id, 'New asset').then(() => load())}>
                   Add asset
@@ -425,22 +301,83 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
             </Box>
           ))}
           {canWrite ? (
-            <Button
-              variant="outline"
-              onClick={() => {
-                const label = window.prompt('Asset type label');
-                if (label === null || label.trim() === '') {
-                  return;
-                }
-                const slug = label.trim().toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
-                void createDbBkAssetType(podId, label.trim(), slug).then(() => load());
-              }}
-            >
+            <Button variant="outline" onClick={() => setAssetTypeDialogOpen(true)}>
               Add custom asset type
             </Button>
           ) : null}
         </Stack>
       )}
+      <BookOutlineEntryDialog
+        open={editorEntry !== undefined}
+        entry={editorEntry}
+        podId={podId}
+        canWrite={canWrite}
+        saving={editorSaving}
+        onClose={() => setEditorEntryId(undefined)}
+        onSave={async (draft) => {
+          if (editorEntry === undefined) {
+            return;
+          }
+          setEditorSaving(true);
+          try {
+            await updateDbBkOutlineEntry(editorEntry.id, {
+              title: draft.title,
+              summaryMd: draft.summaryMd,
+              contentMd: draft.contentMd,
+              status: draft.status,
+              chapterImageStoragePath:
+                editorEntry.kind === BookOutlineKind.CHAPTER ? (draft.chapterImageStoragePath ?? null) : undefined,
+            });
+            await load();
+            setEditorEntryId(undefined);
+          } finally {
+            setEditorSaving(false);
+          }
+        }}
+        onDelete={async () => {
+          if (editorEntry === undefined) {
+            return;
+          }
+          await deleteDbBkOutlineEntry(editorEntry.id, podId);
+          await load();
+          setEditorEntryId(undefined);
+        }}
+      />
+      <BookAssetEditDialog
+        open={editAsset !== undefined}
+        asset={editAsset}
+        podId={podId}
+        typeLabel={editAssetType?.label ?? 'Asset'}
+        canWrite={canWrite}
+        onClose={() => setAssetEditorId(undefined)}
+        onSave={async (name, descriptionMd) => {
+          if (editAsset === undefined) {
+            return;
+          }
+          await updateDbBkAsset(editAsset.id, {name, descriptionMd});
+          await load();
+          setAssetEditorId(undefined);
+        }}
+        onDelete={async () => {
+          if (editAsset === undefined) {
+            return;
+          }
+          await deleteDbBkAsset(editAsset.id, podId);
+          await load();
+          setAssetEditorId(undefined);
+        }}
+        onReload={load}
+        onError={(message) => setError(message)}
+      />
+      <BookAddAssetTypeDialog
+        open={assetTypeDialogOpen}
+        onClose={() => setAssetTypeDialogOpen(false)}
+        onCreate={async (label) => {
+          const slug = label.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
+          await createDbBkAssetType(podId, label, slug);
+          await load();
+        }}
+      />
     </Stack>
   );
 }

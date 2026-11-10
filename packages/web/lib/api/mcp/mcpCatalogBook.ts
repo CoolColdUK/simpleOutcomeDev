@@ -59,7 +59,15 @@ export const BOOK_MCP_TOOLS: readonly McpTool[] = [
   tool(
     'update_book_outline_entry',
     'Update chapter/note fields.',
-    {podId, entryId: {type: 'string'}, title: {type: 'string'}, summaryMd: {type: 'string'}, contentMd: {type: 'string'}, status: {type: 'string'}},
+    {
+      podId,
+      entryId: {type: 'string'},
+      title: {type: 'string'},
+      summaryMd: {type: 'string'},
+      contentMd: {type: 'string'},
+      status: {type: 'string'},
+      chapterImageStoragePath: {type: 'string'},
+    },
     ['podId', 'entryId'],
     (request, args) => updateAgentBookOutlineEntry(request, argsRecord(args)),
   ),
@@ -73,7 +81,12 @@ export const BOOK_MCP_TOOLS: readonly McpTool[] = [
     ['podId', 'orderedIds'],
     (request, args) => reorderAgentBookOutline(request, argsRecord(args)),
   ),
-  tool('export_book_epub', 'Export EPUB 3 (placeholder cover if missing).', {podId, includeNotes: {type: 'boolean'}}, ['podId'], (request, args) =>
+  tool(
+    'export_book_epub',
+    'Export EPUB 3 (placeholder cover if missing). exportScope: all | chapters | notes.',
+    {podId, exportScope: {type: 'string'}, includeNotes: {type: 'boolean'}},
+    ['podId'],
+    (request, args) =>
     exportAgentBookEpub(request, argsRecord(args)),
   ),
   tool('get_book_offline_bundle', 'Offline read bundle with signed image URLs.', {podId}, ['podId'], (request, args) =>
