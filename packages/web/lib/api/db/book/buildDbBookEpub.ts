@@ -93,16 +93,18 @@ export default async function buildDbBookEpub(
 <body><nav epub:type="toc"><ol>
 ${chapters.map((ch, index) => `<li><a href="chapter-${index + 1}.xhtml">${escapeXml(`${ch.chapterNumber ?? index + 1} · ${ch.title}`)}</a></li>`).join('')}
 </ol></nav></body></html>`;
+  const chapterBodies = await Promise.all(chapters.map((ch) => markdownToBookXhtmlBody(ch.contentMd, imageMap)));
   const chapterFiles = chapters.map((ch, index) => {
-    const body = markdownToBookXhtmlBody(ch.contentMd, imageMap);
+    const body = chapterBodies[index] ?? '';
     const html = `<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>${escapeXml(ch.title)}</title></head><body><h1>${escapeXml(ch.title)}</h1>${body}</body></html>`;
     return {path: `OEBPS/chapter-${index + 1}.xhtml`, data: new TextEncoder().encode(html)};
   });
+  const noteBodies = input.includeNotes ? await Promise.all(notes.map((note) => markdownToBookXhtmlBody(note.contentMd, imageMap))) : [];
   const noteFiles = input.includeNotes
     ? notes.map((note, index) => {
-        const body = markdownToBookXhtmlBody(note.contentMd, imageMap);
+        const body = noteBodies[index] ?? '';
         const html = `<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>${escapeXml(note.title)}</title></head><body><h1>Note ${note.noteNumber ?? index + 1}</h1>${body}</body></html>`;
-      return {path: `OEBPS/note-${index + 1}.xhtml`, data: new TextEncoder().encode(html)};
+        return {path: `OEBPS/note-${index + 1}.xhtml`, data: new TextEncoder().encode(html)};
       })
     : [];
   const hasUserCover =
