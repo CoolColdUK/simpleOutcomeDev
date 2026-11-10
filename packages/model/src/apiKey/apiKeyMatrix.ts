@@ -167,6 +167,9 @@ function podGrant(row: ApiKeyMatrixPodRow): ApiKeyPodGrant | undefined {
   if (row.feature === FeatureKind.TRIP_PLANNING) {
     return {trip: actions};
   }
+  if (row.feature === FeatureKind.BOOK) {
+    return {book: actions};
+  }
   return {fp: fpGrant(actions, deleteAll)};
 }
 
@@ -284,6 +287,9 @@ function podRowFromGrant(row: ApiKeyMatrixPodRow, grant: ApiKeyPodGrant | undefi
   }
   if (row.feature === FeatureKind.TRIP_PLANNING) {
     return {...row, cells: cellsFromActions(grant.trip), deleteAll: false};
+  }
+  if (row.feature === FeatureKind.BOOK) {
+    return {...row, cells: cellsFromActions(grant.book), deleteAll: false};
   }
   const fp = grant.fp;
   if (fp === undefined) {

@@ -15,6 +15,7 @@ export interface ApiKeyPodGrant {
   readonly todo?: readonly ApiKeyAction[];
   readonly fp?: ApiKeyFpGrant;
   readonly trip?: readonly ApiKeyAction[];
+  readonly book?: readonly ApiKeyAction[];
 }
 
 export interface ApiKeySpaceGrant {

@@ -19,6 +19,7 @@ import PodWorkspaceSettingsTab from '@/components/app/PodWorkspaceSettingsTab';
 import TodoListBoard from '@/components/todo/TodoListBoard';
 import FinancialPlanningBoard from '@/components/fp/FinancialPlanningBoard';
 import TripPlanningBoard from '@/components/tp/TripPlanningBoard';
+import BookWorkspace from '@/components/book/BookWorkspace';
 
 export default function PodWorkspace() {
   const params = useParams<{spaceId: string; podId: string}>();
@@ -126,9 +127,18 @@ export default function PodWorkspace() {
           {pod.feature === FeatureKind.TRIP_PLANNING ? (
             <TripPlanningBoard podId={pod.id} podRole={myRole} isSpaceOwner={spaceRole === SpaceRole.OWNER} />
           ) : null}
+          {pod.feature === FeatureKind.BOOK ? (
+            <BookWorkspace
+              spaceId={params.spaceId}
+              podId={pod.id}
+              podName={pod.name ?? 'Book'}
+              canWrite={myRole !== PodRole.VIEWER && myRole !== undefined}
+            />
+          ) : null}
           {pod.feature !== FeatureKind.TODO_LIST &&
           pod.feature !== FeatureKind.FINANCIAL_PLANNING &&
-          pod.feature !== FeatureKind.TRIP_PLANNING ? (
+          pod.feature !== FeatureKind.TRIP_PLANNING &&
+          pod.feature !== FeatureKind.BOOK ? (
             <Text>This feature is coming soon. You can still manage access here.</Text>
           ) : null}
         </Tabs.Content>

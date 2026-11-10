@@ -982,6 +982,148 @@ export interface Database {
         Update: Record<string, never>;
         Relationships: [];
       };
+      bk_book: {
+        Row: {
+          pod_id: string;
+          subtitle: string;
+          summary_md: string;
+          cover_storage_path: string | null;
+          offline_bundle_version: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          pod_id: string;
+          subtitle?: string;
+          summary_md?: string;
+          cover_storage_path?: string | null;
+          offline_bundle_version?: number;
+        };
+        Update: {
+          subtitle?: string;
+          summary_md?: string;
+          cover_storage_path?: string | null;
+          offline_bundle_version?: number;
+        };
+        Relationships: [];
+      };
+      bk_outline_entry: {
+        Row: {
+          id: string;
+          pod_id: string;
+          kind: string;
+          sort_order: number;
+          chapter_number: number | null;
+          note_number: number | null;
+          title: string;
+          summary_md: string;
+          content_md: string;
+          status: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pod_id: string;
+          kind: string;
+          sort_order: number;
+          chapter_number?: number | null;
+          note_number?: number | null;
+          title?: string;
+          summary_md?: string;
+          content_md?: string;
+          status?: string | null;
+        };
+        Update: {
+          kind?: string;
+          sort_order?: number;
+          chapter_number?: number | null;
+          note_number?: number | null;
+          title?: string;
+          summary_md?: string;
+          content_md?: string;
+          status?: string | null;
+        };
+        Relationships: [];
+      };
+      bk_asset_type: {
+        Row: {
+          id: string;
+          pod_id: string;
+          slug: string;
+          label: string;
+          sort_order: number;
+          is_system: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pod_id: string;
+          slug: string;
+          label: string;
+          sort_order?: number;
+          is_system?: boolean;
+        };
+        Update: {
+          slug?: string;
+          label?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      bk_asset: {
+        Row: {
+          id: string;
+          pod_id: string;
+          asset_type_id: string;
+          name: string;
+          description_md: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pod_id: string;
+          asset_type_id: string;
+          name?: string;
+          description_md?: string;
+          sort_order?: number;
+        };
+        Update: {
+          asset_type_id?: string;
+          name?: string;
+          description_md?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      bk_asset_image: {
+        Row: {
+          id: string;
+          asset_id: string;
+          pod_id: string;
+          storage_path: string;
+          sort_order: number;
+          caption: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          asset_id: string;
+          pod_id: string;
+          storage_path: string;
+          sort_order?: number;
+          caption?: string | null;
+        };
+        Update: {
+          storage_path?: string;
+          sort_order?: number;
+          caption?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -1096,6 +1238,7 @@ export interface Database {
       };
       undo_agent_fp_import: {Args: {p_pod_id: string; p_import_id: string}; Returns: undefined};
       delete_agent_all_fp_transactions: {Args: {p_pod_id: string}; Returns: undefined};
+      bk_renumber_outline: {Args: {p_pod_id: string}; Returns: undefined};
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

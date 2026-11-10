@@ -53,6 +53,9 @@ function podName(feature: FeatureKind, name: string | undefined): string {
   if (feature === FeatureKind.TRIP_PLANNING) {
     return 'Trip planning';
   }
+  if (feature === FeatureKind.BOOK) {
+    return 'Book';
+  }
   return 'Todo list';
 }
 

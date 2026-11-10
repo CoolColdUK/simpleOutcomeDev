@@ -4,6 +4,7 @@ export enum ApiKeyResource {
   TODO = 'todo',
   FP = 'fp',
   TRIP = 'trip',
+  BOOK = 'book',
   CONTACT = 'contact',
   PROFILE = 'profile',
 }
