@@ -47,9 +47,6 @@ function podName(feature: FeatureKind, name: string | undefined): string {
   if (name !== undefined && name.trim() !== '') {
     return name;
   }
-  if (feature === FeatureKind.SHOPPING_LIST) {
-    return 'Shopping list';
-  }
   if (feature === FeatureKind.FINANCIAL_PLANNING) {
     return 'Financial planning';
   }

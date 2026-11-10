@@ -20,7 +20,6 @@ export interface EffectiveApiKeyPod {
   readonly spaceId: string;
   readonly featureKind: FeatureKind;
   readonly todo?: readonly ApiKeyAction[];
-  readonly shopping?: readonly ApiKeyAction[];
   readonly fp?: ApiKeyFpGrant;
   readonly trip?: readonly ApiKeyAction[];
 }
@@ -85,16 +84,12 @@ function podsFor(key: ApiKeyRecord, spaceId: string, access: ApiKeyOwnerAccess, 
         pod.feature === featureKindForApiResource(ApiKeyResource.TODO)
           ? allowed(key, spaceId, access, nowIso, ApiKeyResource.TODO, {podId: pod.id, todoTarget: 'card'})
           : [];
-      const shopping =
-        pod.feature === featureKindForApiResource(ApiKeyResource.SHOPPING)
-          ? allowed(key, spaceId, access, nowIso, ApiKeyResource.SHOPPING, {podId: pod.id})
-          : [];
       const fp = pod.feature === featureKindForApiResource(ApiKeyResource.FP) ? fpGrant(key, spaceId, access, nowIso, pod.id) : undefined;
       const trip =
         pod.feature === featureKindForApiResource(ApiKeyResource.TRIP)
           ? allowed(key, spaceId, access, nowIso, ApiKeyResource.TRIP, {podId: pod.id})
           : [];
-      if (todo.length === 0 && shopping.length === 0 && fp === undefined && trip.length === 0) {
+      if (todo.length === 0 && fp === undefined && trip.length === 0) {
         return [];
       }
       return [
@@ -103,7 +98,6 @@ function podsFor(key: ApiKeyRecord, spaceId: string, access: ApiKeyOwnerAccess, 
           spaceId,
           featureKind: pod.feature,
           ...(todo.length === 0 ? {} : {todo}),
-          ...(shopping.length === 0 ? {} : {shopping}),
           ...(fp === undefined ? {} : {fp}),
           ...(trip.length === 0 ? {} : {trip}),
         },

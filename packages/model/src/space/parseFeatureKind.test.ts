@@ -14,6 +14,10 @@ describe('parseFeatureKind', () => {
     expect(parseFeatureKind('trip_planning')).toBe(FeatureKind.TRIP_PLANNING);
   });
 
+  it('rejects shopping_list', () => {
+    expect(() => parseFeatureKind('shopping_list')).toThrow();
+  });
+
   it('rejects unknown kinds', () => {
     expect(() => parseFeatureKind('calendar')).toThrow();
   });

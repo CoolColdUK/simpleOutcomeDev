@@ -25,7 +25,7 @@ const crud = [ApiKeyAction.CREATE, ApiKeyAction.READ, ApiKeyAction.UPDATE, ApiKe
 const read = [ApiKeyAction.READ];
 
 const pods = [
-  {podId: podB, spaceId: space, spaceName: 'Work', podName: 'Errands', feature: FeatureKind.SHOPPING_LIST},
+  {podId: podB, spaceId: space, spaceName: 'Work', podName: 'Holiday', feature: FeatureKind.TRIP_PLANNING},
   {podId: podA, spaceId: space, spaceName: 'Family', podName: 'Groceries', feature: FeatureKind.TODO_LIST},
 ];
 const spaces = [
@@ -36,7 +36,7 @@ const spaces = [
 describe('api key permission matrix', () => {
   it('opens with every cell off', () => {
     const matrix = createApiKeyMatrix(pods, spaces);
-    expect(matrix.pods.map((row) => `${row.spaceName} / ${row.podName}`)).toEqual(['Family / Groceries', 'Work / Errands']);
+    expect(matrix.pods.map((row) => `${row.spaceName} / ${row.podName}`)).toEqual(['Family / Groceries', 'Work / Holiday']);
     expect(matrix.spaces.map((section) => section.spaceName)).toEqual(['Family', 'Work']);
     expect(matrix.pods.every((row) => apiKeyMatrixCellsCheck(row.cells) === 'off' && !row.deleteAll)).toBe(true);
     expect(matrix.profile).toEqual({read: false, update: false});
@@ -50,7 +50,7 @@ describe('api key permission matrix', () => {
     const matrix = apiKeyMatrixForPreset(ApiKeyPresetId.ALL_ON, pods, spaces);
     const permissions = permissionsFromApiKeyMatrix(matrix);
     expect(permissions.pods?.[podA]).toEqual({todo: crud});
-    expect(permissions.pods?.[podB]).toEqual({shopping: crud});
+    expect(permissions.pods?.[podB]).toEqual({trip: crud});
     expect(permissions.spaces?.[space]).toEqual({space: crud, group: crud});
     expect(permissions.spaces?.[spaceB]).toEqual({space: crud, group: crud});
     expect(permissions.profile).toEqual(crud.filter((action) => action === ApiKeyAction.READ || action === ApiKeyAction.UPDATE));
@@ -62,7 +62,7 @@ describe('api key permission matrix', () => {
     const matrix = apiKeyMatrixForPreset(ApiKeyPresetId.ALL_READ, [...pods, ...fpPod], spaces);
     const permissions = permissionsFromApiKeyMatrix(matrix);
     expect(permissions.pods?.[podA]?.todo).toEqual(read);
-    expect(permissions.pods?.[podB]?.shopping).toEqual(read);
+    expect(permissions.pods?.[podB]?.trip).toEqual(read);
     expect(permissions.spaces?.[space]).toEqual({space: read, group: read});
     expect(permissions.profile).toEqual(read);
     expect(permissions.pods?.[podFp]?.fp?.delete_all).toBeUndefined();
@@ -105,7 +105,7 @@ describe('api key permission matrix', () => {
     const seeded = toggleApiKeyMatrixSpaceCell(createApiKeyMatrix(pods, spaces), space, 'space', ApiKeyAction.READ);
     const toggled = toggleApiKeyMatrixPodColumn(seeded, ApiKeyAction.READ);
     expect(permissionsFromApiKeyMatrix(toggled).pods?.[podA]).toEqual({todo: read});
-    expect(permissionsFromApiKeyMatrix(toggled).pods?.[podB]).toEqual({shopping: read});
+    expect(permissionsFromApiKeyMatrix(toggled).pods?.[podB]).toEqual({trip: read});
     expect(permissionsFromApiKeyMatrix(toggled).spaces?.[space]?.space).toEqual(read);
     expect(apiKeyMatrixColumnCheck(toggled.pods.map((row) => row.cells), ApiKeyAction.READ)).toBe('on');
     expect(permissionsFromApiKeyMatrix(toggleApiKeyMatrixPodColumn(toggled, ApiKeyAction.READ)).pods).toBeUndefined();

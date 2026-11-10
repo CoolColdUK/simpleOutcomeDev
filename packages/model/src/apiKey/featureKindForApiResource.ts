@@ -5,9 +5,6 @@ export default function featureKindForApiResource(resource: ApiKeyResource): Fea
   if (resource === ApiKeyResource.TODO) {
     return FeatureKind.TODO_LIST;
   }
-  if (resource === ApiKeyResource.SHOPPING) {
-    return FeatureKind.SHOPPING_LIST;
-  }
   if (resource === ApiKeyResource.FP) {
     return FeatureKind.FINANCIAL_PLANNING;
   }
