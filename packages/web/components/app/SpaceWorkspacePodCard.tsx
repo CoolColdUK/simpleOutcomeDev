@@ -18,7 +18,7 @@ export default function SpaceWorkspacePodCard({spaceId, pod, role}: SpaceWorkspa
   const title = pod.name ?? featureKindLabel(pod.feature);
 
   return (
-    <Box asChild css={styles.root}>
+    <Box asChild css={{...styles.root, maxW: 'full'}}>
       <Link href={`/app/spaces/${spaceId}/pods/${pod.id}`}>
         <HStack justify="space-between" align="start" gap={3}>
           <Stack gap={1}>

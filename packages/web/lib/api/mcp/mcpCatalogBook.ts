@@ -108,14 +108,14 @@ export const BOOK_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'create_book_asset',
-    'Create an asset in an asset type.',
+    'Create an asset in an asset type. Response includes images[] and deprecated imageStoragePath (first image).',
     {podId, assetTypeId: {type: 'string'}, name: {type: 'string'}, descriptionMd: {type: 'string'}},
     ['podId', 'assetTypeId'],
     (request, args) => createAgentBookAsset(request, argsRecord(args)),
   ),
   tool(
     'update_book_asset',
-    'Update asset name or description markdown.',
+    'Update asset name or description markdown. Response includes images[] and deprecated imageStoragePath.',
     {podId, assetId: {type: 'string'}, name: {type: 'string'}, descriptionMd: {type: 'string'}},
     ['podId', 'assetId'],
     (request, args) => updateAgentBookAsset(request, argsRecord(args)),
