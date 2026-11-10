@@ -41,14 +41,11 @@ describe('safeParseApiKeyPermissions', () => {
     });
   });
 
-  it('ignores deprecated shopping grants on pods', () => {
+  it('rejects shopping grants on pods', () => {
     const result = safeParseApiKeyPermissions({
-      pods: {[podA]: {shopping: ['read'], todo: ['read']}},
+      pods: {[podA]: {shopping: ['read']}},
     });
-    expect(result).toEqual({
-      ok: true,
-      value: {pods: {[podA]: {todo: [ApiKeyAction.READ]}}},
-    });
+    expect(result.ok).toBe(false);
   });
 
   it('rejects space-level feature actions from the first slice', () => {

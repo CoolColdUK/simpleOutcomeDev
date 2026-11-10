@@ -27,7 +27,6 @@ const read = [ApiKeyAction.READ];
 const pods = [
   {podId: podB, spaceId: space, spaceName: 'Work', podName: 'Holiday', feature: FeatureKind.TRIP_PLANNING},
   {podId: podA, spaceId: space, spaceName: 'Family', podName: 'Groceries', feature: FeatureKind.TODO_LIST},
-  {podId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', spaceId: space, spaceName: 'Family', podName: 'Legacy shop', feature: FeatureKind.SHOPPING_LIST},
 ];
 const spaces = [
   {spaceId: spaceB, spaceName: 'Work'},
@@ -38,7 +37,6 @@ describe('api key permission matrix', () => {
   it('opens with every cell off', () => {
     const matrix = createApiKeyMatrix(pods, spaces);
     expect(matrix.pods.map((row) => `${row.spaceName} / ${row.podName}`)).toEqual(['Family / Groceries', 'Work / Holiday']);
-    expect(matrix.pods.some((row) => row.feature === FeatureKind.SHOPPING_LIST)).toBe(false);
     expect(matrix.spaces.map((section) => section.spaceName)).toEqual(['Family', 'Work']);
     expect(matrix.pods.every((row) => apiKeyMatrixCellsCheck(row.cells) === 'off' && !row.deleteAll)).toBe(true);
     expect(matrix.profile).toEqual({read: false, update: false});

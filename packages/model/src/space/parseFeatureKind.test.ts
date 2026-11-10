@@ -14,8 +14,8 @@ describe('parseFeatureKind', () => {
     expect(parseFeatureKind('trip_planning')).toBe(FeatureKind.TRIP_PLANNING);
   });
 
-  it('accepts legacy shopping_list for existing pods', () => {
-    expect(parseFeatureKind('shopping_list')).toBe(FeatureKind.SHOPPING_LIST);
+  it('rejects shopping_list', () => {
+    expect(() => parseFeatureKind('shopping_list')).toThrow();
   });
 
   it('rejects unknown kinds', () => {

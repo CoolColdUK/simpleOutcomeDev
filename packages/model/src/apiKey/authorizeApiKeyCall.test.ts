@@ -215,16 +215,6 @@ describe('authorizeApiKeyCall', () => {
     expect(result).toEqual({ok: false, code: 'forbidden', message: 'API key does not grant this action'});
   });
 
-  it('denies a todo action on a shopping pod', () => {
-    const result = authorizeApiKeyCall({
-      key: key({pods: {[podA]: {todo: [ApiKeyAction.READ]}}}),
-      access: access(SpaceRole.USER, [pod(podA, FeatureKind.SHOPPING_LIST, PodRole.USER)]),
-      nowIso: now,
-      call: {spaceId: space, podId: podA, resource: ApiKeyResource.TODO, action: ApiKeyAction.READ, todoTarget: 'card'},
-    });
-    expect(result).toEqual({ok: false, code: 'forbidden', message: 'Pod feature does not match this action'});
-  });
-
   it('denies a key whose owner left the space', () => {
     const result = authorizeApiKeyCall({
       key: todoKey,

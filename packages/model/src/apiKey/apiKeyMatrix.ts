@@ -155,10 +155,6 @@ function fpGrant(actions: readonly ApiKeyAction[], deleteAll: boolean): ApiKeyFp
   return {...grant, delete_all: [ApiKeyAction.CREATE]};
 }
 
-function apiKeyMatrixPods(pods: readonly ApiKeyMatrixPodInput[]): readonly ApiKeyMatrixPodInput[] {
-  return pods.filter((pod) => pod.feature !== FeatureKind.SHOPPING_LIST);
-}
-
 function podGrant(row: ApiKeyMatrixPodRow): ApiKeyPodGrant | undefined {
   const actions = actionsFromCells(row.cells);
   const deleteAll = row.feature === FeatureKind.FINANCIAL_PLANNING && row.deleteAll;
@@ -224,8 +220,7 @@ export function apiKeyMatrixForPreset(
   pods: readonly ApiKeyMatrixPodInput[],
   spaces: readonly ApiKeyMatrixSpaceInput[],
 ): ApiKeyPermissionMatrix {
-  const eligiblePods = apiKeyMatrixPods(pods);
-  const podRows = [...eligiblePods]
+  const podRows = [...pods]
     .sort((left, right) => compareName(left.spaceName, right.spaceName) || compareName(left.podName, right.podName))
     .map((pod) => ({...pod, cells: podCells(preset), deleteAll: deleteAllFor(preset, pod.feature)}));
   const spaceRows = [...spaces]
