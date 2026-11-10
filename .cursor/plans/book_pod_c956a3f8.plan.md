@@ -4,7 +4,7 @@ overview: Add a `book` pod kind — one pod per book with markdown everywhere, i
 todos:
   - id: plan-approval
     content: Matthew approves this plan (no implementation until then)
-    status: pending
+    status: completed
   - id: migration-book-schema
     content: "Migration: book feature kind, bk_* tables, RLS, storage paths, create_pod; extend pod-private policies"
     status: pending

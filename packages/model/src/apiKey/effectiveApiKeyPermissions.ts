@@ -22,6 +22,7 @@ export interface EffectiveApiKeyPod {
   readonly todo?: readonly ApiKeyAction[];
   readonly fp?: ApiKeyFpGrant;
   readonly trip?: readonly ApiKeyAction[];
+  readonly book?: readonly ApiKeyAction[];
 }
 
 export interface EffectiveApiKeySpace {
@@ -89,7 +90,11 @@ function podsFor(key: ApiKeyRecord, spaceId: string, access: ApiKeyOwnerAccess, 
         pod.feature === featureKindForApiResource(ApiKeyResource.TRIP)
           ? allowed(key, spaceId, access, nowIso, ApiKeyResource.TRIP, {podId: pod.id})
           : [];
-      if (todo.length === 0 && fp === undefined && trip.length === 0) {
+      const book =
+        pod.feature === featureKindForApiResource(ApiKeyResource.BOOK)
+          ? allowed(key, spaceId, access, nowIso, ApiKeyResource.BOOK, {podId: pod.id})
+          : [];
+      if (todo.length === 0 && fp === undefined && trip.length === 0 && book.length === 0) {
         return [];
       }
       return [
@@ -100,6 +105,7 @@ function podsFor(key: ApiKeyRecord, spaceId: string, access: ApiKeyOwnerAccess, 
           ...(todo.length === 0 ? {} : {todo}),
           ...(fp === undefined ? {} : {fp}),
           ...(trip.length === 0 ? {} : {trip}),
+          ...(book.length === 0 ? {} : {book}),
         },
       ];
     });

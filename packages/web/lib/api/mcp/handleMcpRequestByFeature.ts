@@ -34,7 +34,7 @@ function toolResponse(id: unknown, result: AgentResult<unknown>): Response {
   return rpcResult(id, {content: [{type: 'text', text: JSON.stringify(result.data)}], isError: false});
 }
 
-export async function handleMcpGetForFeature(request: Request, feature: 'trip' | 'todo' | 'fp' | null): Promise<Response> {
+export async function handleMcpGetForFeature(request: Request, feature: 'trip' | 'todo' | 'fp' | 'book' | null): Promise<Response> {
   const ctx = await loadAgentContext(request);
   if (!ctx.ok) {
     return agentResultResponse(ctx);
@@ -50,7 +50,7 @@ export async function handleMcpGetForFeature(request: Request, feature: 'trip' |
   return Response.json({transport: 'streamable-http', endpoint});
 }
 
-export async function handleMcpPostForFeature(request: Request, feature: 'trip' | 'todo' | 'fp' | null): Promise<Response> {
+export async function handleMcpPostForFeature(request: Request, feature: 'trip' | 'todo' | 'fp' | 'book' | null): Promise<Response> {
   const ctx = await loadAgentContext(request);
   if (!ctx.ok) {
     return agentResultResponse(ctx);

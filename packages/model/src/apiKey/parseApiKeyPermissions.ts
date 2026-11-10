@@ -5,7 +5,7 @@ import type {ApiKeyFpGrant, ApiKeyPermissions, ApiKeyPodGrant, ApiKeySpaceGrant}
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const TOP_LEVEL = ['profile', 'pods', 'spaces'] as const;
-const POD_GRANT_KEYS = ['todo', 'fp', 'trip'] as const;
+const POD_GRANT_KEYS = ['todo', 'fp', 'trip', 'book'] as const;
 const SPACE_GRANT_KEYS = ['space', 'group'] as const;
 const FP_RESOURCES = Object.values(FpResource).filter((resource) => resource !== FpResource.DELETE_ALL);
 
@@ -80,6 +80,7 @@ function parsePodGrant(input: unknown): ApiKeyPodGrant | undefined {
   const todo = input['todo'] === undefined ? undefined : parseActions(input['todo']);
   const fp = input['fp'] === undefined ? undefined : parseFpGrant(input['fp']);
   const trip = input['trip'] === undefined ? undefined : parseActions(input['trip']);
+  const book = input['book'] === undefined ? undefined : parseActions(input['book']);
   if (input['todo'] !== undefined && todo === undefined) {
     return undefined;
   }
@@ -89,10 +90,14 @@ function parsePodGrant(input: unknown): ApiKeyPodGrant | undefined {
   if (input['trip'] !== undefined && trip === undefined) {
     return undefined;
   }
+  if (input['book'] !== undefined && book === undefined) {
+    return undefined;
+  }
   return {
     ...(todo === undefined ? {} : {todo}),
     ...(fp === undefined ? {} : {fp}),
     ...(trip === undefined ? {} : {trip}),
+    ...(book === undefined ? {} : {book}),
   };
 }
 

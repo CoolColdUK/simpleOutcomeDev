@@ -13,6 +13,7 @@ import {
   FP_MCP_TOOLS,
   TODO_EXTRA_MCP_TOOLS,
 } from '@/lib/api/mcp/mcpCatalogExtra';
+import {BOOK_MCP_TOOLS} from '@/lib/api/mcp/mcpCatalogBook';
 import {
   createAgentTpTrip,
   getAgentTpBudgetRollup,
@@ -555,7 +556,7 @@ export const TRIP_MCP_TOOLS: readonly McpTool[] = [
 /**
  * Get MCP tools for a specific feature endpoint
  */
-export function getMcpToolsForFeature(feature: 'trip' | 'todo' | 'fp' | null): readonly McpTool[] {
+export function getMcpToolsForFeature(feature: 'trip' | 'todo' | 'fp' | 'book' | null): readonly McpTool[] {
   if (feature === 'trip') {
     return TRIP_MCP_TOOLS;
   }
@@ -564,6 +565,9 @@ export function getMcpToolsForFeature(feature: 'trip' | 'todo' | 'fp' | null): r
   }
   if (feature === 'fp') {
     return FP_MCP_TOOLS;
+  }
+  if (feature === 'book') {
+    return BOOK_MCP_TOOLS;
   }
   // null = core endpoint (/api/mcp)
   return CORE_MCP_TOOLS;

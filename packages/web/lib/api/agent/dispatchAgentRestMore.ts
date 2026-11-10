@@ -73,6 +73,16 @@ import {
   setAgentPodStatus,
   updateAgentPod,
 } from '@/lib/api/agent/spaceLifecycleAgent';
+import {
+  exportAgentBookEpub,
+  getAgentBookOfflineBundle,
+  getAgentBookWorkspace,
+  reorderAgentBookOutline,
+  updateAgentBookMetadata,
+  updateAgentBookOutlineEntry,
+  createAgentBookOutlineEntry,
+  deleteAgentBookOutlineEntry,
+} from '@/lib/api/agent/bookAgent';
 import {archiveAgentTodoColumnCards, archiveAgentTodoColumnCompleted, reorderAgentTodoCards, reorderAgentTodoColumns} from '@/lib/api/agent/todoAgentBoard';
 import {addAgentTodoCommentImage} from '@/lib/api/agent/todoAgentComments';
 import {clearAgentTodoCardIcon, replaceAgentTodoCardIcon} from '@/lib/api/agent/todoAgentIcons';
@@ -246,7 +256,45 @@ export default async function dispatchAgentRestMore(method: string, request: Req
     }
     return methodNotAllowed();
   }
-  return (await dispatchTp(method, request, path)) ?? (await dispatchFp(method, request, path));
+  return (await dispatchBook(method, request, path)) ?? (await dispatchTp(method, request, path)) ?? (await dispatchFp(method, request, path));
+}
+
+async function dispatchBook(method: string, request: Request, path: readonly string[]): Promise<Response | undefined> {
+  const [, id, third, fourth, fifth] = path;
+  if (path[0] !== 'pods' || !isUuid(id) || third !== 'book') {
+    return undefined;
+  }
+  const podId = id;
+  if (fourth === 'workspace' && fifth === undefined) {
+    return method === 'GET' ? agentResultResponse(await getAgentBookWorkspace(request, {podId})) : methodNotAllowed();
+  }
+  if (fourth === undefined && fifth === undefined) {
+    return method === 'PATCH' ? agentResultResponse(await updateAgentBookMetadata(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+  }
+  if (fourth === 'outline' && fifth === undefined) {
+    return method === 'POST'
+      ? agentResultResponse(await createAgentBookOutlineEntry(request, await bodyWith(request, {podId})))
+      : methodNotAllowed();
+  }
+  if (fourth === 'outline' && fifth === 'reorder') {
+    return method === 'POST' ? agentResultResponse(await reorderAgentBookOutline(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+  }
+  if (fourth === 'outline' && isUuid(fifth) && path[5] === undefined) {
+    if (method === 'PATCH') {
+      return agentResultResponse(await updateAgentBookOutlineEntry(request, await bodyWith(request, {podId, entryId: fifth})));
+    }
+    if (method === 'DELETE') {
+      return agentResultResponse(await deleteAgentBookOutlineEntry(request, {podId, entryId: fifth}));
+    }
+    return methodNotAllowed();
+  }
+  if (fourth === 'offline-bundle' && fifth === undefined) {
+    return method === 'GET' ? agentResultResponse(await getAgentBookOfflineBundle(request, {podId})) : methodNotAllowed();
+  }
+  if (fourth === 'export' && fifth === 'epub') {
+    return method === 'POST' ? agentResultResponse(await exportAgentBookEpub(request, await bodyWith(request, {podId}))) : methodNotAllowed();
+  }
+  return methodNotAllowed();
 }
 
 async function dispatchTp(method: string, request: Request, path: readonly string[]): Promise<Response | undefined> {
