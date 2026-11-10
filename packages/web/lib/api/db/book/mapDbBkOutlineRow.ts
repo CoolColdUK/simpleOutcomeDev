@@ -12,6 +12,7 @@ export interface DbBkOutlineEntry {
   readonly summaryMd: string;
   readonly contentMd: string;
   readonly status: BookChapterStatus | undefined;
+  readonly chapterImageStoragePath: string | undefined;
 }
 
 interface BkOutlineRow {
@@ -25,6 +26,7 @@ interface BkOutlineRow {
   readonly summary_md: string;
   readonly content_md: string;
   readonly status: string | null;
+  readonly chapter_image_storage_path: string | null;
 }
 
 export default function mapDbBkOutlineRow(row: BkOutlineRow): DbBkOutlineEntry {
@@ -42,5 +44,6 @@ export default function mapDbBkOutlineRow(row: BkOutlineRow): DbBkOutlineEntry {
       row.status === 'outline' || row.status === 'draft' || row.status === 'done'
         ? (row.status as BookChapterStatus)
         : undefined,
+    chapterImageStoragePath: row.chapter_image_storage_path ?? undefined,
   };
 }

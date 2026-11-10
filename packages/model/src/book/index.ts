@@ -4,6 +4,10 @@ export {BookImageMime, bookImageExtensionForMime, normalizeBookImageMimeFromBlob
 export {default as buildBookAssetImageObjectPath} from './buildBookAssetImageObjectPath';
 export {default as buildBookCoverObjectPath} from './buildBookCoverObjectPath';
 export {default as buildBookOutlineImageObjectPath} from './buildBookOutlineImageObjectPath';
+export {default as buildBookChapterImageObjectPath} from './buildBookChapterImageObjectPath';
+export {default as buildBookPlaceholderCoverPng} from './buildBookPlaceholderCoverPng';
+export {bookMarkdownForDisplay, bookMarkdownForEpub, isBookPageBreakLine} from './bookPageBreak';
+export {default as coerceZipEntryData} from './coerceZipEntryData';
 export {default as collectBookOfflineImagePaths} from './collectBookOfflineImagePaths';
 export type {CollectBookOfflineImagePathsInput} from './collectBookOfflineImagePaths';
 export {default as buildStoreZip} from './buildStoreZip';

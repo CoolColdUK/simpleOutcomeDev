@@ -1019,6 +1019,7 @@ export interface Database {
           summary_md: string;
           content_md: string;
           status: string | null;
+          chapter_image_storage_path: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1033,6 +1034,7 @@ export interface Database {
           summary_md?: string;
           content_md?: string;
           status?: string | null;
+          chapter_image_storage_path?: string | null;
         };
         Update: {
           kind?: string;
@@ -1043,6 +1045,7 @@ export interface Database {
           summary_md?: string;
           content_md?: string;
           status?: string | null;
+          chapter_image_storage_path?: string | null;
         };
         Relationships: [];
       };

@@ -8,6 +8,7 @@ import updateDbPod from '@/lib/api/db/updateDbPod';
 import getDbFpSetting from '@/lib/api/db/getDbFpSetting';
 import type {DbFpSetting} from '@/lib/api/db/mapDbFpSetting';
 import FpSettingsPanel from '@/components/fp/FpSettingsPanel';
+import BookPodSettingsSection from '@/components/book/BookPodSettingsSection';
 
 export interface PodWorkspaceSettingsTabProps {
   readonly pod: DbPod;
@@ -17,6 +18,7 @@ export interface PodWorkspaceSettingsTabProps {
   readonly onArchive: () => void;
   readonly onDelete: () => void;
   readonly onSaved: () => void;
+  readonly canWritePod?: boolean;
 }
 
 export default function PodWorkspaceSettingsTab({
@@ -27,6 +29,7 @@ export default function PodWorkspaceSettingsTab({
   onArchive,
   onDelete,
   onSaved,
+  canWritePod = false,
 }: PodWorkspaceSettingsTabProps) {
   const [name, setName] = useState(pod.name ?? '');
   const [description, setDescription] = useState(pod.description ?? '');
@@ -78,6 +81,9 @@ export default function PodWorkspaceSettingsTab({
       ) : (
         <Text color="fg.muted">Only pod owners and space owners can change settings.</Text>
       )}
+      {pod.feature === FeatureKind.BOOK ? (
+        <BookPodSettingsSection podId={pod.id} canManage={canManage || canWritePod} />
+      ) : null}
       {fpSetting !== undefined ? (
         <FpSettingsPanel
           podId={pod.id}

@@ -1,8 +1,10 @@
 /** Minimal ZIP (store, no compression) for EPUB 3. */
 
-interface ZipEntryInput {
+import coerceZipEntryData from './coerceZipEntryData';
+
+export interface ZipEntryInput {
   readonly path: string;
-  readonly data: Uint8Array;
+  readonly data: Uint8Array | string | ArrayBuffer;
 }
 
 function crc32(buf: Uint8Array): number {
@@ -27,8 +29,9 @@ export default function buildStoreZip(entries: readonly ZipEntryInput[]): Uint8A
   let offset = 0;
   entries.forEach((entry) => {
     const nameBytes = new TextEncoder().encode(entry.path);
-    const crc = crc32(entry.data);
-    const size = entry.data.length;
+    const entryData = coerceZipEntryData(entry.data);
+    const crc = crc32(entryData);
+    const size = entryData.length;
     const local = new Uint8Array(30 + nameBytes.length + size);
     const view = new DataView(local.buffer);
     view.setUint32(0, 0x04034b50, true);
@@ -38,7 +41,7 @@ export default function buildStoreZip(entries: readonly ZipEntryInput[]): Uint8A
     view.setUint32(22, size, true);
     view.setUint16(26, nameBytes.length, true);
     local.set(nameBytes, 30);
-    local.set(entry.data, 30 + nameBytes.length);
+    local.set(entryData, 30 + nameBytes.length);
     parts.push(local);
     const cd = new Uint8Array(46 + nameBytes.length);
     const cdView = new DataView(cd.buffer);
