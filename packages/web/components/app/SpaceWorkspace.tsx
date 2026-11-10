@@ -3,7 +3,7 @@
 import {useCallback, useEffect, useState} from 'react';
 import Link from 'next/link';
 import {useParams} from 'next/navigation';
-import {Alert, Badge, Button, Heading, HStack, Stack, Text} from '@chakra-ui/react';
+import {Alert, Badge, Button, Heading, HStack, SimpleGrid, Stack, Text} from '@chakra-ui/react';
 import {canManageSpace, filterAccessiblePods, spaceRoleLabel, SpaceRole} from '@so/model';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbSpace from '@/lib/api/db/getDbSpace';
@@ -133,15 +133,20 @@ export default function SpaceWorkspace() {
             ) : null}
           </HStack>
         </HStack>
-        {visible.map((pod) => (
-          <SpaceWorkspacePodCard
-            key={pod.id}
-            spaceId={spaceId ?? ''}
-            pod={pod}
-            role={memberships.find((m) => m.podId === pod.id)?.role}
-          />
-        ))}
-        {visible.length === 0 ? <Text color="fg.muted">No pods yet. Find or create one.</Text> : null}
+        {visible.length === 0 ? (
+          <Text color="fg.muted">No pods yet. Find or create one.</Text>
+        ) : (
+          <SimpleGrid columns={{base: 1, md: 2, lg: 3}} gap={3} w="full">
+            {visible.map((pod) => (
+              <SpaceWorkspacePodCard
+                key={pod.id}
+                spaceId={spaceId ?? ''}
+                pod={pod}
+                role={memberships.find((m) => m.podId === pod.id)?.role}
+              />
+            ))}
+          </SimpleGrid>
+        )}
       </Stack>
       {spaceId !== undefined ? (
         <>
