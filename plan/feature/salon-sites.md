@@ -1,6 +1,6 @@
 # Multi-site salon websites — plan
 
-**Status:** Draft for Matthew’s review. Provisional answers are recorded at the bottom and are not a formal approval. This file is the whole product change. No app, schema, or migration code until this plan is approved. Implementation then continues on this same pull request.
+**Status:** Approved by Matthew (“implement PR34”). The decisions at the bottom are approved. Banner wording is the current demo copy and is not final marketing copy. Implementation is on this pull request.
 
 **Repo:** [CoolColdUK/simpleOutcomeDev](https://github.com/CoolColdUK/simpleOutcomeDev)
 
@@ -374,7 +374,7 @@ CI already runs on draft pull requests (`opened`, `synchronize`, `reopened`, `re
 
 Code and workflows do not change Namecheap, and they cannot create the Vercel project until the token and org id already used by Production are in GitHub. Tick these off by hand:
 
-- [ ] Confirm the existing Vercel team (the one in `VERCEL_ORG_ID`) is on **Vercel Pro**. Client sites are commercial use. Hobby is the wrong plan for this project. Pro is also the plan that would be required if we later wanted a wildcard domain; this design does **not** use a wildcard.
+- [ ] Use the existing Simple Outcome Vercel account. **Hobby for now** — no paid upgrade in this phase. Create the sites project in that account. Do not create a new Supabase project; `public.site` lives in the existing one. A wildcard domain is still not used. Commercial use of client sites may need Pro later; that is a later decision.
 - [ ] Confirm Namecheap has **no** wildcard record for `*.simpleoutcome.dev`. Each demo is its own record.
 - [ ] Confirm the apex `simpleoutcome.dev` and `www` stay on the **existing** Vercel project. Do not add the apex to `simple-outcome-sites`.
 - [ ] Run **Create Vercel sites project** (after the workflow exists on `develop`). Check the run summary: project `simple-outcome-sites`, root `packages/sites`, Git not connected, GitHub variable `VERCEL_PROJECT_ID_SITES` set. `VERCEL_PROJECT_ID_PRODUCTION` unchanged.
@@ -432,11 +432,11 @@ After this plan is approved, the work lands on this same pull request in this or
 
 ---
 
-## Provisional answers
+## Approved decisions
 
-Matthew has not formally approved this plan. The answers below are **proposed**. They are what implementation will follow unless he changes them in this pull request.
+Matthew approved these on this pull request (“implement PR34”). Banner wording stays as written for the demo and can change later.
 
-| # | Topic | Proposed |
+| # | Topic | Approved |
 | --- | --- | --- |
 | 1 | Demo sections | The three demos use the full set — hero, about, services and prices, gallery, reviews, booking CTA, hours and location, contact — in the Home Studio theme. The short mock 04 stays the `home-studio` preset document for the library. |
 | 2 | What may be real | Real public business name, real public prices, and the real Fresha booking link. Photos are placeholders only. |
@@ -447,4 +447,4 @@ Matthew has not formally approved this plan. The answers below are **proposed**.
 | 7 | Who edits | Matthew is the only editor for now, via SQL (migration or the Supabase SQL editor). No Supabase secret key on the sites project. |
 | 8 | Demo chrome | A sales banner, not a plain SAMPLE badge: “Sample made for &lt;Business&gt; by Simple Outcome”, button “Make this yours”, panel with £450 setup, £39/month care plan, and a contact link defaulting to info@simpleoutcome.dev (`SITES_SALES_EMAIL`). Shown only when `status = demo`. |
 
-Nothing else is blocking. Formal approval is still the gate before implementation.
+The sales banner sentence, button, and prices are the demo copy above. The contact address defaults to info@simpleoutcome.dev.
