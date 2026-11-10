@@ -9,16 +9,13 @@ export interface UpdateDbBkBookInput {
 
 export default async function updateDbBkBook(podId: string, input: UpdateDbBkBookInput): Promise<void> {
   const supabase = getSupabaseBrowserClient();
-  const patch: Record<string, string | null> = {};
-  if (input.subtitle !== undefined) {
-    patch.subtitle = input.subtitle;
-  }
-  if (input.summaryMd !== undefined) {
-    patch.summary_md = input.summaryMd;
-  }
-  if (input.coverStoragePath !== undefined) {
-    patch.cover_storage_path = input.coverStoragePath;
-  }
-  const {error} = await supabase.from('bk_book').update(patch).eq('pod_id', podId);
+  const {error} = await supabase
+    .from('bk_book')
+    .update({
+      ...(input.subtitle === undefined ? {} : {subtitle: input.subtitle}),
+      ...(input.summaryMd === undefined ? {} : {summary_md: input.summaryMd}),
+      ...(input.coverStoragePath === undefined ? {} : {cover_storage_path: input.coverStoragePath}),
+    })
+    .eq('pod_id', podId);
   throwIfSupabaseError(error);
 }

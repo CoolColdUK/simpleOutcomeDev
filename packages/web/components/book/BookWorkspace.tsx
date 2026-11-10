@@ -25,7 +25,8 @@ import {
 import {SortableContext, arrayMove, useSortable, verticalListSortingStrategy} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 import {BookChapterStatus, BookOutlineKind, bookOutlineListLabel} from '@so/model';
-import type {DbBkOutlineEntry, DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
+import type {DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
+import type {DbBkOutlineEntry} from '@/lib/api/db/book/mapDbBkOutlineRow';
 import loadDbBookWorkspace from '@/lib/api/db/book/loadDbBookWorkspace';
 import updateDbBkBook from '@/lib/api/db/book/updateDbBkBook';
 import createDbBkOutlineEntry from '@/lib/api/db/book/createDbBkOutlineEntry';
@@ -97,7 +98,6 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   const [includeNotesExport, setIncludeNotesExport] = useState(false);
   const [error, setError] = useState('');
   const [contentDraftById, setContentDraftById] = useState<Record<string, string>>({});
-  const contentRef = useCallback((node: HTMLTextAreaElement | null) => node, []);
   const contentDraft =
     selectedId === undefined
       ? ''
@@ -188,7 +188,7 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
     }
     const supabase = getSupabaseBrowserClient();
     const bytes = await buildDbBookEpub(supabase, workspace, {title: podName, includeNotes: includeNotesExport});
-    const blob = new Blob([bytes], {type: 'application/epub+zip'});
+    const blob = new Blob([Uint8Array.from(bytes)], {type: 'application/epub+zip'});
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -310,7 +310,6 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
               ) : null}
               <Textarea
                 key={selected.id}
-                ref={contentRef}
                 value={contentDraft}
                 onChange={(e) => setContentDraftById((prev) => ({...prev, [selected.id]: e.target.value}))}
                 rows={14}

@@ -15,20 +15,15 @@ export default async function updateDbBkOutlineEntry(
   input: UpdateDbBkOutlineEntryInput,
 ): Promise<DbBkOutlineEntry> {
   const supabase = getSupabaseBrowserClient();
-  const patch: Record<string, string> = {};
-  if (input.title !== undefined) {
-    patch.title = input.title;
-  }
-  if (input.summaryMd !== undefined) {
-    patch.summary_md = input.summaryMd;
-  }
-  if (input.contentMd !== undefined) {
-    patch.content_md = input.contentMd;
-  }
-  if (input.status !== undefined) {
-    patch.status = input.status;
-  }
-  const {error} = await supabase.from('bk_outline_entry').update(patch).eq('id', entryId);
+  const {error} = await supabase
+    .from('bk_outline_entry')
+    .update({
+      ...(input.title === undefined ? {} : {title: input.title}),
+      ...(input.summaryMd === undefined ? {} : {summary_md: input.summaryMd}),
+      ...(input.contentMd === undefined ? {} : {content_md: input.contentMd}),
+      ...(input.status === undefined ? {} : {status: input.status}),
+    })
+    .eq('id', entryId);
   throwIfSupabaseError(error);
   const {data, error: readErr} = await supabase.from('bk_outline_entry').select('*').eq('id', entryId).single();
   throwIfSupabaseError(readErr);
