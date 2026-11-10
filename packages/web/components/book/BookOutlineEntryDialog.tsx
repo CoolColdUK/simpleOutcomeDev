@@ -187,44 +187,41 @@ export default function BookOutlineEntryDialog({
                 Summary
               </Text>
               <Textarea value={summaryMd} onChange={(event) => setSummaryMd(event.target.value)} rows={3} disabled={!canWrite} />
+              <Switch.Root checked={showPreview} onCheckedChange={(details) => setShowPreview(details.checked === true)}>
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label>Show preview</Switch.Label>
+              </Switch.Root>
+              {showPreview ? (
+                <Stack w="full" borderWidth="1px" borderRadius="md" p={3} minH="120px">
+                  <BookMarkdownBody markdown={contentMd} />
+                </Stack>
+              ) : null}
               <Text fontSize="sm" fontWeight="medium">
                 Content
               </Text>
               <Text fontSize="xs" color="fg.muted">
                 Page break: put <code>{'<!-- pagebreak -->'}</code> or <code>\pagebreak</code> on its own line.
               </Text>
-              <HStack align="start" gap={4} flexDirection={{base: 'column', md: 'row'}}>
-                <Textarea
-                  value={contentMd}
-                  onChange={(event) => setContentMd(event.target.value)}
-                  rows={16}
-                  flex="1"
-                  w="full"
-                  disabled={!canWrite}
-                  onPaste={(event) => {
-                    const file = [...event.clipboardData.items].map((item) => item.getAsFile()).find((picked) => picked?.type.startsWith('image/') ?? false);
-                    if (file === undefined || file === null || !canWrite) {
-                      return;
-                    }
-                    event.preventDefault();
-                    void uploadStorageBookInlineImageMarkdownFragment(podId, entry.id, file).then((fragment) => {
-                      const ta = event.target as HTMLTextAreaElement;
-                      const {next} = insertAtCaret(contentMd, ta, fragment);
-                      setContentMd(next);
-                    });
-                  }}
-                />
-                {showPreview ? (
-                  <Stack flex="1" w="full" borderWidth="1px" borderRadius="md" p={3} minH="200px">
-                    <BookMarkdownBody markdown={contentMd} />
-                  </Stack>
-                ) : null}
-              </HStack>
-              <Switch.Root checked={showPreview} onCheckedChange={(details) => setShowPreview(details.checked === true)}>
-                <Switch.HiddenInput />
-                <Switch.Control />
-                <Switch.Label>Show preview</Switch.Label>
-              </Switch.Root>
+              <Textarea
+                value={contentMd}
+                onChange={(event) => setContentMd(event.target.value)}
+                rows={16}
+                w="full"
+                disabled={!canWrite}
+                onPaste={(event) => {
+                  const file = [...event.clipboardData.items].map((item) => item.getAsFile()).find((picked) => picked?.type.startsWith('image/') ?? false);
+                  if (file === undefined || file === null || !canWrite) {
+                    return;
+                  }
+                  event.preventDefault();
+                  void uploadStorageBookInlineImageMarkdownFragment(podId, entry.id, file).then((fragment) => {
+                    const ta = event.target as HTMLTextAreaElement;
+                    const {next} = insertAtCaret(contentMd, ta, fragment);
+                    setContentMd(next);
+                  });
+                }}
+              />
             </Stack>
           </DialogBody>
           <DialogFooter>

@@ -8,6 +8,7 @@ export {default as buildBookChapterImageObjectPath} from './buildBookChapterImag
 export {default as buildBookPlaceholderCoverPng} from './buildBookPlaceholderCoverPng';
 export {bookMarkdownForDisplay, bookMarkdownForEpub, isBookPageBreakLine} from './bookPageBreak';
 export {default as coerceZipEntryData} from './coerceZipEntryData';
+export {default as bookAssetDescriptionSnippet} from './bookAssetDescriptionSnippet';
 export {default as collectBookOfflineImagePaths} from './collectBookOfflineImagePaths';
 export type {CollectBookOfflineImagePathsInput} from './collectBookOfflineImagePaths';
 export {default as buildStoreZip} from './buildStoreZip';

@@ -6,6 +6,25 @@ import {loadDbBookWorkspaceWithClient} from '@/lib/api/db/book/loadDbBookWorkspa
 import buildDbBookEpub from '@/lib/api/db/book/buildDbBookEpub';
 import buildDbBookOfflineBundle from '@/lib/api/db/book/buildDbBookOfflineBundle';
 import mapDbBkOutlineRow from '@/lib/api/db/book/mapDbBkOutlineRow';
+import type {DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
+import mapBookAssetForAgent, {type AgentBookAssetPayload} from '@/lib/api/agent/mapBookAssetForAgent';
+
+function mapBookWorkspaceForAgent(workspace: DbBookWorkspace): Omit<DbBookWorkspace, 'assets'> & {assets: AgentBookAssetPayload[]} {
+  return {
+    ...workspace,
+    assets: workspace.assets.map(mapBookAssetForAgent),
+  };
+}
+
+async function loadMappedBookAsset(
+  supabase: Parameters<typeof loadDbBookWorkspaceWithClient>[0],
+  podId: string,
+  assetId: string,
+): Promise<ReturnType<typeof mapBookAssetForAgent> | undefined> {
+  const workspace = await loadDbBookWorkspaceWithClient(supabase, podId);
+  const asset = workspace?.assets.find((row) => row.id === assetId);
+  return asset === undefined ? undefined : mapBookAssetForAgent(asset);
+}
 
 function podIdFromArgs(args: Record<string, unknown>): string {
   return typeof args.podId === 'string' ? args.podId : '';
@@ -29,7 +48,7 @@ export async function getAgentBookWorkspace(request: Request, args: unknown): Pr
   if (workspace === undefined) {
     return agentErr(404, 'not_found', 'Book not found');
   }
-  return agentOk(workspace);
+  return agentOk(mapBookWorkspaceForAgent(workspace));
 }
 
 export async function updateAgentBookMetadata(request: Request, args: unknown): Promise<AgentResult<unknown>> {
@@ -305,7 +324,11 @@ export async function createAgentBookAsset(request: Request, args: unknown): Pro
   if (createErr !== undefined) {
     return createErr;
   }
-  return agentOk(data);
+  if (data === null) {
+    return agentErr(500, 'internal', 'Create failed');
+  }
+  const mapped = await loadMappedBookAsset(ctx.data.supabase, podId, data.id);
+  return agentOk(mapped ?? data);
 }
 
 export async function updateAgentBookAsset(request: Request, args: unknown): Promise<AgentResult<unknown>> {
@@ -336,7 +359,8 @@ export async function updateAgentBookAsset(request: Request, args: unknown): Pro
   if (rowErr !== undefined) {
     return rowErr;
   }
-  return agentOk(row.data);
+  const mapped = await loadMappedBookAsset(ctx.data.supabase, podId, assetId);
+  return agentOk(mapped ?? row.data);
 }
 
 export async function deleteAgentBookAsset(request: Request, args: unknown): Promise<AgentResult<unknown>> {

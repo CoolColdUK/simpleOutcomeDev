@@ -22,10 +22,7 @@ import createDbBkOutlineEntry from '@/lib/api/db/book/createDbBkOutlineEntry';
 import updateDbBkOutlineEntry from '@/lib/api/db/book/updateDbBkOutlineEntry';
 import deleteDbBkOutlineEntry from '@/lib/api/db/book/deleteDbBkOutlineEntry';
 import reorderDbBkOutline from '@/lib/api/db/book/reorderDbBkOutline';
-import createDbBkAsset from '@/lib/api/db/book/createDbBkAsset';
 import deleteDbBkAsset from '@/lib/api/db/book/deleteDbBkAsset';
-import createDbBkAssetType from '@/lib/api/db/book/createDbBkAssetType';
-import deleteDbBkAssetType from '@/lib/api/db/book/deleteDbBkAssetType';
 import updateDbBkAsset from '@/lib/api/db/book/updateDbBkAsset';
 import buildDbBookOfflineBundle from '@/lib/api/db/book/buildDbBookOfflineBundle';
 import buildDbBookEpub, {type BookEpubExportScope} from '@/lib/api/db/book/buildDbBookEpub';
@@ -33,8 +30,7 @@ import {loadBookOfflineBundle, saveBookOfflineBundle} from '@/lib/book/bookOffli
 import BookMarkdownBody from '@/components/book/BookMarkdownBody';
 import BookOutlineEntryDialog from '@/components/book/BookOutlineEntryDialog';
 import BookAssetEditDialog from '@/components/book/BookAssetEditDialog';
-import BookAssetReadOnlyCard from '@/components/book/BookAssetReadOnlyCard';
-import BookAddAssetTypeDialog from '@/components/book/BookAddAssetTypeDialog';
+import BookAssetsSection from '@/components/book/BookAssetsSection';
 import SoToaster from '@/components/ui/SoToaster';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import {soToaster} from '@/lib/ui/soToaster';
@@ -78,7 +74,6 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   const [editorEntryId, setEditorEntryId] = useState<string | undefined>(undefined);
   const [editorSaving, setEditorSaving] = useState(false);
   const [assetEditorId, setAssetEditorId] = useState<string | undefined>(undefined);
-  const [assetTypeDialogOpen, setAssetTypeDialogOpen] = useState(false);
   const [summaryMd, setSummaryMd] = useState('');
   const [error, setError] = useState('');
   const [offlineReady, setOfflineReady] = useState(false);
@@ -211,7 +206,7 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   }
 
   return (
-  <Stack gap={4}>
+    <Stack gap={4}>
       <SoToaster />
       {error !== '' ? <Text color="fg.error">{error}</Text> : null}
       <Accordion.Root collapsible defaultValue={[]}>
@@ -267,45 +262,14 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
           </DndContext>
         </Stack>
       ) : (
-        <Stack gap={4}>
-          {workspace.assetTypes.map((type) => (
-            <Box key={type.id} borderWidth="1px" borderRadius="md" p={3}>
-              <HStack justify="space-between" mb={2}>
-                <Text fontWeight="semibold">{type.label}</Text>
-                {canWrite && !type.isSystem ? (
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    onClick={() =>
-                      void deleteDbBkAssetType(podId, type.id)
-                        .then(() => load())
-                        .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
-                    }
-                  >
-                    Delete type
-                  </Button>
-                ) : null}
-              </HStack>
-              <Stack gap={2}>
-                {workspace.assets
-                  .filter((asset) => asset.assetTypeId === type.id)
-                  .map((asset) => (
-                    <BookAssetReadOnlyCard key={asset.id} asset={asset} typeLabel={type.label} onEdit={() => setAssetEditorId(asset.id)} />
-                  ))}
-              </Stack>
-              {canWrite ? (
-                <Button size="sm" mt={2} onClick={() => void createDbBkAsset(podId, type.id, 'New asset').then(() => load())}>
-                  Add asset
-                </Button>
-              ) : null}
-            </Box>
-          ))}
-          {canWrite ? (
-            <Button variant="outline" onClick={() => setAssetTypeDialogOpen(true)}>
-              Add custom asset type
-            </Button>
-          ) : null}
-        </Stack>
+        <BookAssetsSection
+          workspace={workspace}
+          podId={podId}
+          canWrite={canWrite}
+          onEditAsset={setAssetEditorId}
+          onReload={load}
+          onError={(message) => setError(message)}
+        />
       )}
       <BookOutlineEntryDialog
         open={editorEntry !== undefined}
@@ -368,15 +332,6 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
         }}
         onReload={load}
         onError={(message) => setError(message)}
-      />
-      <BookAddAssetTypeDialog
-        open={assetTypeDialogOpen}
-        onClose={() => setAssetTypeDialogOpen(false)}
-        onCreate={async (label) => {
-          const slug = label.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
-          await createDbBkAssetType(podId, label, slug);
-          await load();
-        }}
       />
     </Stack>
   );
