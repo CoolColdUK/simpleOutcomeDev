@@ -243,7 +243,7 @@ Replaces the plain SAMPLE corner badge. Rendered only when `status = demo`. Live
 - Text: `Sample made for <Business> by Simple Outcome`, with `<Business>` the document `businessName`.
 - Button: `Make this yours`. It opens a small panel (a dialog).
 - Panel copy: setup **£450**, care plan **£39/month**, and a contact link. Those two prices are constants in the sites app, not fields on the site document, so a JSON edit cannot drop them off a demo.
-- The contact link defaults to `mailto:info@simpleoutcome.dev`. Override with env `SITES_SALES_EMAIL` (server-read, default `info@simpleoutcome.dev`). The checklist sets it on the one sites project, so every demo shares it.
+- The contact link defaults to `mailto:info@simpleoutcome.dev`. Override with GitHub variable `SITES_SALES_EMAIL`. Sites production writes it to `NEXT_PUBLIC_SITES_SALES_EMAIL` so Next inlines it at build time (default `info@simpleoutcome.dev` when the variable is empty). It is not set on the Vercel project.
 - The panel closes with a visible control and with Escape. Focus moves to the panel when it opens and back to the button when it closes.
 - The same mobile-first rules apply: at 375px the bar stacks, and the panel fits the screen.
 
@@ -305,7 +305,7 @@ Suggested files (concrete paths, still to be written after approval):
 - `components/SiteSalesBanner.tsx` — banner plus panel. Omitted entirely when status is live.
 - `components/SiteSection*.tsx` — one file per section type, `ParentChild` naming from the project rules (`SiteSectionHero`, and so on). Phone layout is the default in each file.
 - `lib/site/loadSiteForHost.ts` — the direct Supabase read. Server-only. Selects `slug, custom_domain, status, preset, document`. No call into `packages/web`.
-- `env.example` — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITES_ROOT_DOMAIN`, optional `SITES_SALES_EMAIL`.
+- `env.example` — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITES_ROOT_DOMAIN`, optional `NEXT_PUBLIC_SITES_SALES_EMAIL`. Production takes those from GitHub at build time, not from the Vercel project.
 
 Rendering is dynamic (`force-dynamic` or an equivalent uncached fetch). A SQL update then shows up without a redeploy. Caching and on-demand revalidation wait until the editor exists and there is something to invalidate.
 
@@ -336,7 +336,7 @@ Add `.github/workflows/sites-production.yml`, workflow_dispatch only:
 1. Checkout, Node 26, `npm ci` (same private `@coolcolduk` registry setup as Production).
 2. Require `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and a **new** variable `VERCEL_PROJECT_ID_SITES`.
 3. `npm run build:model`.
-4. `vercel pull --environment=production`, `vercel build --prod`, `vercel deploy --prebuilt --prod`, with `VERCEL_PROJECT_ID` set to the sites project id.
+4. `vercel pull --environment=production`, then overwrite `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITES_ROOT_DOMAIN`, and `NEXT_PUBLIC_SITES_SALES_EMAIL` in `.vercel/.env.production.local` from GitHub (secrets for the Supabase pair, variable `NEXT_PUBLIC_SITES_ROOT_DOMAIN`, optional variable `SITES_SALES_EMAIL` defaulting to `info@simpleoutcome.dev`). Fail if a required value is empty. Then `vercel build --prod` and `vercel deploy --prebuilt --prod`, with `VERCEL_PROJECT_ID` set to the sites project id. Do not rely on those values being set on the Vercel project.
 5. Do not bump Lerna, do not push migrations, do not deploy `packages/web`.
 
 Add a one-shot `.github/workflows/create-vercel-sites-project.yml` (or a clearly separate input on a copy of the existing workflow) that:
@@ -363,7 +363,7 @@ CI already runs on draft pull requests (`opened`, `synchronize`, `reopened`, `re
 1. Merge this pull request to `develop`.
 2. Run **Production** so `supabase db push` creates `site` and the three rows. `deploy_vercel` can stay on; that deploys the main app, which this feature does not change.
 3. Run **Create Vercel sites project** once.
-4. Set the sites project env (checklist below).
+4. Set GitHub variable `NEXT_PUBLIC_SITES_ROOT_DOMAIN` to `simpleoutcome.dev`. Optional variable `SITES_SALES_EMAIL`. The Supabase URL and anon key are already repository secrets. Do not set those on the Vercel project.
 5. Run **Sites production**.
 6. Attach the three domains (Vercel and Namecheap).
 7. Open each demo at about 375px wide and at desktop width: sales banner visible, “Make this yours” opens the £450 / £39 panel, response header shows `noindex`, no horizontal scroll, unknown host 404s, `https://simpleoutcome.dev` still serves the main app.
@@ -378,7 +378,7 @@ Code and workflows do not change Namecheap, and they cannot create the Vercel pr
 - [ ] Confirm Namecheap has **no** wildcard record for `*.simpleoutcome.dev`. Each demo is its own record.
 - [ ] Confirm the apex `simpleoutcome.dev` and `www` stay on the **existing** Vercel project. Do not add the apex to `simple-outcome-sites`.
 - [ ] Run **Create Vercel sites project** (after the workflow exists on `develop`). Check the run summary: project `simple-outcome-sites`, root `packages/sites`, Git not connected, GitHub variable `VERCEL_PROJECT_ID_SITES` set. `VERCEL_PROJECT_ID_PRODUCTION` unchanged.
-- [ ] On that **one** Vercel project, set production env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (same Supabase project as the main app; the sites app reads with this anon key), `NEXT_PUBLIC_SITES_ROOT_DOMAIN` = `simpleoutcome.dev`. Optional `SITES_SALES_EMAIL` (default `info@simpleoutcome.dev`). Do **not** set `SUPABASE_SECRET_KEY`. Do **not** point the sites app at a URL of the main app.
+- [ ] Do **not** set the sites build env on the Vercel project. **Sites production** reads repository secrets `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`, repository variable `NEXT_PUBLIC_SITES_ROOT_DOMAIN` (`simpleoutcome.dev`), and optional repository variable `SITES_SALES_EMAIL` (default `info@simpleoutcome.dev`). It writes those into `.vercel/.env.production.local` after `vercel pull`. Do **not** set `SUPABASE_SECRET_KEY`. Do **not** point the sites app at a URL of the main app.
 - [ ] Run **Production** once so the `site` migration is applied. Confirm the three rows in the Supabase table editor.
 - [ ] Run **Sites production** and open the deployment URL. It should 404 (no client site on `*.vercel.app`).
 - [ ] For each of `newbeauty`, `soniasnails`, `lkbaesthetics`:
@@ -399,7 +399,7 @@ After this plan is approved, the work lands on this same pull request in this or
 2. **Migration.** `public.site`, RLS, grants, moddatetime trigger, three inserts.
 3. **App shell.** `packages/sites` package, env example, proxy rewrite, 404 for unknown hosts, dynamic render of one parsed document. Root `build:sites` script. Dev fallback only when Supabase env is unset.
 4. **Sections, mobile-first.** The twelve section components and theme CSS variables, transcribed from the ten mocks for colour and order. Base styles are the 375px layout; `min-width` queries add the desktop composition. Preset documents match the section sequences in the preset table. The three demos use the longer section list in the Home Studio theme.
-5. **Demo and live presentation.** Sales banner and panel (demo status only), footer, metadata robots, dynamic `robots.ts`, `X-Robots-Tag` on `*.simpleoutcome.dev`. `SITES_SALES_EMAIL` defaults to `info@simpleoutcome.dev`.
+5. **Demo and live presentation.** Sales banner and panel (demo status only), footer, metadata robots, dynamic `robots.ts`, `X-Robots-Tag` on `*.simpleoutcome.dev`. `NEXT_PUBLIC_SITES_SALES_EMAIL` is inlined at build time and defaults to `info@simpleoutcome.dev`.
 6. **CI and deploy workflows.** Sites build step in `ci.yml`. `sites-production.yml`. `create-vercel-sites-project.yml`. README deploy section gets a short pointer at this plan (the manual checklist stays here, not a second copy).
 7. **Self-check before marking the PR ready.** `npm test` covers the new model exports. `npm run lint` and the sites build pass. `packages/web` has no behaviour diff. Each preset and each of the three demos is opened at about 375px and at about 1280px against the mobile-first acceptance criteria (no horizontal scroll, stacked columns, banner and panel usable). Matthew runs the manual checklist after merge; the PR description records that those DNS and Vercel clicks are still his.
 
@@ -445,6 +445,6 @@ Matthew approved these on this pull request (“implement PR34”). Banner wordi
 | 5 | Validation and UI kit | Valibot in `@so/model`. No Chakra in the sites app. |
 | 6 | Indexing | Custom client domains are indexable once `status = live`. Every `*.simpleoutcome.dev` host is `noindex`. |
 | 7 | Who edits | Matthew is the only editor for now, via SQL (migration or the Supabase SQL editor). No Supabase secret key on the sites project. |
-| 8 | Demo chrome | A sales banner, not a plain SAMPLE badge: “Sample made for &lt;Business&gt; by Simple Outcome”, button “Make this yours”, panel with £450 setup, £39/month care plan, and a contact link defaulting to info@simpleoutcome.dev (`SITES_SALES_EMAIL`). Shown only when `status = demo`. |
+| 8 | Demo chrome | A sales banner, not a plain SAMPLE badge: “Sample made for &lt;Business&gt; by Simple Outcome”, button “Make this yours”, panel with £450 setup, £39/month care plan, and a contact link defaulting to info@simpleoutcome.dev (`NEXT_PUBLIC_SITES_SALES_EMAIL`, from GitHub variable `SITES_SALES_EMAIL`). Shown only when `status = demo`. |
 
 The sales banner sentence, button, and prices are the demo copy above. The contact address defaults to info@simpleoutcome.dev.
