@@ -29,7 +29,7 @@ import BookOutlineEmbeddedImagesPanel from '@/components/book/BookOutlineEmbedde
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import uploadStorageBookChapterImage from '@/lib/api/storage/uploadStorageBookChapterImage';
 import uploadStorageBookInlineImageMarkdownFragment from '@/lib/api/storage/uploadStorageBookInlineImageMarkdownFragment';
-import resolveStorageBookImageSignedUrls from '@/lib/api/storage/resolveStorageBookImageSignedUrls';
+import {getStorageBookSignedUrl} from '@/lib/api/storage/storageBookSignedUrlCache';
 
 export interface BookOutlineEntryDialogProps {
   readonly open: boolean;
@@ -103,10 +103,9 @@ export default function BookOutlineEntryDialog({
       return;
     }
     let cancelled = false;
-    void resolveStorageBookImageSignedUrls(`![](soimg:${encodeURIComponent(chapterImagePath)})`).then((resolved) => {
-      const match = resolved.match(/\]\(<([^>]+)>\)/);
-      if (!cancelled && match?.[1] !== undefined) {
-        setChapterImagePreview(match[1]);
+    void getStorageBookSignedUrl(chapterImagePath).then((url) => {
+      if (!cancelled && url !== undefined) {
+        setChapterImagePreview(url);
       }
     });
     return () => {

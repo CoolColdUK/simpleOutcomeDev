@@ -2,7 +2,8 @@
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Accordion, Box, Button, HStack, Stack, Text} from '@chakra-ui/react';
+import {Accordion, Box, Button, HStack, IconButton, Stack, Text} from '@chakra-ui/react';
+import {SortAscIcon, SortDescIcon} from '@so/component';
 import {
   DndContext,
   PointerSensor,
@@ -13,7 +14,14 @@ import {
 } from '@dnd-kit/core';
 import {SortableContext, arrayMove, useSortable, verticalListSortingStrategy} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
-import {BookChapterStatus, BookOutlineKind, bookOutlineListLabel} from '@so/model';
+import {
+  BookChapterStatus,
+  BookListSortDirection,
+  BookOutlineKind,
+  BookOutlineListFilter,
+  BookWorkspaceTab,
+  bookOutlineListLabel,
+} from '@so/model';
 import type {DbBkAsset, DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
 import type {DbBkOutlineEntry} from '@/lib/api/db/book/mapDbBkOutlineRow';
 import loadDbBookWorkspace from '@/lib/api/db/book/loadDbBookWorkspace';
@@ -35,6 +43,8 @@ import BookAssetEditDialog from '@/components/book/BookAssetEditDialog';
 import BookAssetViewDialog from '@/components/book/BookAssetViewDialog';
 import BookMarkdownEditorWithPreview from '@/components/book/BookMarkdownEditorWithPreview';
 import BookAssetsSection from '@/components/book/BookAssetsSection';
+import BookListPagination from '@/components/book/BookListPagination';
+import AppIconTooltip from '@/components/app/AppIconTooltip';
 import SoToaster from '@/components/ui/SoToaster';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import {soToaster} from '@/lib/ui/soToaster';
@@ -46,7 +56,7 @@ export interface BookWorkspaceProps {
   readonly canWrite: boolean;
 }
 
-type OutlineFilter = 'all' | 'chapters' | 'notes' | 'assets';
+const OUTLINE_PAGE_SIZE = 20;
 
 type OutlineEditorTarget =
   | {readonly mode: 'edit'; readonly entryId: string}
@@ -110,7 +120,10 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   const router = useRouter();
   const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 6}}));
   const [workspace, setWorkspace] = useState<DbBookWorkspace | undefined>(undefined);
-  const [filter, setFilter] = useState<OutlineFilter>('all');
+  const [workspaceTab, setWorkspaceTab] = useState(BookWorkspaceTab.OUTLINE);
+  const [outlineFilter, setOutlineFilter] = useState(BookOutlineListFilter.ALL);
+  const [outlineSort, setOutlineSort] = useState(BookListSortDirection.ASC);
+  const [outlinePage, setOutlinePage] = useState(1);
   const [outlineEditor, setOutlineEditor] = useState<OutlineEditorTarget | undefined>(undefined);
   const [assetEditor, setAssetEditor] = useState<AssetEditorTarget | undefined>(undefined);
   const [viewAssetId, setViewAssetId] = useState<string | undefined>(undefined);
@@ -175,31 +188,60 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
     return workspace.outline.find((entry) => entry.id === viewOutlineEntryId);
   }, [viewOutlineEntryId, workspace]);
 
+  const outlineCounts = useMemo(() => {
+    if (workspace === undefined) {
+      return {chapters: 0, notes: 0};
+    }
+    let chapters = 0;
+    let notes = 0;
+    for (const entry of workspace.outline) {
+      if (entry.kind === BookOutlineKind.CHAPTER) {
+        chapters += 1;
+      } else {
+        notes += 1;
+      }
+    }
+    return {chapters, notes};
+  }, [workspace]);
+
   const filteredOutline = useMemo(() => {
     if (workspace === undefined) {
       return [];
     }
-    if (filter === 'chapters') {
+    if (outlineFilter === BookOutlineListFilter.CHAPTERS) {
       return workspace.outline.filter((entry) => entry.kind === BookOutlineKind.CHAPTER);
     }
-    if (filter === 'notes') {
+    if (outlineFilter === BookOutlineListFilter.NOTES) {
       return workspace.outline.filter((entry) => entry.kind === BookOutlineKind.NOTE);
     }
-    if (filter === 'assets') {
-      return [];
-    }
     return workspace.outline;
-  }, [filter, workspace]);
+  }, [outlineFilter, workspace]);
+
+  const sortedOutline = useMemo(() => {
+    const list = [...filteredOutline].sort((left, right) => left.sortOrder - right.sortOrder);
+    if (outlineSort === BookListSortDirection.DESC) {
+      list.reverse();
+    }
+    return list;
+  }, [filteredOutline, outlineSort]);
+
+  const outlineTotalPages = Math.max(1, Math.ceil(sortedOutline.length / OUTLINE_PAGE_SIZE));
+
+  const paginatedOutline = useMemo(() => {
+    const safePage = Math.min(outlinePage, outlineTotalPages);
+    const start = (safePage - 1) * OUTLINE_PAGE_SIZE;
+    return sortedOutline.slice(start, start + OUTLINE_PAGE_SIZE);
+  }, [outlinePage, outlineTotalPages, sortedOutline]);
 
   const epubScope = useMemo((): BookEpubExportScope => {
-    if (filter === 'notes') {
+    if (outlineFilter === BookOutlineListFilter.NOTES) {
       return 'notes';
     }
-    if (filter === 'chapters') {
+    if (outlineFilter === BookOutlineListFilter.CHAPTERS) {
       return 'chapters';
     }
     return 'all';
-  }, [filter]);
+  }, [outlineFilter]);
 
   const onDragEnd = async (event: DragEndEvent): Promise<void> => {
     if (workspace === undefined || !canWrite) {
@@ -302,11 +344,20 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
         </Accordion.Item>
       </Accordion.Root>
       <HStack wrap="wrap" gap={2}>
-        {(['all', 'chapters', 'notes', 'assets'] as const).map((value) => (
-          <Button key={value} size="sm" variant={filter === value ? 'solid' : 'outline'} onClick={() => setFilter(value)}>
-            {value}
-          </Button>
-        ))}
+        <Button
+          size="sm"
+          variant={workspaceTab === BookWorkspaceTab.OUTLINE ? 'solid' : 'outline'}
+          onClick={() => setWorkspaceTab(BookWorkspaceTab.OUTLINE)}
+        >
+          Chapters & notes
+        </Button>
+        <Button
+          size="sm"
+          variant={workspaceTab === BookWorkspaceTab.ASSETS ? 'solid' : 'outline'}
+          onClick={() => setWorkspaceTab(BookWorkspaceTab.ASSETS)}
+        >
+          Assets
+        </Button>
         <Button size="sm" variant={offlineReady ? 'solid' : 'outline'} onClick={() => void downloadOffline()}>
           {offlineReady ? 'Offline ready' : 'Download offline'}
         </Button>
@@ -317,8 +368,53 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
           Export EPUB
         </Button>
       </HStack>
-      {filter !== 'assets' ? (
+      {workspaceTab === BookWorkspaceTab.OUTLINE ? (
         <Stack gap={2}>
+          <Text fontSize="sm" color="fg.muted">
+            {outlineCounts.chapters} chapter{outlineCounts.chapters === 1 ? '' : 's'}
+            {outlineFilter === BookOutlineListFilter.ALL ? ` · ${outlineCounts.notes} note${outlineCounts.notes === 1 ? '' : 's'}` : ''}
+          </Text>
+          <HStack wrap="wrap" gap={2}>
+            {(
+              [
+                [BookOutlineListFilter.ALL, 'All'],
+                [BookOutlineListFilter.CHAPTERS, 'Chapters'],
+                [BookOutlineListFilter.NOTES, 'Notes'],
+              ] as const
+            ).map(([value, label]) => (
+              <Button
+                key={value}
+                size="sm"
+                variant={outlineFilter === value ? 'solid' : 'outline'}
+                onClick={() => {
+                  setOutlineFilter(value);
+                  setOutlinePage(1);
+                }}
+              >
+                {label}
+              </Button>
+            ))}
+            <AppIconTooltip label={outlineSort === BookListSortDirection.ASC ? 'Sort descending' : 'Sort ascending'}>
+              <IconButton
+                aria-label="Toggle sort order"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setOutlineSort((prev) =>
+                    prev === BookListSortDirection.ASC ? BookListSortDirection.DESC : BookListSortDirection.ASC,
+                  )
+                }
+              >
+                {outlineSort === BookListSortDirection.ASC ? <SortAscIcon size={16} /> : <SortDescIcon size={16} />}
+              </IconButton>
+            </AppIconTooltip>
+          </HStack>
+          <BookListPagination
+            page={Math.min(outlinePage, outlineTotalPages)}
+            totalPages={outlineTotalPages}
+            totalItems={sortedOutline.length}
+            onPageChange={setOutlinePage}
+          />
           {canWrite ? (
             <HStack>
               <Button size="sm" onClick={() => setOutlineEditor({mode: 'create', draft: newOutlineDraft(podId, BookOutlineKind.CHAPTER)})}>
@@ -330,8 +426,8 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
             </HStack>
           ) : null}
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => void onDragEnd(event)}>
-            <SortableContext items={filteredOutline.map((entry) => entry.id)} strategy={verticalListSortingStrategy}>
-              {filteredOutline.map((entry) => (
+            <SortableContext items={paginatedOutline.map((entry) => entry.id)} strategy={verticalListSortingStrategy}>
+              {paginatedOutline.map((entry) => (
                 <SortableOutlineRow key={entry.id} entry={entry} onView={() => setViewOutlineEntryId(entry.id)} />
               ))}
             </SortableContext>
@@ -361,6 +457,14 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
           const entryId = viewOutlineEntry.id;
           setViewOutlineEntryId(undefined);
           setOutlineEditor({mode: 'edit', entryId});
+        }}
+        onDelete={async () => {
+          if (viewOutlineEntry === undefined) {
+            return;
+          }
+          await deleteDbBkOutlineEntry(viewOutlineEntry.id, podId);
+          await load();
+          setViewOutlineEntryId(undefined);
         }}
         onReload={load}
         onError={(message) => setError(message)}
@@ -425,7 +529,16 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
         asset={viewAsset}
         typeLabel={viewAssetType?.label ?? 'Asset'}
         podId={podId}
+        canWrite={canWrite}
         onClose={() => setViewAssetId(undefined)}
+        onEdit={() => {
+          if (viewAsset === undefined) {
+            return;
+          }
+          const assetId = viewAsset.id;
+          setViewAssetId(undefined);
+          setAssetEditor({mode: 'edit', assetId});
+        }}
         onReload={load}
         onError={(message) => setError(message)}
       />

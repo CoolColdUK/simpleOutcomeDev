@@ -5,6 +5,7 @@ import {
   normalizeBookImageMimeFromBlobType,
 } from '@so/model';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
+import bookStorageUploadOptions from '@/lib/api/storage/bookStorageUploadOptions';
 
 export default async function uploadStorageBookAssetInlineImageMarkdownFragment(
   podId: string,
@@ -17,10 +18,7 @@ export default async function uploadStorageBookAssetInlineImageMarkdownFragment(
   }
   const supabase = getSupabaseBrowserClient();
   const objectPath = buildBookAssetImageObjectPath(podId, assetId, mime);
-  const {error} = await supabase.storage.from(BUCKET_POD_PRIVATE).upload(objectPath, blob, {
-    contentType: mime,
-    upsert: false,
-  });
+  const {error} = await supabase.storage.from(BUCKET_POD_PRIVATE).upload(objectPath, blob, bookStorageUploadOptions(mime));
   if (error !== null) {
     throw new Error(error.message);
   }

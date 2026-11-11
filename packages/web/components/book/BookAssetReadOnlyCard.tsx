@@ -6,7 +6,7 @@ import {DeleteIcon, EditIcon} from '@so/component';
 import {bookAssetDescriptionSnippet, extractSoImageObjectPathsFromBody} from '@so/model';
 import type {DbBkAsset} from '@/lib/api/db/book/loadDbBookWorkspace';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
-import resolveStorageBookImageSignedUrls from '@/lib/api/storage/resolveStorageBookImageSignedUrls';
+import {getStorageBookSignedUrl} from '@/lib/api/storage/storageBookSignedUrlCache';
 
 export default function BookAssetReadOnlyCard({
   asset,
@@ -33,10 +33,9 @@ export default function BookAssetReadOnlyCard({
       return;
     }
     let cancelled = false;
-    void resolveStorageBookImageSignedUrls(`![](soimg:${encodeURIComponent(path)})`).then((resolved) => {
-      const match = resolved.match(/\]\(<([^>]+)>\)/);
-      if (!cancelled && match?.[1] !== undefined) {
-        setThumb(match[1]);
+    void getStorageBookSignedUrl(path).then((url) => {
+      if (!cancelled && url !== undefined) {
+        setThumb(url);
       }
     });
     return () => {

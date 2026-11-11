@@ -13,6 +13,7 @@ export interface BookOutlineEmbeddedImagesPanelProps {
   readonly canWrite: boolean;
   readonly onReload: () => Promise<void>;
   readonly onError: (message: string) => void;
+  readonly viewMode?: boolean;
   readonly onMarkdownPatched?: (patch: {
     readonly summaryMd: string;
     readonly contentMd: string;
@@ -25,6 +26,7 @@ export default function BookOutlineEmbeddedImagesPanel({
   canWrite,
   onReload,
   onError,
+  viewMode = false,
   onMarkdownPatched,
 }: BookOutlineEmbeddedImagesPanelProps) {
   const paths = useMemo(
@@ -53,6 +55,7 @@ export default function BookOutlineEmbeddedImagesPanel({
       emptyLabel="No images in this entry yet."
       items={items}
       canWrite={canWrite}
+      viewMode={viewMode}
       confirmTitle="Remove image?"
       confirmDescription="This deletes the file from storage and removes its markdown reference from summary and content."
       onError={onError}

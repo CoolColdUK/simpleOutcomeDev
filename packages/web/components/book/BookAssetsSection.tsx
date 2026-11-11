@@ -1,7 +1,11 @@
 'use client';
 
 import {useEffect, useMemo, useState} from 'react';
-import {Button, HStack, Input, NativeSelect, SimpleGrid, Stack, Text} from '@chakra-ui/react';
+import {Button, HStack, IconButton, Input, NativeSelect, SimpleGrid, Stack, Text} from '@chakra-ui/react';
+import {SortAscIcon, SortDescIcon} from '@so/component';
+import {BookListSortDirection} from '@so/model';
+import BookListPagination from '@/components/book/BookListPagination';
+import AppIconTooltip from '@/components/app/AppIconTooltip';
 import type {DbBkAsset, DbBookWorkspace} from '@/lib/api/db/book/loadDbBookWorkspace';
 import createDbBkAssetType from '@/lib/api/db/book/createDbBkAssetType';
 import deleteDbBkAsset from '@/lib/api/db/book/deleteDbBkAsset';
@@ -22,6 +26,7 @@ export interface BookAssetsSectionProps {
 }
 
 const ALL_TYPES = '';
+const ASSET_PAGE_SIZE = 18;
 
 export default function BookAssetsSection({
   workspace,
@@ -38,6 +43,8 @@ export default function BookAssetsSection({
   const [assetTypeDialogOpen, setAssetTypeDialogOpen] = useState(false);
   const [addTypeId, setAddTypeId] = useState(workspace.assetTypes[0]?.id ?? '');
   const [deleteTarget, setDeleteTarget] = useState<DbBkAsset | undefined>(undefined);
+  const [assetSort, setAssetSort] = useState(BookListSortDirection.ASC);
+  const [assetPage, setAssetPage] = useState(1);
 
   useEffect(() => {
     if (addTypeId === '' && workspace.assetTypes[0] !== undefined) {
@@ -64,6 +71,27 @@ export default function BookAssetsSection({
       );
     });
   }, [search, typeById, typeFilter, workspace.assets]);
+
+  const sortedAssets = useMemo(() => {
+    const list = [...filteredAssets].sort((left, right) => {
+      const byOrder = left.sortOrder - right.sortOrder;
+      if (byOrder !== 0) {
+        return byOrder;
+      }
+      return left.name.localeCompare(right.name);
+    });
+    if (assetSort === BookListSortDirection.DESC) {
+      list.reverse();
+    }
+    return list;
+  }, [assetSort, filteredAssets]);
+
+  const assetTotalPages = Math.max(1, Math.ceil(sortedAssets.length / ASSET_PAGE_SIZE));
+  const paginatedAssets = useMemo(() => {
+    const safePage = Math.min(assetPage, assetTotalPages);
+    const start = (safePage - 1) * ASSET_PAGE_SIZE;
+    return sortedAssets.slice(start, start + ASSET_PAGE_SIZE);
+  }, [assetPage, assetTotalPages, sortedAssets]);
 
   return (
     <Stack gap={4} w="full">
@@ -95,10 +123,42 @@ export default function BookAssetsSection({
         </HStack>
       ) : null}
       <HStack wrap="wrap" gap={2} align="center">
+        <Text fontSize="sm" color="fg.muted">
+          {sortedAssets.length} asset{sortedAssets.length === 1 ? '' : 's'}
+        </Text>
+        <AppIconTooltip label={assetSort === BookListSortDirection.ASC ? 'Sort descending' : 'Sort ascending'}>
+          <IconButton
+            aria-label="Toggle asset sort order"
+            size="xs"
+            variant="outline"
+            onClick={() =>
+              setAssetSort((prev) =>
+                prev === BookListSortDirection.ASC ? BookListSortDirection.DESC : BookListSortDirection.ASC,
+              )
+            }
+          >
+            {assetSort === BookListSortDirection.ASC ? <SortAscIcon size={14} /> : <SortDescIcon size={14} />}
+          </IconButton>
+        </AppIconTooltip>
+      </HStack>
+      <BookListPagination
+        page={Math.min(assetPage, assetTotalPages)}
+        totalPages={assetTotalPages}
+        totalItems={sortedAssets.length}
+        onPageChange={setAssetPage}
+      />
+      <HStack wrap="wrap" gap={2} align="center">
         <Text fontSize="sm" fontWeight="medium">
           Filter
         </Text>
-        <Button size="xs" variant={typeFilter === ALL_TYPES ? 'solid' : 'outline'} onClick={() => setTypeFilter(ALL_TYPES)}>
+        <Button
+          size="xs"
+          variant={typeFilter === ALL_TYPES ? 'solid' : 'outline'}
+          onClick={() => {
+            setTypeFilter(ALL_TYPES);
+            setAssetPage(1);
+          }}
+        >
           All types
         </Button>
         {workspace.assetTypes.map((type) => (
@@ -106,7 +166,10 @@ export default function BookAssetsSection({
             key={type.id}
             size="xs"
             variant={typeFilter === type.id ? 'solid' : 'outline'}
-            onClick={() => setTypeFilter(type.id)}
+            onClick={() => {
+              setTypeFilter(type.id);
+              setAssetPage(1);
+            }}
           >
             {type.label}
           </Button>
@@ -136,11 +199,11 @@ export default function BookAssetsSection({
         onChange={(event) => setSearch(event.target.value)}
         maxW={{base: 'full', md: '20rem'}}
       />
-      {filteredAssets.length === 0 ? (
+      {sortedAssets.length === 0 ? (
         <Text color="fg.muted">No assets match this filter.</Text>
       ) : (
         <SimpleGrid columns={{base: 1, md: 2, lg: 3}} gap={3} w="full">
-          {filteredAssets.map((asset) => {
+          {paginatedAssets.map((asset) => {
             const typeLabel = typeById.get(asset.assetTypeId)?.label ?? 'Asset';
             return (
               <BookAssetReadOnlyCard

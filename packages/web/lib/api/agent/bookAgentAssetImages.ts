@@ -2,6 +2,7 @@ import {
   ApiKeyAction,
   BUCKET_POD_PRIVATE,
   BOOK_MAX_ASSET_IMAGE_BYTES,
+  BOOK_POD_PRIVATE_SIGNED_URL_SECONDS,
   assertBookAssetImageObjectPath,
   bookAssetInlineMarkdownFragment,
   normalizeAgentBookAssetImageMime,
@@ -51,7 +52,10 @@ async function mapAssetWithSignedUrls(ctx: AgentContext, podId: string, assetId:
   }
   const mapped = mapBookAssetForAgent(asset);
   const paths = [...new Set(mapped.images.map((image) => image.storagePath))];
-  const signed = paths.length === 0 ? {data: [] as {path: string | null; signedUrl: string | null}[]} : await ctx.supabase.storage.from(BUCKET_POD_PRIVATE).createSignedUrls(paths, 60 * 60);
+  const signed =
+    paths.length === 0
+      ? {data: [] as {path: string | null; signedUrl: string | null}[]}
+      : await ctx.supabase.storage.from(BUCKET_POD_PRIVATE).createSignedUrls(paths, BOOK_POD_PRIVATE_SIGNED_URL_SECONDS);
   const urlByPath = new Map(
     (signed.data ?? [])
       .filter((row) => row.path !== null && row.signedUrl !== null && row.signedUrl !== '')

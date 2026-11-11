@@ -58,6 +58,8 @@ export * from './SettingsIcon';
 export * from './ShareIcon';
 export * from './SignOutIcon';
 export * from './SitesIcon';
+export * from './SortAscIcon';
+export * from './SortDescIcon';
 export * from './SplitIcon';
 export * from './StrategyIcon';
 export * from './StrategyAddIcon';
