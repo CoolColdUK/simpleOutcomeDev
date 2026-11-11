@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useRef} from 'react';
 import {Button, HStack, Input, Text} from '@chakra-ui/react';
 
 export interface BookListPaginationProps {
@@ -11,11 +11,7 @@ export interface BookListPaginationProps {
 }
 
 export default function BookListPagination({page, totalPages, totalItems, onPageChange}: BookListPaginationProps) {
-  const [jumpValue, setJumpValue] = useState(String(page));
-
-  useEffect(() => {
-    setJumpValue(String(page));
-  }, [page]);
+  const jumpRef = useRef<HTMLInputElement | null>(null);
 
   return (
     <HStack wrap="wrap" gap={2} align="center">
@@ -33,29 +29,26 @@ export default function BookListPagination({page, totalPages, totalItems, onPage
           Go to
         </Text>
         <Input
+          key={page}
+          ref={jumpRef}
           size="xs"
           width="4rem"
           type="number"
           min={1}
           max={totalPages}
-          value={jumpValue}
-          onChange={(event) => setJumpValue(event.target.value)}
+          defaultValue={String(page)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
-              const parsed = Number.parseInt(jumpValue, 10);
+              const parsed = Number.parseInt(event.currentTarget.value, 10);
               if (!Number.isNaN(parsed)) {
                 onPageChange(Math.min(totalPages, Math.max(1, parsed)));
               }
             }
           }}
-          onBlur={() => {
-            const parsed = Number.parseInt(jumpValue, 10);
+          onBlur={(event) => {
+            const parsed = Number.parseInt(event.currentTarget.value, 10);
             if (!Number.isNaN(parsed)) {
-              const next = Math.min(totalPages, Math.max(1, parsed));
-              onPageChange(next);
-              setJumpValue(String(next));
-            } else {
-              setJumpValue(String(page));
+              onPageChange(Math.min(totalPages, Math.max(1, parsed)));
             }
           }}
         />
