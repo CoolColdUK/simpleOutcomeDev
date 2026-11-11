@@ -36,6 +36,7 @@ Add an optional `seo` object on the site document in `@so/model` (valibot, stric
 | `description` | Optional. Falls back to the derived sentence below. Max about 160 characters after trim. |
 | `locale` | Optional. Default `en-GB`. v1 only allows `en-GB`. |
 | `ogImageUrl` | Optional `https` URL. Omitted from the tags when empty. A gradient is not an image URL. |
+| `googleBusinessProfileUrl` | Optional `https` URL of the salon’s Google Business Profile. Omitted from `sameAs` when empty. |
 | `geo` | Optional `{latitude, longitude}`. Both numbers, or neither. Only when someone has typed them. The app does not geocode. |
 
 Canonical host is not a free-text field in the JSON. It is `public.site.custom_domain` when that column is set. That keeps one source for the live domain.
@@ -78,7 +79,7 @@ On an indexable page, one `<script type="application/ld+json">` block. `@type` i
 | `address` | See below. |
 | `openingHoursSpecification` | Only for an hours row the parser understands: one weekday or a Monday–Friday style range, and one `HH:MM–HH:MM` span. Other rows stay on the page and are left out of the JSON so a bad parse is not published. |
 | `priceRange` | Omitted in v1 unless every listed price is a plain `£` amount. Then the lowest and highest become a range such as `£5–£33`. “Not published” and “from £30” mean the field is omitted. |
-| `sameAs` | `booking.href` when it is `https`, plus any Instagram channel `https` URL. |
+| `sameAs` | `booking.href` when it is `https`, any Instagram channel `https` URL, and `seo.googleBusinessProfileUrl` when set. |
 | `geo` | `seo.geo` when both numbers are present. Otherwise omit. Do not call a geocoder. |
 
 ### Home-based salons
@@ -120,7 +121,8 @@ In `@so/model` Jest:
 - `street-and-area` JSON-LD input has no street and no house number.
 - A `full` address may include the street line.
 - A price list that says “Not published” does not produce `priceRange`.
-- `ogImageUrl` must be `https` when present.
+- `ogImageUrl` and `googleBusinessProfileUrl` must be `https` when present.
+- `googleBusinessProfileUrl` is included in `sameAs` and left out when empty.
 
 No Playwright in this phase.
 
