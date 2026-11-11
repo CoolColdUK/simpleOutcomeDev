@@ -3,6 +3,7 @@ import {
   BUCKET_POD_PRIVATE,
   BOOK_MAX_ASSET_IMAGE_BYTES,
   assertBookAssetImageObjectPath,
+  bookAssetInlineMarkdownFragment,
   normalizeAgentBookAssetImageMime,
   parseBookAssetImageBase64Payload,
 } from '@so/model';
@@ -72,6 +73,7 @@ export async function uploadAgentBookAssetImage(request: Request, args: unknown)
   const imageBase64 = typeof record.imageBase64 === 'string' ? record.imageBase64 : '';
   const mimeType = typeof record.mimeType === 'string' ? record.mimeType : '';
   const caption = typeof record.caption === 'string' ? record.caption : undefined;
+  const insertInline = record.insertInline === true;
   if (podId === '' || assetId === '' || imageBase64 === '' || mimeType === '') {
     return agentValidation('podId, assetId, imageBase64, and mimeType are required');
   }
@@ -109,6 +111,21 @@ export async function uploadAgentBookAssetImage(request: Request, args: unknown)
   const inserted = await insertDbBkAssetImage(ctx.data.supabase, podId, assetId, storagePath, caption);
   if (inserted === undefined) {
     return agentErr(500, 'internal', 'Failed to record asset image');
+  }
+  if (insertInline) {
+    const current = await ctx.data.supabase.from('bk_asset').select('description_md').eq('id', assetId).eq('pod_id', podId).maybeSingle();
+    const currentErr = dbErr(current.error);
+    if (currentErr !== undefined) {
+      return currentErr;
+    }
+    const prev = current.data?.description_md ?? '';
+    const fragment = bookAssetInlineMarkdownFragment(storagePath);
+    const next = prev === '' ? fragment.trimEnd() : `${prev.trimEnd()}\n\n${fragment.trimEnd()}`;
+    const {error: descErr} = await ctx.data.supabase.from('bk_asset').update({description_md: next}).eq('id', assetId).eq('pod_id', podId);
+    const updateDescErr = dbErr(descErr);
+    if (updateDescErr !== undefined) {
+      return updateDescErr;
+    }
   }
   const mapped = await mapAssetWithSignedUrls(ctx.data, podId, assetId);
   if (mapped === undefined) {

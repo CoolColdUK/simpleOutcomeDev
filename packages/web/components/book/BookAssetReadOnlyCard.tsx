@@ -12,12 +12,14 @@ export default function BookAssetReadOnlyCard({
   asset,
   typeLabel,
   canWrite,
+  onView,
   onEdit,
   onDelete,
 }: {
   readonly asset: DbBkAsset;
   readonly typeLabel: string;
   readonly canWrite: boolean;
+  readonly onView: () => void;
   readonly onEdit: () => void;
   readonly onDelete: () => void;
 }) {
@@ -26,8 +28,6 @@ export default function BookAssetReadOnlyCard({
   const inlinePath = extractSoImageObjectPathsFromBody(asset.descriptionMd)[0];
   const path = galleryPath ?? inlinePath;
   const snippet = bookAssetDescriptionSnippet(asset.descriptionMd);
-  const imageCount = Math.max(asset.images.length, extractSoImageObjectPathsFromBody(asset.descriptionMd).length);
-
   useEffect(() => {
     if (path === undefined) {
       return;
@@ -45,7 +45,18 @@ export default function BookAssetReadOnlyCard({
   }, [path]);
 
   return (
-    <Box borderWidth="1px" borderRadius="md" p={3} bg="bg.subtle" h="full" display="flex" flexDirection="column">
+    <Box
+      borderWidth="1px"
+      borderRadius="md"
+      p={3}
+      bg="bg.subtle"
+      h="full"
+      display="flex"
+      flexDirection="column"
+      cursor="pointer"
+      onClick={onView}
+      _hover={{borderColor: 'border.emphasized'}}
+    >
       <HStack justify="space-between" align="start" gap={2} flex="1">
         <Stack gap={1} flex="1" minW={0}>
           <HStack wrap="wrap" gap={1}>
@@ -65,9 +76,9 @@ export default function BookAssetReadOnlyCard({
               No description
             </Text>
           )}
-          {imageCount > 1 ? (
+          {asset.images.length > 0 ? (
             <Text fontSize="xs" color="fg.muted">
-              {imageCount} images
+              {asset.images.length} gallery image{asset.images.length === 1 ? '' : 's'}
             </Text>
           ) : null}
         </Stack>
@@ -77,13 +88,30 @@ export default function BookAssetReadOnlyCard({
       </HStack>
       <HStack mt={2} gap={1}>
         <AppIconTooltip label="Edit">
-          <IconButton aria-label="Edit asset" size="sm" variant="outline" onClick={onEdit}>
+          <IconButton
+            aria-label="Edit asset"
+            size="sm"
+            variant="outline"
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit();
+            }}
+          >
             <EditIcon size={16} />
           </IconButton>
         </AppIconTooltip>
         {canWrite ? (
           <AppIconTooltip label="Delete">
-            <IconButton aria-label="Delete asset" size="sm" variant="outline" colorPalette="red" onClick={onDelete}>
+            <IconButton
+              aria-label="Delete asset"
+              size="sm"
+              variant="outline"
+              colorPalette="red"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
+            >
               <DeleteIcon size={16} />
             </IconButton>
           </AppIconTooltip>

@@ -2,7 +2,7 @@
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Accordion, Box, Button, HStack, Stack, Text, Textarea} from '@chakra-ui/react';
+import {Accordion, Box, Button, HStack, Stack, Text} from '@chakra-ui/react';
 import {
   DndContext,
   PointerSensor,
@@ -29,9 +29,11 @@ import syncDbBkAssetImagesFromPaths from '@/lib/api/db/book/syncDbBkAssetImagesF
 import buildDbBookOfflineBundle from '@/lib/api/db/book/buildDbBookOfflineBundle';
 import buildDbBookEpub, {type BookEpubExportScope} from '@/lib/api/db/book/buildDbBookEpub';
 import {loadBookOfflineBundle, saveBookOfflineBundle} from '@/lib/book/bookOfflineStore';
-import BookMarkdownBody from '@/components/book/BookMarkdownBody';
 import BookOutlineEntryDialog from '@/components/book/BookOutlineEntryDialog';
+import BookOutlineEntryViewDialog from '@/components/book/BookOutlineEntryViewDialog';
 import BookAssetEditDialog from '@/components/book/BookAssetEditDialog';
+import BookAssetViewDialog from '@/components/book/BookAssetViewDialog';
+import BookMarkdownEditorWithPreview from '@/components/book/BookMarkdownEditorWithPreview';
 import BookAssetsSection from '@/components/book/BookAssetsSection';
 import SoToaster from '@/components/ui/SoToaster';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
@@ -54,7 +56,7 @@ type AssetEditorTarget =
   | {readonly mode: 'edit'; readonly assetId: string}
   | {readonly mode: 'create'; readonly draft: DbBkAsset};
 
-function SortableOutlineRow({entry, onEdit}: {readonly entry: DbBkOutlineEntry; readonly onEdit: () => void}) {
+function SortableOutlineRow({entry, onView}: {readonly entry: DbBkOutlineEntry; readonly onView: () => void}) {
   const {attributes, listeners, setNodeRef, transform, transition} = useSortable({id: entry.id});
   const style = {transform: CSS.Transform.toString(transform), transition};
   return (
@@ -69,7 +71,7 @@ function SortableOutlineRow({entry, onEdit}: {readonly entry: DbBkOutlineEntry; 
       {...attributes}
       {...listeners}
     >
-      <Button variant="ghost" w="full" justifyContent="start" onClick={onEdit}>
+      <Button variant="ghost" w="full" justifyContent="start" onClick={onView}>
         {bookOutlineListLabel(entry.kind, entry.title, entry.chapterNumber, entry.noteNumber)}
       </Button>
     </Box>
@@ -111,6 +113,8 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   const [filter, setFilter] = useState<OutlineFilter>('all');
   const [outlineEditor, setOutlineEditor] = useState<OutlineEditorTarget | undefined>(undefined);
   const [assetEditor, setAssetEditor] = useState<AssetEditorTarget | undefined>(undefined);
+  const [viewAssetId, setViewAssetId] = useState<string | undefined>(undefined);
+  const [viewOutlineEntryId, setViewOutlineEntryId] = useState<string | undefined>(undefined);
   const [outlineSaving, setOutlineSaving] = useState(false);
   const [assetSaving, setAssetSaving] = useState(false);
   const [summaryMd, setSummaryMd] = useState('');
@@ -154,6 +158,22 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
   }, [assetEditor, workspace]);
 
   const editAssetType = editAsset === undefined ? undefined : workspace?.assetTypes.find((type) => type.id === editAsset.assetTypeId);
+
+  const viewAsset = useMemo((): DbBkAsset | undefined => {
+    if (viewAssetId === undefined || workspace === undefined) {
+      return undefined;
+    }
+    return workspace.assets.find((asset) => asset.id === viewAssetId);
+  }, [viewAssetId, workspace]);
+
+  const viewAssetType = viewAsset === undefined ? undefined : workspace?.assetTypes.find((type) => type.id === viewAsset.assetTypeId);
+
+  const viewOutlineEntry = useMemo((): DbBkOutlineEntry | undefined => {
+    if (viewOutlineEntryId === undefined || workspace === undefined) {
+      return undefined;
+    }
+    return workspace.outline.find((entry) => entry.id === viewOutlineEntryId);
+  }, [viewOutlineEntryId, workspace]);
 
   const filteredOutline = useMemo(() => {
     if (workspace === undefined) {
@@ -269,8 +289,13 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
               <Text fontSize="sm" color="fg.muted">
                 Subtitle and cover are in pod Settings.
               </Text>
-              <Textarea value={summaryMd} onChange={(event) => setSummaryMd(event.target.value)} placeholder="Summary (markdown)" rows={4} disabled={!canWrite} />
-              {summaryMd !== '' ? <BookMarkdownBody markdown={summaryMd} /> : null}
+              <BookMarkdownEditorWithPreview
+                label="Summary"
+                value={summaryMd}
+                onChange={setSummaryMd}
+                disabled={!canWrite}
+                rows={4}
+              />
               {canWrite ? <Button onClick={() => void saveBookSummary()}>Save summary</Button> : null}
             </Stack>
           </Accordion.ItemContent>
@@ -307,7 +332,7 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => void onDragEnd(event)}>
             <SortableContext items={filteredOutline.map((entry) => entry.id)} strategy={verticalListSortingStrategy}>
               {filteredOutline.map((entry) => (
-                <SortableOutlineRow key={entry.id} entry={entry} onEdit={() => setOutlineEditor({mode: 'edit', entryId: entry.id})} />
+                <SortableOutlineRow key={entry.id} entry={entry} onView={() => setViewOutlineEntryId(entry.id)} />
               ))}
             </SortableContext>
           </DndContext>
@@ -317,12 +342,29 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
           workspace={workspace}
           podId={podId}
           canWrite={canWrite}
+          onViewAsset={(assetId) => setViewAssetId(assetId)}
           onEditAsset={(assetId) => setAssetEditor({mode: 'edit', assetId})}
           onCreateAsset={(assetTypeId) => setAssetEditor({mode: 'create', draft: newAssetDraft(podId, assetTypeId)})}
           onReload={load}
           onError={(message) => setError(message)}
         />
       )}
+      <BookOutlineEntryViewDialog
+        open={viewOutlineEntry !== undefined}
+        entry={viewOutlineEntry}
+        canWrite={canWrite}
+        onClose={() => setViewOutlineEntryId(undefined)}
+        onEdit={() => {
+          if (viewOutlineEntry === undefined) {
+            return;
+          }
+          const entryId = viewOutlineEntry.id;
+          setViewOutlineEntryId(undefined);
+          setOutlineEditor({mode: 'edit', entryId});
+        }}
+        onReload={load}
+        onError={(message) => setError(message)}
+      />
       <BookOutlineEntryDialog
         open={editorEntry !== undefined}
         isCreate={outlineEditor?.mode === 'create'}
@@ -331,6 +373,8 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
         canWrite={canWrite}
         saving={outlineSaving}
         onClose={() => setOutlineEditor(undefined)}
+        onReload={load}
+        onError={(message) => setError(message)}
         onSave={async (draft) => {
           if (editorEntry === undefined) {
             return;
@@ -376,6 +420,15 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
             : undefined
         }
       />
+      <BookAssetViewDialog
+        open={viewAsset !== undefined}
+        asset={viewAsset}
+        typeLabel={viewAssetType?.label ?? 'Asset'}
+        podId={podId}
+        onClose={() => setViewAssetId(undefined)}
+        onReload={load}
+        onError={(message) => setError(message)}
+      />
       <BookAssetEditDialog
         open={editAsset !== undefined}
         isCreate={assetEditor?.mode === 'create'}
@@ -385,6 +438,8 @@ export default function BookWorkspace({spaceId, podId, podName, canWrite}: BookW
         canWrite={canWrite}
         saving={assetSaving}
         onClose={() => setAssetEditor(undefined)}
+        onReload={load}
+        onError={(message) => setError(message)}
         onSave={async (name, descriptionMd, pendingImagePaths) => {
           if (editAsset === undefined) {
             return;
