@@ -1,6 +1,7 @@
 import {BUCKET_POD_PRIVATE, type BookImageMime, buildBookAssetImageObjectPath} from '@so/model';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Database} from '@/lib/supabase/database';
+import bookStorageUploadOptions from '@/lib/api/storage/bookStorageUploadOptions';
 
 export default async function uploadStorageBookAssetImageBytes(
   supabase: SupabaseClient<Database>,
@@ -10,10 +11,7 @@ export default async function uploadStorageBookAssetImageBytes(
   mime: BookImageMime,
 ): Promise<string> {
   const objectPath = buildBookAssetImageObjectPath(podId, assetId, mime);
-  const {error} = await supabase.storage.from(BUCKET_POD_PRIVATE).upload(objectPath, bytes, {
-    contentType: mime,
-    upsert: false,
-  });
+  const {error} = await supabase.storage.from(BUCKET_POD_PRIVATE).upload(objectPath, bytes, bookStorageUploadOptions(mime));
   if (error !== null) {
     throw new Error(error.message);
   }

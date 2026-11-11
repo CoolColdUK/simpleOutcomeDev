@@ -17,6 +17,7 @@ export interface BookAssetAttachedImagesPanelProps {
   readonly onError: (message: string) => void;
   readonly onPendingGalleryPath?: (storagePath: string) => void;
   readonly skipDbInsert?: boolean;
+  readonly viewMode?: boolean;
 }
 
 function acceptImageFiles(files: FileList | Iterable<File>): File[] {
@@ -32,6 +33,7 @@ export default function BookAssetAttachedImagesPanel({
   onError,
   onPendingGalleryPath,
   skipDbInsert = false,
+  viewMode = false,
 }: BookAssetAttachedImagesPanelProps) {
   const [dragActive, setDragActive] = useState(false);
   const sorted = useMemo(() => [...images].sort((left, right) => left.sortOrder - right.sortOrder), [images]);
@@ -128,6 +130,7 @@ export default function BookAssetAttachedImagesPanel({
       emptyLabel="No gallery images yet."
       items={galleryItems}
       canWrite={canWrite}
+      viewMode={viewMode}
       confirmTitle="Remove image?"
       confirmDescription="This removes the gallery image from the asset and deletes it from storage."
       onError={onError}
