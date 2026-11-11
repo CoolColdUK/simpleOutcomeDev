@@ -50,6 +50,10 @@ jobs:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SITES_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN }}
+          SITES_SALES_EMAIL: ${{ vars.SITES_SALES_EMAIL }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           set -euo pipefail
@@ -61,6 +65,81 @@ jobs:
             echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_SITES (Create Vercel sites project).'
             exit 1
           fi
+          if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ]; then
+            echo '::error::Repository secret NEXT_PUBLIC_SUPABASE_URL is empty.'
+            exit 1
+          fi
+          if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
+            echo '::error::Repository secret NEXT_PUBLIC_SUPABASE_ANON_KEY is empty.'
+            exit 1
+          fi
+          if [ -z "${NEXT_PUBLIC_SITES_ROOT_DOMAIN:-}" ]; then
+            echo '::error::Repository variable NEXT_PUBLIC_SITES_ROOT_DOMAIN is empty. Set it to simpleoutcome.dev.'
+            exit 1
+          fi
+          if [ -n "${SITES_SALES_EMAIL:-}" ]; then
+            export NEXT_PUBLIC_SITES_SALES_EMAIL="$SITES_SALES_EMAIL"
+          else
+            export NEXT_PUBLIC_SITES_SALES_EMAIL="info@simpleoutcome.dev"
+          fi
+          if ! printf '%s' "$NEXT_PUBLIC_SITES_SALES_EMAIL" | grep -Eq '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'; then
+            echo '::error::Variable SITES_SALES_EMAIL is not an email address.'
+            exit 1
+          fi
           npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          # pull writes the Vercel project's env into .vercel/.env.production.local.
+          # Replace the build keys from GitHub so they win whether `vercel build`
+          # prefers that file or the process environment.
+          node <<'NODE'
+          const {mkdirSync, readFileSync, writeFileSync} = require('node:fs');
+          const path = '.vercel/.env.production.local';
+          const keys = [
+            'NEXT_PUBLIC_SUPABASE_URL',
+            'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+            'NEXT_PUBLIC_SITES_ROOT_DOMAIN',
+            'NEXT_PUBLIC_SITES_SALES_EMAIL',
+          ];
+          const values = {};
+          for (const key of keys) {
+            const value = process.env[key];
+            if (value === undefined || value.length === 0) {
+              console.error(`::error::${key} is empty. Refusing to build.`);
+              process.exit(1);
+            }
+            values[key] = value;
+          }
+          mkdirSync('.vercel', {recursive: true});
+          let existing = '';
+          try {
+            existing = readFileSync(path, 'utf8');
+          } catch (error) {
+            if (error.code !== 'ENOENT') {
+              throw error;
+            }
+          }
+          const quote = (value) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
+          const kept = existing.split(/\r?\n/).filter((line) => {
+            if (line.length === 0) {
+              return false;
+            }
+            const eq = line.indexOf('=');
+            if (eq === -1) {
+              return true;
+            }
+            const name = line.slice(0, eq).replace(/^export\s+/, '').trim();
+            return !Object.hasOwn(values, name);
+          });
+          const lines = [...kept, ...keys.map((key) => `${key}=${quote(values[key])}`)];
+          writeFileSync(path, `${lines.join('\n')}\n`);
+          const written = readFileSync(path, 'utf8').split(/\r?\n/);
+          for (const key of keys) {
+            const expected = `${key}=${quote(values[key])}`;
+            if (!written.includes(expected)) {
+              console.error(`::error::${key} in .vercel/.env.production.local does not match GitHub. Refusing to build.`);
+              process.exit(1);
+            }
+          }
+          console.log('Overrode build env in .vercel/.env.production.local from GitHub. Values are not printed.');
+          NODE
           npx vercel build --prod --yes --token="$VERCEL_TOKEN"
           npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"

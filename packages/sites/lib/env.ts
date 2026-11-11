@@ -13,12 +13,13 @@ const DEFAULT_ROOT_DOMAIN = 'simpleoutcome.dev';
 const DEFAULT_SALES_EMAIL = 'info@simpleoutcome.dev';
 
 function readSalesEmail(): string {
-  const email = process.env.SITES_SALES_EMAIL?.trim();
+  // Direct NEXT_PUBLIC_ access so Next inlines this when the app is built.
+  const email = process.env.NEXT_PUBLIC_SITES_SALES_EMAIL?.trim();
   if (email === undefined || email.length === 0) {
     return DEFAULT_SALES_EMAIL;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error('SITES_SALES_EMAIL is not an email address');
+    throw new Error('NEXT_PUBLIC_SITES_SALES_EMAIL is not an email address');
   }
   return email;
 }

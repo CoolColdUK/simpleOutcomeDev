@@ -1,6 +1,7 @@
 # One-shot: create (or update) the sites Vercel project without connecting GitHub.
 # Does not deploy. Does not change VERCEL_PROJECT_ID_PRODUCTION.
-# After this succeeds, set env vars if they were not synced, then run Sites production.
+# After this succeeds, run Sites production. That workflow reads build env from GitHub
+# and overwrites .vercel/.env.production.local, so these values do not need to be set on the Vercel project.
 name: Create Vercel sites project
 run-name: 'Create Vercel sites project: ${{ inputs.project_name }}'
 'on':
@@ -17,7 +18,7 @@ run-name: 'Create Vercel sites project: ${{ inputs.project_name }}'
         type: boolean
         default: true
       sync_env:
-        description: 'Copy NEXT_PUBLIC_* GitHub secrets onto the Vercel project (if those secrets exist)'
+        description: 'Optional. Copy public env onto the Vercel project. Sites production does not use those copies.'
         required: false
         type: boolean
         default: true
@@ -224,5 +225,5 @@ jobs:
             echo
             echo 'GitHub secret still required: `VERCEL_TOKEN`.'
             echo
-            echo 'Do not set `SUPABASE_SECRET_KEY` on this project. Public env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITES_ROOT_DOMAIN`. Optional `SITES_SALES_EMAIL`.'
+            echo 'Do not set build env on this Vercel project. Sites production reads `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from GitHub secrets, `NEXT_PUBLIC_SITES_ROOT_DOMAIN` from a GitHub variable, and optional `SITES_SALES_EMAIL` (default info@simpleoutcome.dev). Do not set `SUPABASE_SECRET_KEY`.'
           } >> "$GITHUB_STEP_SUMMARY"
