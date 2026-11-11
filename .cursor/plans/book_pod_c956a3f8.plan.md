@@ -317,7 +317,7 @@ Wire through existing agent auth (`authorizeApiKeyCall`, session user).
 
 ## MCP tools (`POST /api/mcp/book`)
 
-Register in `mcpCatalogBook.ts` (`BOOK_MCP_TOOLS`, 16 tools). Asset gallery images: `upload_book_asset_image` (base64 JPEG/PNG, max 10MB), `remove_book_asset_image` (storagePath or imageIndex), `reorder_book_asset_images` (orderedStoragePaths). Responses include `images[]` with optional `signedUrl` per image; `imageStoragePath` remains first gallery image for MCP compatibility.
+Register in `mcpCatalogBook.ts` (`BOOK_MCP_TOOLS`, 16 tools). Canonical names: `packages/model/src/book/bookMcpToolCatalog.ts` (also in `buildApiKeyAiSetupPrompt` and `bookMcpTools.test.ts`). Tools: `get_book_workspace`, `update_book_metadata`, `create_book_outline_entry`, `update_book_outline_entry`, `delete_book_outline_entry`, `reorder_book_outline`, `export_book_epub`, `get_book_offline_bundle`, `create_book_asset_type`, `delete_book_asset_type`, `create_book_asset`, `update_book_asset`, `delete_book_asset`, `upload_book_asset_image`, `remove_book_asset_image`, `reorder_book_asset_images`. Asset gallery: `upload_book_asset_image` (base64 JPEG/PNG, max 10MB; optional `insertInline` appends soimg markdown to `descriptionMd`), `remove_book_asset_image` (storagePath or imageIndex), `reorder_book_asset_images` (orderedStoragePaths). Chapter inline images are managed via outline markdown fields (no separate MCP tools this round). Responses include `images[]` with optional `signedUrl` per image; `imageStoragePath` remains first gallery image for MCP compatibility.
 
 Tool descriptions should tell agents to **read summaries first**, then generate `content_md`.
 

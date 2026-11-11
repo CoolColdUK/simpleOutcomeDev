@@ -2,7 +2,6 @@
 
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {
-  Box,
   DialogBackdrop,
   DialogBody,
   DialogCloseTrigger,
@@ -12,28 +11,25 @@ import {
   DialogPositioner,
   DialogRoot,
   DialogTitle,
-  Grid,
   HStack,
   IconButton,
   Image,
   Input,
   NativeSelect,
   Stack,
-  Switch,
   Text,
-  Textarea,
 } from '@chakra-ui/react';
 import {AddIcon, CrossIcon, DeleteIcon, SaveIcon} from '@so/component';
 import {BookChapterStatus, BookOutlineKind, bookOutlineListLabel} from '@so/model';
 import type {DbBkOutlineEntry} from '@/lib/api/db/book/mapDbBkOutlineRow';
-import BookMarkdownBody from '@/components/book/BookMarkdownBody';
 import BookConfirmDeleteDialog from '@/components/book/BookConfirmDeleteDialog';
 import BookDiscardChangesDialog from '@/components/book/BookDiscardChangesDialog';
+import BookMarkdownEditorWithPreview from '@/components/book/BookMarkdownEditorWithPreview';
+import BookOutlineEmbeddedImagesPanel from '@/components/book/BookOutlineEmbeddedImagesPanel';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
 import uploadStorageBookChapterImage from '@/lib/api/storage/uploadStorageBookChapterImage';
 import uploadStorageBookInlineImageMarkdownFragment from '@/lib/api/storage/uploadStorageBookInlineImageMarkdownFragment';
 import resolveStorageBookImageSignedUrls from '@/lib/api/storage/resolveStorageBookImageSignedUrls';
-import insertAtCaret from '@/components/todo/insertAtCaret';
 
 export interface BookOutlineEntryDialogProps {
   readonly open: boolean;
@@ -51,6 +47,8 @@ export interface BookOutlineEntryDialogProps {
     chapterImageStoragePath: string | null | undefined;
   }) => Promise<void>;
   readonly onDelete?: () => Promise<void>;
+  readonly onReload: () => Promise<void>;
+  readonly onError: (message: string) => void;
 }
 
 export default function BookOutlineEntryDialog({
@@ -63,6 +61,8 @@ export default function BookOutlineEntryDialog({
   onClose,
   onSave,
   onDelete,
+  onReload,
+  onError,
 }: BookOutlineEntryDialogProps) {
   const [title, setTitle] = useState('');
   const [summaryMd, setSummaryMd] = useState('');
@@ -70,7 +70,6 @@ export default function BookOutlineEntryDialog({
   const [status, setStatus] = useState<BookChapterStatus | undefined>(undefined);
   const [chapterImagePath, setChapterImagePath] = useState<string | undefined>(undefined);
   const [chapterImagePreview, setChapterImagePreview] = useState('');
-  const [showPreview, setShowPreview] = useState(true);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
@@ -139,7 +138,19 @@ export default function BookOutlineEntryDialog({
     finishClose();
   };
 
-  if (entry === undefined) {
+  const imagesEntry = useMemo((): DbBkOutlineEntry | undefined => {
+    if (entry === undefined) {
+      return undefined;
+    }
+    return {
+      ...entry,
+      summaryMd,
+      contentMd,
+      chapterImageStoragePath: chapterImagePath,
+    };
+  }, [chapterImagePath, contentMd, entry, summaryMd]);
+
+  if (entry === undefined || imagesEntry === undefined) {
     return null;
   }
 
@@ -228,56 +239,46 @@ export default function BookOutlineEntryDialog({
                     ) : null}
                   </Stack>
                 ) : null}
-                <Text fontSize="sm" fontWeight="medium">
-                  Summary
-                </Text>
-                <Textarea value={summaryMd} onChange={(event) => setSummaryMd(event.target.value)} rows={3} disabled={!canWrite} />
-                <Switch.Root checked={showPreview} onCheckedChange={(details) => setShowPreview(details.checked === true)}>
-                  <Switch.HiddenInput />
-                  <Switch.Control />
-                  <Switch.Label>Show preview</Switch.Label>
-                </Switch.Root>
-                <Text fontSize="sm" fontWeight="medium">
-                  Content
-                </Text>
-                <Text fontSize="xs" color="fg.muted">
-                  Page break: put <code>{'<!-- pagebreak -->'}</code> or <code>\pagebreak</code> on its own line.
-                </Text>
-                <Grid
-                  templateColumns={{base: '1fr', md: showPreview ? '1fr 1fr' : '1fr'}}
-                  gap={3}
-                  w="full"
-                  alignItems="start"
-                >
-                  {showPreview ? (
-                    <Box w="full" borderWidth="1px" borderRadius="md" p={3} minH="120px" order={{base: 1, md: 0}}>
-                      <BookMarkdownBody markdown={contentMd} />
-                    </Box>
-                  ) : null}
-                  <Textarea
-                    ref={contentRef}
-                    value={contentMd}
-                    onChange={(event) => setContentMd(event.target.value)}
-                    rows={16}
-                    w="full"
-                    disabled={!canWrite}
-                    order={{base: 0, md: showPreview ? 1 : 0}}
-                    onPaste={(event) => {
-                      const file = [...event.clipboardData.items]
-                        .map((item) => item.getAsFile())
-                        .find((picked) => picked?.type.startsWith('image/') ?? false);
-                      if (file === undefined || file === null || !canWrite) {
-                        return;
+                <BookMarkdownEditorWithPreview
+                  label="Summary"
+                  value={summaryMd}
+                  onChange={setSummaryMd}
+                  disabled={!canWrite}
+                  rows={3}
+                />
+                <BookMarkdownEditorWithPreview
+                  label="Content"
+                  hint="Page break: put <!-- pagebreak --> or \\pagebreak on its own line."
+                  value={contentMd}
+                  onChange={setContentMd}
+                  disabled={!canWrite}
+                  rows={16}
+                  textareaRef={contentRef}
+                  onPasteImage={
+                    canWrite
+                      ? async (blob) => {
+                          const fragment = await uploadStorageBookInlineImageMarkdownFragment(podId, entry.id, blob);
+                          return fragment;
+                        }
+                      : undefined
+                  }
+                />
+                {!isCreate ? (
+                  <BookOutlineEmbeddedImagesPanel
+                    entry={imagesEntry}
+                    canWrite={canWrite}
+                    onReload={onReload}
+                    onError={onError}
+                    onMarkdownPatched={(patch) => {
+                      setSummaryMd(patch.summaryMd);
+                      setContentMd(patch.contentMd);
+                      if (patch.chapterImageStoragePath !== undefined) {
+                        setChapterImagePath(patch.chapterImageStoragePath);
+                        setChapterImagePreview('');
                       }
-                      event.preventDefault();
-                      void uploadStorageBookInlineImageMarkdownFragment(podId, entry.id, file).then((fragment) => {
-                        const ta = event.target as HTMLTextAreaElement;
-                        const {next} = insertAtCaret(contentMd, ta, fragment);
-                        setContentMd(next);
-                      });
                     }}
                   />
-                </Grid>
+                ) : null}
               </Stack>
             </DialogBody>
             <DialogFooter>

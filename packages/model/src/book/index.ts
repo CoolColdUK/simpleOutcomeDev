@@ -20,3 +20,13 @@ export {
   normalizeAgentBookAssetImageMime,
   parseBookAssetImageBase64Payload,
 } from './agentBookAssetImage';
+export {default as bookAssetInlineMarkdownFragment} from './bookAssetInlineMarkdownFragment';
+export {default as collectOutlineEntryImagePaths} from './collectOutlineEntryImagePaths';
+export type {CollectOutlineEntryImagePathsInput} from './collectOutlineEntryImagePaths';
+export {default as removeSoImageMarkdownForObjectPath} from './removeSoImageMarkdownForObjectPath';
+export {
+  BOOK_MCP_ASSET_IMAGE_TOOL_NAMES,
+  BOOK_MCP_TOOL_COUNT,
+  BOOK_MCP_TOOL_NAMES,
+  type BookMcpToolName,
+} from './bookMcpToolCatalog';

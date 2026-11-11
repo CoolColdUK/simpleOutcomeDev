@@ -14,6 +14,7 @@ export interface BookAssetsSectionProps {
   readonly workspace: DbBookWorkspace;
   readonly podId: string;
   readonly canWrite: boolean;
+  readonly onViewAsset: (assetId: string) => void;
   readonly onEditAsset: (assetId: string) => void;
   readonly onCreateAsset: (assetTypeId: string) => void;
   readonly onReload: () => Promise<void>;
@@ -26,6 +27,7 @@ export default function BookAssetsSection({
   workspace,
   podId,
   canWrite,
+  onViewAsset,
   onEditAsset,
   onCreateAsset,
   onReload,
@@ -146,6 +148,7 @@ export default function BookAssetsSection({
                 asset={asset}
                 typeLabel={typeLabel}
                 canWrite={canWrite}
+                onView={() => onViewAsset(asset.id)}
                 onEdit={() => onEditAsset(asset.id)}
                 onDelete={() => setDeleteTarget(asset)}
               />

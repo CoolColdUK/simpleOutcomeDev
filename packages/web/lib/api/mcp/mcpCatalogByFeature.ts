@@ -6,6 +6,7 @@
  * - /api/mcp/trip → TRIP tools only
  * - /api/mcp/todo → TODO tools only (including extra board operations)
  * - /api/mcp/fp → FP tools only
+ * - /api/mcp/book → BOOK tools only (see packages/model/src/book/bookMcpToolCatalog.ts)
  */
 
 import {CORE_MCP_TOOLS, TODO_MCP_TOOLS, type McpTool} from '@/lib/api/mcp/mcpCatalog';

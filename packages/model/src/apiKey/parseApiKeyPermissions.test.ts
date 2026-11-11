@@ -126,6 +126,8 @@ describe('buildApiKeyAiSetupPrompt', () => {
   it('points at hosted MCP and an env placeholder', () => {
     const prompt = buildApiKeyAiSetupPrompt('https://simpleoutcome.dev/');
     expect(prompt).toContain('https://simpleoutcome.dev/api/mcp');
+    expect(prompt).toContain('https://simpleoutcome.dev/api/mcp/book');
+    expect(prompt).toContain('upload_book_asset_image');
     expect(prompt).toContain('${SIMPLEOUTCOME_API_KEY}');
     expect(prompt).not.toContain('so_');
   });

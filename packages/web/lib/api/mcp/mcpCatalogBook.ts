@@ -1,5 +1,7 @@
 import type {McpTool} from '@/lib/api/mcp/mcpCatalog';
 
+/** Keep tool names in sync with packages/model/src/book/bookMcpToolCatalog.ts */
+
 function argsRecord(args: unknown): Record<string, unknown> {
   return typeof args === 'object' && args !== null && !Array.isArray(args) ? (args as Record<string, unknown>) : {};
 }
@@ -130,13 +132,14 @@ export const BOOK_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool(
     'upload_book_asset_image',
-    'Upload a JPEG or PNG (base64 or data URL, max 10MB) to an asset gallery; appends to images[].',
+    'Upload a JPEG or PNG (base64 or data URL, max 10MB) to the asset gallery (images[]). Set insertInline true to also append an soimg markdown image to descriptionMd.',
     {
       podId,
       assetId: {type: 'string'},
       imageBase64: {type: 'string'},
       mimeType: {type: 'string', description: 'image/jpeg or image/png'},
       caption: {type: 'string'},
+      insertInline: {type: 'boolean', description: 'When true, append inline markdown to descriptionMd using the same soimg convention as the web UI.'},
     },
     ['podId', 'assetId', 'imageBase64', 'mimeType'],
     (request, args) => uploadAgentBookAssetImage(request, argsRecord(args)),
