@@ -15,7 +15,7 @@ The form is part of the standard £39/month care plan. There is no paid feature 
 ## Decided for v1
 
 - Send with Resend, called with `fetch`. No new npm package. No row is written for the message. There is no `site_message` table and no cleanup job.
-- From: `info@simpleoutcome.dev`, after that address is verified in Resend on the domain `simpleoutcome.dev`.
+- From: `Website enquiry via Simple Outcome <info@simpleoutcome.dev>`, after that address is verified in Resend on the domain `simpleoutcome.dev`.
 - Reply-To: the visitor's address.
 - To: the salon's address in `public.site_contact` (no anon read). Demos go to `info@simpleoutcome.dev` instead.
 - The per-site switch `public.site.messages_enabled` stays.
@@ -76,13 +76,15 @@ The key can read and write the whole Supabase project. The handler uses it only 
 | Step | Visitor | Salon | Simple Outcome |
 | --- | --- | --- | --- |
 | The form on the page | Sees no salon address and no `info@simpleoutcome.dev`. The HTML and the public JSON do not contain them. | — | — |
-| The email Resend sends | Does not receive this first email. | Sees From `info@simpleoutcome.dev`, Reply-To set to the visitor, and the visitor's address in the body. Does not need to know any other address to read it. | The message passes through Resend. We do not store a copy. |
+| The email Resend sends | Does not receive this first email. | Sees From `Website enquiry via Simple Outcome <info@simpleoutcome.dev>`, Reply-To set to the visitor, and the visitor's address in the body. | The message passes through Resend. We do not store a copy. |
 | The salon presses Reply | Sees the salon's own From address on that reply. | Their mail program sends from their own mailbox. | — |
 | A bounce or an auto-reply | — | Their host sends it to the original From. | It arrives at `info@simpleoutcome.dev`, because that is the From address. |
 
 The salon's address is never in the page, the HTML, or the public JSON. A full relay, which would also hide the salon address after they reply, stays later.
 
 Auto-replies and bounces from salon inboxes land in `info@simpleoutcome.dev`. That inbox should be watched. v1 does not add a separate bounce address.
+
+Because the message is not stored, a bounce or a spam filter at the salon is the end of that enquiry. There is no copy to resend. The visitor has already been told it was sent only if Resend accepted it. Matthew checks the Resend logs (the dashboard, searched by the message id) when `info@` receives a bounce or a salon says the message never arrived.
 
 ---
 
@@ -120,7 +122,7 @@ Order:
 4. Load the public site row, including `messages_enabled`. Unknown host is 404. `messages_enabled = false` refuses the post.
 5. Apply the rate limit (below). When limited, `429` and a short message.
 6. Choose the recipient. Live: `site_contact.delivery_email`. Demo: `info@simpleoutcome.dev`, and do not read `site_contact` for delivery. A live site with no `site_contact` row refuses the post. The response does not include the address.
-7. Send with Resend. On success, replace the form with “Message sent.” A demo success line says Simple Outcome has the message. On failure, a generic error, and the visitor can retry. Nothing is written to Postgres for the message itself.
+7. Send with Resend. The visitor sees “Message sent.” only after Resend accepts the email (a success response that includes a message id). A demo success line says Simple Outcome has the message. If Resend refuses it, the form stays up with a generic error and the visitor can retry. The name, address, and message are not written to Postgres.
 
 Validation errors name the field (“Enter an email”). Server failures use one sentence and do not include JSON from Supabase or Resend.
 
@@ -132,7 +134,7 @@ Pure helpers in `@so/model` choose the recipient. Tests assert a demo recipient 
 
 **Resend**, `POST https://api.resend.com/emails`. Matthew verifies `simpleoutcome.dev` in Resend and adds the DNS records Resend shows, in Namecheap. That is separate from the demo CNAMEs. `info@simpleoutcome.dev` must be a verified sender.
 
-- From: `Simple Outcome <info@simpleoutcome.dev>`
+- From: `Website enquiry via Simple Outcome <info@simpleoutcome.dev>`
 - To: the recipient from the rule above
 - Reply-To: the visitor's email
 - Subject: `Message from <name> via <business name>` for a live enquiry. `New lead from <name> via <business name>` for a demo.
@@ -140,7 +142,7 @@ Pure helpers in `@so/model` choose the recipient. Tests assert a demo recipient 
 
 **Reply-To trade-off.** The visitor does not see the salon address on the page or in the first email. When the owner presses Reply, their own mail program sends from their mailbox, and the visitor then sees that address. A full relay stays later.
 
-**Bounces and auto-replies.** Mail servers send those to the From address, so they arrive at `info@simpleoutcome.dev`.
+**Bounces and auto-replies.** Mail servers send those to the From address, so they arrive at `info@simpleoutcome.dev`. A bounce, or the salon’s spam filter, drops the enquiry: we have no stored copy to send again. Check Resend’s logs with the message id. The recommended log is an open question below: keep that id, the site id, and the time, and nothing about the person.
 
 ---
 
@@ -251,3 +253,4 @@ No Playwright in this phase. Layout check at 375px and 1280px, including the sal
 2. **Rate limit without a message table.** Recommended default: Upstash Redis via `fetch`, one-hour TTL, 5 per hashed IP per site and 30 per site. In-memory is local dev only. Decline this and v1 keeps honeypot and Turnstile without a cross-request limit.
 3. **Service key.** Recommended default: the route reads `site_contact` with the existing `SUPABASE_SECRET_KEY`, passed through Sites production into the server env only. It is not a `NEXT_PUBLIC_` variable and it is not set in the Vercel dashboard.
 4. **Published phone numbers.** Recommended default: keep phone, WhatsApp, and Instagram channels. Reject `kind: "email"` so a mailto link cannot be stored in the public document.
+5. **Resend message ids.** Recommended default: after Resend accepts a send, store `site_id`, the Resend message id, and the time. No name, email, or message body. That id is what you look up in the Resend logs when a bounce arrives or a salon says nothing came. Decline the table and the id is only in the server log until that log expires. Either way, the visitor sees success only after Resend accepts the email.
