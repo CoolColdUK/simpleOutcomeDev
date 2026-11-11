@@ -14,3 +14,9 @@ export type {CollectBookOfflineImagePathsInput} from './collectBookOfflineImageP
 export {default as buildStoreZip} from './buildStoreZip';
 export {default as renumberBookOutline, bookOutlineListLabel} from './bookOutlineEntryNumbers';
 export type {BookOutlineNumbered, BookOutlineNumberInput} from './bookOutlineEntryNumbers';
+export {
+  BOOK_MAX_ASSET_IMAGE_BYTES,
+  assertBookAssetImageObjectPath,
+  normalizeAgentBookAssetImageMime,
+  parseBookAssetImageBase64Payload,
+} from './agentBookAssetImage';

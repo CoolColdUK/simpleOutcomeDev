@@ -317,7 +317,7 @@ Wire through existing agent auth (`authorizeApiKeyCall`, session user).
 
 ## MCP tools (`POST /api/mcp/book`)
 
-Register in new `BOOK_MCP_TOOLS` section (or `mcpCatalogBook.ts` imported by feature router). Naming: `list_book_outline`, `get_book_workspace`, `update_book_metadata`, `create_book_chapter`, `create_book_note`, `update_book_outline_entry`, `delete_book_outline_entry`, `reorder_book_outline`, `list_book_assets`, `create_book_asset`, …, `list_book_asset_types`, `create_book_asset_type`, `upload_book_inline_image` (base64), `get_book_offline_bundle`.
+Register in `mcpCatalogBook.ts` (`BOOK_MCP_TOOLS`, 16 tools). Asset gallery images: `upload_book_asset_image` (base64 JPEG/PNG, max 10MB), `remove_book_asset_image` (storagePath or imageIndex), `reorder_book_asset_images` (orderedStoragePaths). Responses include `images[]` with optional `signedUrl` per image; `imageStoragePath` remains first gallery image for MCP compatibility.
 
 Tool descriptions should tell agents to **read summaries first**, then generate `content_md`.
 

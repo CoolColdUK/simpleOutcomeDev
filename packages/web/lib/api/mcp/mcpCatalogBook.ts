@@ -28,6 +28,11 @@ import {
   updateAgentBookMetadata,
   updateAgentBookOutlineEntry,
 } from '@/lib/api/agent/bookAgent';
+import {
+  removeAgentBookAssetImage,
+  reorderAgentBookAssetImages,
+  uploadAgentBookAssetImage,
+} from '@/lib/api/agent/bookAgentAssetImages';
 
 const podId = {type: 'string', description: 'Pod id'};
 
@@ -122,5 +127,41 @@ export const BOOK_MCP_TOOLS: readonly McpTool[] = [
   ),
   tool('delete_book_asset', 'Delete an asset.', {podId, assetId: {type: 'string'}}, ['podId', 'assetId'], (request, args) =>
     deleteAgentBookAsset(request, argsRecord(args)),
+  ),
+  tool(
+    'upload_book_asset_image',
+    'Upload a JPEG or PNG (base64 or data URL, max 10MB) to an asset gallery; appends to images[].',
+    {
+      podId,
+      assetId: {type: 'string'},
+      imageBase64: {type: 'string'},
+      mimeType: {type: 'string', description: 'image/jpeg or image/png'},
+      caption: {type: 'string'},
+    },
+    ['podId', 'assetId', 'imageBase64', 'mimeType'],
+    (request, args) => uploadAgentBookAssetImage(request, argsRecord(args)),
+  ),
+  tool(
+    'remove_book_asset_image',
+    'Remove one asset gallery image by storagePath or zero-based imageIndex.',
+    {
+      podId,
+      assetId: {type: 'string'},
+      storagePath: {type: 'string'},
+      imageIndex: {type: 'integer'},
+    },
+    ['podId', 'assetId'],
+    (request, args) => removeAgentBookAssetImage(request, argsRecord(args)),
+  ),
+  tool(
+    'reorder_book_asset_images',
+    'Reorder asset gallery images; orderedStoragePaths must list every current image path once.',
+    {
+      podId,
+      assetId: {type: 'string'},
+      orderedStoragePaths: {type: 'array', items: {type: 'string'}},
+    },
+    ['podId', 'assetId', 'orderedStoragePaths'],
+    (request, args) => reorderAgentBookAssetImages(request, argsRecord(args)),
   ),
 ];
