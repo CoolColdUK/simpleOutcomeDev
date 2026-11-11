@@ -1,6 +1,6 @@
 # SimpleOutcome
 
-Marketing site and personal app shell. Monorepo: `packages/web` (Next.js) and `packages/model`.
+Marketing site and personal app shell. Monorepo: `packages/web` (Next.js), `packages/sites` (client websites), and `packages/model`.
 
 ## Local
 
@@ -13,7 +13,9 @@ Marketing site and personal app shell. Monorepo: `packages/web` (Next.js) and `p
 
 1. GitHub secret `VERCEL_TOKEN` (https://vercel.com/account/tokens).
 2. **Actions → Create Vercel project** (once; no Git import).
-3. **Actions → Production** to build and deploy.
+3. **Actions → Production** to build and deploy the main app and apply Supabase migrations.
+
+Client sites (`packages/sites`) deploy separately. See [plan/feature/salon-sites.md](plan/feature/salon-sites.md): one Vercel project, **Actions → Create Vercel sites project**, then **Actions → Sites production**. Do not connect Git. The manual checklist in that plan names the env vars and the three demo CNAMEs.
 
 See `AGENTS.md`.
 

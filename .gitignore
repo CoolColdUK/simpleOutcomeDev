@@ -33,6 +33,7 @@ next-env.d.ts
 # Vercel
 .vercel
 packages/web/.vercel
+packages/sites/.vercel
 
 # Supabase
 .supabase
