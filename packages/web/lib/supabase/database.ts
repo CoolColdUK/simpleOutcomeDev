@@ -157,6 +157,8 @@ export interface Database {
           name: string;
           key_prefix: string;
           secret_hash: string;
+          secret: string | null;
+          kind: string;
           permissions: Record<string, unknown>;
           status: string;
           expires_at: string | null;
@@ -170,6 +172,8 @@ export interface Database {
           name: string;
           key_prefix: string;
           secret_hash: string;
+          secret?: string | null;
+          kind?: string;
           permissions: Record<string, unknown>;
           status?: string;
           expires_at?: string | null;
@@ -1200,6 +1204,7 @@ export interface Database {
           p_name: string;
           p_permissions: Record<string, unknown>;
           p_expires_at?: string | null;
+          p_kind?: string;
         };
         Returns: {id: string; secret: string; prefix: string};
       };
@@ -1209,6 +1214,7 @@ export interface Database {
           p_id: string;
           p_name: string;
           p_permissions: Record<string, unknown>;
+          p_kind?: string;
         };
         Returns: undefined;
       };

@@ -34,7 +34,7 @@ export async function getAgentApiKeyPermissions(request: Request): Promise<Agent
   if (!ctx.ok) {
     return ctx;
   }
-  const spaces = await loadGrantedSpaceAccess(ctx.data.supabase, ctx.data.record.ownerUserId, ctx.data.record.permissions);
+  const spaces = await loadGrantedSpaceAccess(ctx.data.supabase, ctx.data.record.ownerUserId, ctx.data.record.permissions, ctx.data.record.kind);
   if (!spaces.ok) {
     return spaces;
   }

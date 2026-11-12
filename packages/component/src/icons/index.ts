@@ -21,6 +21,8 @@ export * from './ensureTradeLogoBadgeGeometry';
 export * from './EnsureTradeLogoBadgeIcon';
 export * from './EnsureTradeLogoIcon';
 export * from './EditIcon';
+export * from './EyeIcon';
+export * from './EyeOffIcon';
 export * from './ChromeExtensionIcon';
 export * from './InboxIcon';
 export * from './FastForwardIcon';

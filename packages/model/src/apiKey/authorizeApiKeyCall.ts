@@ -1,3 +1,4 @@
+import {ApiKeyKind} from './apiKeyKind';
 import {ApiKeyStatus} from './apiKeyStatus';
 import apiKeyPodResource from './apiKeyPodResource';
 import deriveApiKeyStatus from './deriveApiKeyStatus';
@@ -34,6 +35,20 @@ function deny(code: ApiKeyAuthzCode, message: string): ApiKeyAuthzFailure {
   return {ok: false, code, message};
 }
 
+function grantFailure(key: ApiKeyRecord, call: ApiKeyCall): ApiKeyAuthzFailure | undefined {
+  if (key.kind === ApiKeyKind.FULL) {
+    return undefined;
+  }
+  const granted = explicitApiKeyActions(key, call);
+  if (granted.missingPodGrant) {
+    return deny('forbidden', 'API key has no grant for this pod');
+  }
+  if (granted.actions === undefined || !granted.actions.includes(call.action)) {
+    return deny('forbidden', 'API key does not grant this action');
+  }
+  return undefined;
+}
+
 function podFromAccess(access: ApiKeyOwnerAccess, podId: string | undefined): ApiKeyPodAccess | undefined {
   if (podId === undefined) {
     return undefined;
@@ -50,9 +65,9 @@ export default function authorizeApiKeyCall(input: AuthorizeApiKeyCallInput): Ap
     return deny('expired', 'API key is expired');
   }
   if (input.call.resource === ApiKeyResource.PROFILE) {
-    const profile = explicitApiKeyActions(input.key, input.call);
-    if (profile.actions === undefined || !profile.actions.includes(input.call.action)) {
-      return deny('forbidden', 'API key does not grant this action');
+    const missing = grantFailure(input.key, input.call);
+    if (missing !== undefined) {
+      return missing;
     }
     if (!roleAllowsApiCall(input.call, input.access, undefined)) {
       return deny('forbidden', 'Role does not allow this action');
@@ -87,12 +102,9 @@ export default function authorizeApiKeyCall(input: AuthorizeApiKeyCallInput): Ap
     }
   }
 
-  const granted = explicitApiKeyActions(input.key, input.call);
-  if (granted.missingPodGrant) {
-    return deny('forbidden', 'API key has no grant for this pod');
-  }
-  if (granted.actions === undefined || !granted.actions.includes(input.call.action)) {
-    return deny('forbidden', 'API key does not grant this action');
+  const missing = grantFailure(input.key, input.call);
+  if (missing !== undefined) {
+    return missing;
   }
   if (!roleAllowsApiCall(input.call, input.access, pod)) {
     return deny('forbidden', 'Role does not allow this action');

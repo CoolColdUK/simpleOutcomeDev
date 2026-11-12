@@ -5,6 +5,7 @@ import {PodRole} from '../space/podRole';
 import {PodStatus} from '../space/podStatus';
 import {SpaceRole} from '../space/spaceRole';
 import {ApiKeyAction} from './apiKeyAction';
+import {ApiKeyKind} from './apiKeyKind';
 import type {ApiKeyPermissions} from './apiKeyPermissions';
 import {ApiKeyResource} from './apiKeyResource';
 import type {ApiKeyOwnerAccess, ApiKeyPodAccess, ApiKeyRecord} from './apiKeyRecord';
@@ -37,6 +38,7 @@ function key(permissions: ApiKeyPermissions, partial?: Partial<ApiKeyRecord>): A
     ownerUserId: owner,
     status: 'active',
     expiresAt: undefined,
+    kind: ApiKeyKind.SCOPED,
     permissions,
     ...partial,
   };
@@ -364,5 +366,41 @@ describe('effectiveApiKeyPermissions', () => {
       {spaceId: spaceB, space: [], group: [ApiKeyAction.READ]},
     ]);
     expect(result.pods.map((item) => item.podId)).toEqual([podA, podShop]);
+  });
+
+  it('lets a full access key use access the owner gains later', () => {
+    const result = authorizeApiKeyCall({
+      key: key({}, {kind: ApiKeyKind.FULL}),
+      access: access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER)]),
+      nowIso: now,
+      call: {spaceId: space, podId: podA, resource: ApiKeyResource.TODO, action: ApiKeyAction.CREATE, todoTarget: 'card'},
+    });
+    expect(result).toEqual({ok: true, principalUserId: owner});
+  });
+
+  it('keeps a full access key inside the owner role', () => {
+    const result = authorizeApiKeyCall({
+      key: key({}, {kind: ApiKeyKind.FULL}),
+      access: access(SpaceRole.ADMIN, []),
+      nowIso: now,
+      call: {spaceId: space, resource: ApiKeyResource.GROUP, action: ApiKeyAction.UPDATE, groupTarget: 'member'},
+    });
+    expect(result).toEqual({ok: false, code: 'forbidden', message: 'Role does not allow this action'});
+  });
+
+  it('reports every pod the owner can access for a full access key', () => {
+    const result = effectiveApiKeyPermissions(
+      key({}, {kind: ApiKeyKind.FULL}),
+      [
+        {
+          spaceId: space,
+          access: access(SpaceRole.USER, [pod(podA, FeatureKind.TODO_LIST, PodRole.USER), pod(podB, FeatureKind.TODO_LIST, undefined)]),
+        },
+      ],
+      now,
+    );
+    expect(result.profile).toEqual([ApiKeyAction.READ, ApiKeyAction.UPDATE]);
+    expect(result.spaces).toEqual([{spaceId: space, space: [ApiKeyAction.READ], group: [ApiKeyAction.READ]}]);
+    expect(result.pods.map((item) => item.podId)).toEqual([podA]);
   });
 });

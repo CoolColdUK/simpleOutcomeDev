@@ -18,6 +18,7 @@ import {
   parseApiKeySecret,
   safeParseApiKeyPermissions,
   type ApiKeyCall,
+  ApiKeyKind,
   ApiKeyStatus,
   ApiKeyResource,
   parseFpPermissionMatrix,
@@ -54,6 +55,16 @@ function enumValue<T extends string>(values: readonly T[], input: string): T | u
 function storedStatus(input: string): ApiKeyStoredStatus | undefined {
   if (input === 'active' || input === 'revoked') {
     return input;
+  }
+  return undefined;
+}
+
+function storedKind(kind: string): ApiKeyKind | undefined {
+  if (kind === ApiKeyKind.FULL) {
+    return ApiKeyKind.FULL;
+  }
+  if (kind === ApiKeyKind.SCOPED) {
+    return ApiKeyKind.SCOPED;
   }
   return undefined;
 }
@@ -137,7 +148,7 @@ export default async function loadAgentContext(request: Request): Promise<AgentR
   }
   const found = await supabase
     .from('api_key')
-    .select('id, owner_user_id, name, key_prefix, secret_hash, permissions, status, expires_at')
+    .select('id, owner_user_id, name, key_prefix, secret_hash, permissions, kind, status, expires_at')
     .eq('key_prefix', parsedSecret.prefix)
     .maybeSingle();
   const foundErr = dbErr(found.error);
@@ -165,6 +176,10 @@ export default async function loadAgentContext(request: Request): Promise<AgentR
   if (!permissions.ok) {
     return agentErr(403, 'forbidden', 'API key permissions are invalid');
   }
+  const kind = storedKind(row.kind);
+  if (kind === undefined) {
+    return agentErr(403, 'forbidden', 'API key kind is invalid');
+  }
   const touched = await supabase.from('api_key').update({last_used_at: nowIso}).eq('id', row.id);
   const touchedErr = dbErr(touched.error);
   if (touchedErr !== undefined) {
@@ -175,6 +190,7 @@ export default async function loadAgentContext(request: Request): Promise<AgentR
     ownerUserId: row.owner_user_id,
     status,
     expiresAt: row.expires_at ?? undefined,
+    kind,
     permissions: permissions.value,
   };
   return agentOk({
@@ -198,11 +214,38 @@ async function podSpaceIds(supabase: SupabaseClient<Database>, podIds: readonly 
   return agentOk((pods.data ?? []).map((pod) => pod.space_id));
 }
 
+async function memberSpaceIds(supabase: SupabaseClient<Database>, ownerUserId: string): Promise<AgentResult<readonly string[]>> {
+  const members = await supabase.from('space_member').select('space_id').eq('user_id', ownerUserId);
+  const membersErr = dbErr(members.error);
+  if (membersErr !== undefined) {
+    return membersErr;
+  }
+  return agentOk((members.data ?? []).map((row) => row.space_id));
+}
+
 export async function loadGrantedSpaceAccess(
   supabase: SupabaseClient<Database>,
   ownerUserId: string,
   permissions: ApiKeyPermissions,
+  kind: ApiKeyKind,
 ): Promise<AgentResult<readonly GrantedSpaceAccess[]>> {
+  if (kind === ApiKeyKind.FULL) {
+    const memberSpaces = await memberSpaceIds(supabase, ownerUserId);
+    if (!memberSpaces.ok) {
+      return memberSpaces;
+    }
+    const loaded = await Promise.all(
+      memberSpaces.data.map(async (spaceId) => {
+        const access = await loadAccess(supabase, spaceId, ownerUserId);
+        return {spaceId, access};
+      }),
+    );
+    const failed = loaded.find((item) => !item.access.ok);
+    if (failed !== undefined && !failed.access.ok) {
+      return failed.access;
+    }
+    return agentOk(loaded.flatMap((item) => (item.access.ok ? [{spaceId: item.spaceId, access: item.access.data}] : [])));
+  }
   const podSpaces = await podSpaceIds(supabase, Object.keys(permissions.pods ?? {}));
   if (!podSpaces.ok) {
     return podSpaces;

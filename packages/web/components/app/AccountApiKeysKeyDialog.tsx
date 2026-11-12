@@ -19,7 +19,9 @@ import {
   Stack,
 } from '@chakra-ui/react';
 import {
+  API_KEY_KIND_OPTIONS,
   API_KEY_PRESET_OPTIONS,
+  ApiKeyKind,
   ApiKeyPresetId,
   apiKeyMatrixForPreset,
   type ApiKeyMatrixPodInput,
@@ -34,19 +36,21 @@ export interface AccountApiKeysKeyDialogProps {
   readonly title: string;
   readonly submitLabel: string;
   readonly initialName: string;
+  readonly initialKind: ApiKeyKind;
   readonly initialMatrix: ApiKeyPermissionMatrix;
   readonly pods: readonly ApiKeyMatrixPodInput[];
   readonly spaces: readonly ApiKeyMatrixSpaceInput[];
   readonly saving: boolean;
   readonly error: string;
   readonly onClose: () => void;
-  readonly onSubmit: (name: string, matrix: ApiKeyPermissionMatrix) => void;
+  readonly onSubmit: (name: string, kind: ApiKeyKind, matrix: ApiKeyPermissionMatrix) => void;
 }
 
 function AccountApiKeysKeyDialogForm({
   title,
   submitLabel,
   initialName,
+  initialKind,
   initialMatrix,
   pods,
   spaces,
@@ -56,7 +60,9 @@ function AccountApiKeysKeyDialogForm({
   onSubmit,
 }: Omit<AccountApiKeysKeyDialogProps, 'open' | 'formKey'>) {
   const [name, setName] = useState(initialName);
+  const [kind, setKind] = useState(initialKind);
   const [matrix, setMatrix] = useState(initialMatrix);
+  const selectedKind = API_KEY_KIND_OPTIONS.find((option) => option.id === kind) ?? API_KEY_KIND_OPTIONS[0];
 
   const applyPreset = (preset: ApiKeyPresetId): void => {
     setMatrix(apiKeyMatrixForPreset(preset, pods, spaces));
@@ -74,14 +80,35 @@ function AccountApiKeysKeyDialogForm({
             <Field.Label>Name</Field.Label>
             <Input value={name} onChange={(event) => setName(event.target.value)} maxW="lg" />
           </Field.Root>
-          <HStack gap={2} flexWrap="wrap">
-            {API_KEY_PRESET_OPTIONS.map((option) => (
-              <Button key={option.id} size="sm" variant="outline" colorPalette="brand" onClick={() => applyPreset(option.id)}>
-                {option.label}
-              </Button>
-            ))}
-          </HStack>
-          <AccountApiKeysPanelMatrix matrix={matrix} onChange={setMatrix} />
+          <Field.Root>
+            <Field.Label>Type</Field.Label>
+            <HStack gap={2} flexWrap="wrap">
+              {API_KEY_KIND_OPTIONS.map((option) => (
+                <Button
+                  key={option.id}
+                  size="sm"
+                  variant={kind === option.id ? 'solid' : 'outline'}
+                  colorPalette="brand"
+                  onClick={() => setKind(option.id)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </HStack>
+            <Field.HelperText>{selectedKind === undefined ? '' : selectedKind.description}</Field.HelperText>
+          </Field.Root>
+          {kind === ApiKeyKind.SCOPED ? (
+            <>
+              <HStack gap={2} flexWrap="wrap">
+                {API_KEY_PRESET_OPTIONS.map((option) => (
+                  <Button key={option.id} size="sm" variant="outline" colorPalette="brand" onClick={() => applyPreset(option.id)}>
+                    {option.label}
+                  </Button>
+                ))}
+              </HStack>
+              <AccountApiKeysPanelMatrix matrix={matrix} onChange={setMatrix} />
+            </>
+          ) : null}
           {error !== '' ? (
             <Alert.Root status="error">
               <Alert.Description>{error}</Alert.Description>
@@ -93,7 +120,7 @@ function AccountApiKeysKeyDialogForm({
         <Button variant="outline" onClick={onClose} disabled={saving}>
           Cancel
         </Button>
-        <Button colorPalette="brand" loading={saving} onClick={() => onSubmit(name, matrix)}>
+        <Button colorPalette="brand" loading={saving} onClick={() => onSubmit(name, kind, matrix)}>
           {submitLabel}
         </Button>
       </DialogFooter>

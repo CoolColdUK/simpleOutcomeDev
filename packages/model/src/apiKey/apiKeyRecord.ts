@@ -5,6 +5,7 @@ import type {PodRole} from '../space/podRole';
 import type {PodStatus} from '../space/podStatus';
 import type {SpaceRole} from '../space/spaceRole';
 import type {ApiKeyAction} from './apiKeyAction';
+import type {ApiKeyKind} from './apiKeyKind';
 import type {ApiKeyPermissions} from './apiKeyPermissions';
 import type {ApiKeyResource} from './apiKeyResource';
 import type {ApiKeyStoredStatus} from './apiKeyStatus';
@@ -14,6 +15,7 @@ export interface ApiKeyRecord {
   readonly ownerUserId: string;
   readonly status: ApiKeyStoredStatus;
   readonly expiresAt: string | undefined;
+  readonly kind: ApiKeyKind;
   readonly permissions: ApiKeyPermissions;
 }
 

@@ -1,11 +1,13 @@
 'use client';
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {Alert, Button, Heading, HStack, Input, Stack, Text, Textarea} from '@chakra-ui/react';
+import {Alert, Badge, Button, Heading, HStack, Stack, Text, Textarea} from '@chakra-ui/react';
 import {
+  ApiKeyKind,
   ApiKeyStatus,
   FeatureKind,
   PodStatus,
+  apiKeyKindLabel,
   apiKeyMatrixFromPermissions,
   buildApiKeyAiSetupPrompt,
   createApiKeyMatrix,
@@ -18,6 +20,7 @@ import {
   type ApiKeyPermissions,
 } from '@so/model';
 import AccountApiKeysKeyDialog from '@/components/app/AccountApiKeysKeyDialog';
+import AccountApiKeysSecret from '@/components/app/AccountApiKeysSecret';
 import createDbApiKey from '@/lib/api/db/createDbApiKey';
 import listDbApiKeys, {type DbApiKey} from '@/lib/api/db/listDbApiKeys';
 import listDbPods from '@/lib/api/db/listDbPods';
@@ -98,6 +101,8 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
   const [keys, setKeys] = useState<readonly DbApiKey[]>([]);
   const [inputs, setInputs] = useState<MatrixInputs>({pods: [], spaces: []});
   const [secret, setSecret] = useState<string | undefined>(undefined);
+  const [secretVisible, setSecretVisible] = useState(false);
+  const [visibleKeyIds, setVisibleKeyIds] = useState<ReadonlySet<string>>(new Set());
   const [prompt, setPrompt] = useState<string | undefined>(undefined);
   const [error, setError] = useState('');
   const [dialogError, setDialogError] = useState('');
@@ -128,13 +133,13 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
       });
   }, [refresh]);
 
-  const saveKey = async (name: string, matrix: ApiKeyPermissionMatrix, mode: 'create' | 'edit', keyId?: string): Promise<void> => {
+  const saveKey = async (name: string, kind: ApiKeyKind, matrix: ApiKeyPermissionMatrix, mode: 'create' | 'edit', keyId?: string): Promise<void> => {
     const trimmed = name.trim();
     if (trimmed === '') {
       setDialogError('Name is required');
       return;
     }
-    const permissions = permissionsFromApiKeyMatrix(matrix);
+    const permissions = kind === ApiKeyKind.FULL ? {} : permissionsFromApiKeyMatrix(matrix);
     const parsed = safeParseApiKeyPermissions(permissions);
     if (!parsed.ok) {
       setDialogError(parsed.message);
@@ -144,12 +149,13 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
     setSaving(true);
     try {
       if (mode === 'create') {
-        const created = await createDbApiKey(trimmed, parsed.value);
+        const created = await createDbApiKey(trimmed, parsed.value, kind);
         setSecret(created.secret);
+        setSecretVisible(false);
         setPrompt(buildApiKeyAiSetupPrompt(window.location.origin));
         setCreateOpen(false);
       } else if (keyId !== undefined) {
-        await updateDbApiKey(keyId, trimmed, parsed.value);
+        await updateDbApiKey(keyId, trimmed, parsed.value, kind);
         setEditingKey(undefined);
       }
       await refresh();
@@ -170,8 +176,16 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
     }
   };
 
-  const copy = async (value: string): Promise<void> => {
-    await navigator.clipboard.writeText(value);
+  const toggleKeyVisible = (id: string): void => {
+    setVisibleKeyIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const closeCreate = (): void => {
@@ -190,7 +204,7 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
         API keys
       </Heading>
       <Text color="fg.muted">
-        Keys act as you and can cover pods in more than one space. Nothing is granted until you turn it on. The secret is shown once.
+        Scoped keys only include the actions you turn on. Full access keys can do everything you can do, including access you gain later. Secrets stay hidden until you show them.
       </Text>
       {ready ? (
         <Button
@@ -212,13 +226,14 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
         title="Create API key"
         submitLabel="Create key"
         initialName=""
+        initialKind={ApiKeyKind.SCOPED}
         initialMatrix={createMatrix}
         pods={inputs.pods}
         spaces={inputs.spaces}
         saving={saving}
         error={dialogError}
         onClose={closeCreate}
-        onSubmit={(name, matrix) => void saveKey(name, matrix, 'create')}
+        onSubmit={(name, kind, matrix) => void saveKey(name, kind, matrix, 'create')}
       />
       <AccountApiKeysKeyDialog
         open={editingKey !== undefined}
@@ -226,13 +241,14 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
         title="Edit API key"
         submitLabel="Save"
         initialName={editingKey?.name ?? ''}
+        initialKind={editingKey?.kind ?? ApiKeyKind.SCOPED}
         initialMatrix={editMatrix}
         pods={inputs.pods}
         spaces={inputs.spaces}
         saving={saving}
         error={dialogError}
         onClose={closeEdit}
-        onSubmit={(name, matrix) => void saveKey(name, matrix, 'edit', editingKey?.id)}
+        onSubmit={(name, kind, matrix) => void saveKey(name, kind, matrix, 'edit', editingKey?.id)}
       />
       {error !== '' ? (
         <Alert.Root status="error">
@@ -242,24 +258,37 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
       {secret !== undefined && prompt !== undefined ? (
         <Stack gap={2} maxW="lg">
           <Alert.Root status="warning">
-            <Alert.Description>Copy the secret now. It will not be shown again.</Alert.Description>
+            <Alert.Description>Copy the secret now, or show it later from this list.</Alert.Description>
           </Alert.Root>
-          <Input readOnly value={secret} />
-          <Button alignSelf="start" variant="outline" colorPalette="brand" onClick={() => void copy(secret)}>
+          <AccountApiKeysSecret value={secret} revealed={secretVisible} onToggle={() => setSecretVisible((current) => !current)} />
+          <Button alignSelf="start" variant="outline" colorPalette="brand" onClick={() => void navigator.clipboard.writeText(secret)}>
             Copy secret
           </Button>
           <Textarea readOnly value={prompt} minH="8rem" />
-          <Button alignSelf="start" variant="outline" colorPalette="brand" onClick={() => void copy(prompt)}>
+          <Button alignSelf="start" variant="outline" colorPalette="brand" onClick={() => void navigator.clipboard.writeText(prompt)}>
             Copy MCP setup
           </Button>
         </Stack>
       ) : null}
       <Stack gap={3}>
         {keys.map((key) => (
-          <HStack key={key.id} justify="space-between" flexWrap="wrap" gap={2}>
-            <Text>
-              {key.name} · {key.prefix} · {key.status} · last used {formatWhen(key.lastUsedAt)}
-            </Text>
+          <Stack key={key.id} gap={2} align="start">
+            <HStack gap={2} flexWrap="wrap">
+              <Text>{key.name}</Text>
+              <Badge colorPalette={key.kind === ApiKeyKind.FULL ? 'brand' : 'gray'} variant="subtle">
+                {apiKeyKindLabel(key.kind)}
+              </Badge>
+              <Text color="fg.muted">
+                {key.status} · last used {formatWhen(key.lastUsedAt)}
+              </Text>
+            </HStack>
+            {key.secret === undefined ? (
+              <Text fontFamily="mono" color="fg.muted">
+                {key.prefix}
+              </Text>
+            ) : (
+              <AccountApiKeysSecret value={key.secret} revealed={visibleKeyIds.has(key.id)} onToggle={() => toggleKeyVisible(key.id)} />
+            )}
             {key.status === ApiKeyStatus.ACTIVE ? (
               <HStack gap={2}>
                 <Button
@@ -278,7 +307,7 @@ export default function AccountApiKeysPanel({userId}: AccountApiKeysPanelProps) 
                 </Button>
               </HStack>
             ) : null}
-          </HStack>
+          </Stack>
         ))}
       </Stack>
     </Stack>

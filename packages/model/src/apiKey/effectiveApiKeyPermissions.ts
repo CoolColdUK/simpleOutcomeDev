@@ -1,6 +1,7 @@
 import {FpResource} from '../fp/fpResource';
 import type {FeatureKind} from '../space/featureKind';
 import {ApiKeyAction} from './apiKeyAction';
+import {ApiKeyKind} from './apiKeyKind';
 import type {ApiKeyFpGrant} from './apiKeyPermissions';
 import {ApiKeyResource} from './apiKeyResource';
 import authorizeApiKeyCall from './authorizeApiKeyCall';
@@ -79,7 +80,7 @@ function fpGrant(key: ApiKeyRecord, spaceId: string, access: ApiKeyOwnerAccess, 
 function podsFor(key: ApiKeyRecord, spaceId: string, access: ApiKeyOwnerAccess, nowIso: string): readonly EffectiveApiKeyPod[] {
   return access.pods
     .filter((pod) => ownerCanAccessPod(pod, access.spaceRole, key.ownerUserId))
-    .filter((pod) => key.permissions.pods?.[pod.id] !== undefined)
+    .filter((pod) => key.kind === ApiKeyKind.FULL || key.permissions.pods?.[pod.id] !== undefined)
     .flatMap((pod) => {
       const todo =
         pod.feature === featureKindForApiResource(ApiKeyResource.TODO)
@@ -125,7 +126,8 @@ export default function effectiveApiKeyPermissions(
     }
     return [{spaceId: item.spaceId, space, group, pods}];
   });
-  const profile = (key.permissions.profile ?? []).filter((action) => action === ApiKeyAction.READ || action === ApiKeyAction.UPDATE);
+  const storedProfile = key.kind === ApiKeyKind.FULL ? [ApiKeyAction.READ, ApiKeyAction.UPDATE] : (key.permissions.profile ?? []);
+  const profile = storedProfile.filter((action) => action === ApiKeyAction.READ || action === ApiKeyAction.UPDATE);
   return {
     principalUserId: key.ownerUserId,
     ...(profile.length === 0 ? {} : {profile}),

@@ -1,4 +1,4 @@
-import {deriveApiKeyStatus, safeParseApiKeyPermissions, type ApiKeyPermissions, type ApiKeyStatus, type ApiKeyStoredStatus} from '@so/model';
+import {ApiKeyKind, deriveApiKeyStatus, safeParseApiKeyPermissions, type ApiKeyPermissions, type ApiKeyStatus, type ApiKeyStoredStatus} from '@so/model';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import throwIfSupabaseError from '@/lib/api/db/throwIfSupabaseError';
 
@@ -6,6 +6,8 @@ export interface DbApiKey {
   readonly id: string;
   readonly name: string;
   readonly prefix: string;
+  readonly secret: string | undefined;
+  readonly kind: ApiKeyKind;
   readonly status: ApiKeyStatus;
   readonly permissions: ApiKeyPermissions;
   readonly createdAt: string;
@@ -21,7 +23,7 @@ export default async function listDbApiKeys(): Promise<readonly DbApiKey[]> {
   const supabase = getSupabaseBrowserClient();
   const {data, error} = await supabase
     .from('api_key')
-    .select('id, name, key_prefix, status, permissions, created_at, last_used_at, expires_at')
+    .select('id, name, key_prefix, secret, kind, status, permissions, created_at, last_used_at, expires_at')
     .order('created_at', {ascending: false});
   throwIfSupabaseError(error);
   const nowIso = new Date().toISOString();
@@ -30,10 +32,13 @@ export default async function listDbApiKeys(): Promise<readonly DbApiKey[]> {
     if (!parsed.ok) {
       throw new Error(`Invalid permissions on API key ${row.id}`);
     }
+    const kind = row.kind === ApiKeyKind.FULL ? ApiKeyKind.FULL : ApiKeyKind.SCOPED;
     return {
       id: row.id,
       name: row.name,
       prefix: row.key_prefix,
+      secret: row.secret ?? undefined,
+      kind,
       status: deriveApiKeyStatus(storedStatus(row.status), row.expires_at ?? undefined, nowIso),
       permissions: parsed.value,
       createdAt: row.created_at,

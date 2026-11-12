@@ -1,4 +1,6 @@
 export {ApiKeyAction} from './apiKeyAction';
+export {ApiKeyKind, API_KEY_KIND_OPTIONS, apiKeyKindLabel} from './apiKeyKind';
+export type {ApiKeyKindOption} from './apiKeyKind';
 export {ApiKeyResource} from './apiKeyResource';
 export {ApiKeyStatus} from './apiKeyStatus';
 export type {ApiKeyStoredStatus} from './apiKeyStatus';
