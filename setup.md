@@ -53,7 +53,7 @@ The sites app is at port **3001**.
 | `SUPABASE_SECRET_KEY` | Required to send a **live** enquiry (reads `site_contact`). Demos do not read that table. Server only. | GitHub secret. Required. Injected at build. Do not set it on the Vercel sites project. |
 | `RESEND_API_KEY` | Empty: submit returns “This form is not available right now.” after Turnstile passes. | GitHub secret. Required. |
 | `TURNSTILE_SECRET_KEY` | Empty is a configuration error once a token is posted. Server only. | GitHub secret. Required. |
-| `UPSTASH_REDIS_REST_URL` | Leave all three rate-limit values empty to use the in-memory limit (5 per IP and 30 per site each hour, lost on restart). | GitHub secret. Required. Upstash Redis REST URL. |
+| `UPSTASH_REDIS_REST_URL` | Leave all three rate-limit values empty to use the in-memory limit (5 per IP and 30 per site each hour, lost on restart). | GitHub variable. Required. Upstash Redis REST URL. |
 | `UPSTASH_REDIS_REST_TOKEN` | Set together with the URL and the pepper, or leave all three empty. A partial set fails closed. | GitHub secret. Required. |
 | `SITES_IP_HASH_PEPPER` | Same. Any non-empty string is enough locally. | GitHub secret. Required. |
 
@@ -131,6 +131,6 @@ Create the Vercel projects once, with no Git connection: **Create Vercel project
 | Variable | `SITES_SALES_EMAIL` | Sites. Optional. |
 | Secret | `RESEND_API_KEY` | Sites. |
 | Secret | `TURNSTILE_SECRET_KEY` | Sites. |
-| Secret | `UPSTASH_REDIS_REST_URL` | Sites. |
+| Variable | `UPSTASH_REDIS_REST_URL` | Sites. |
 | Secret | `UPSTASH_REDIS_REST_TOKEN` | Sites. |
 | Secret | `SITES_IP_HASH_PEPPER` | Sites. |
