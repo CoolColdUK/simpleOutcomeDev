@@ -1,6 +1,6 @@
 'use client';
 
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {
   Alert,
   Button,
@@ -18,7 +18,7 @@ import {
   Switch,
   Text,
 } from '@chakra-ui/react';
-import type {FeatureKind, PodVisibility} from '@so/model';
+import {PodStatus, type FeatureKind, type PodVisibility} from '@so/model';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import listDbMyPodMemberships from '@/lib/api/db/listDbMyPodMemberships';
 import searchDbPods from '@/lib/api/db/searchDbPods';
@@ -32,14 +32,13 @@ interface FindPodRow {
   readonly feature: FeatureKind;
   readonly name: string | undefined;
   readonly visibility: PodVisibility;
+  readonly status: PodStatus;
 }
 
 export interface SpaceFindPodsDialogProps {
   readonly open: boolean;
   readonly spaceId: string;
-  readonly showArchived: boolean;
   readonly canShowArchivedSwitch: boolean;
-  readonly onShowArchivedChange: (show: boolean) => void;
   readonly onClose: () => void;
   readonly onJoined: () => void;
 }
@@ -47,14 +46,15 @@ export interface SpaceFindPodsDialogProps {
 export default function SpaceFindPodsDialog({
   open,
   spaceId,
-  showArchived,
   canShowArchivedSwitch,
-  onShowArchivedChange,
   onClose,
   onJoined,
 }: SpaceFindPodsDialogProps) {
   const {user} = useSupabaseAuthState();
   const [query, setQuery] = useState('');
+  const queryRef = useRef(query);
+  queryRef.current = query;
+  const [showArchived, setShowArchived] = useState(false);
   const [error, setError] = useState('');
   const [memberPodIds, setMemberPodIds] = useState<readonly string[]>([]);
   const [requestedPodIds, setRequestedPodIds] = useState<readonly string[]>([]);
@@ -64,10 +64,14 @@ export default function SpaceFindPodsDialog({
     if (user === undefined) {
       return;
     }
-    const [found, memberships] = await Promise.all([searchDbPods(spaceId, ''), listDbMyPodMemberships(user.id)]);
+    const safe = queryRef.current.replace(/[%_,()]/g, '');
+    const [found, memberships] = await Promise.all([
+      searchDbPods(spaceId, safe, showArchived),
+      listDbMyPodMemberships(user.id),
+    ]);
     setRows(found);
     setMemberPodIds(memberships.map((m) => m.podId));
-  }, [spaceId, user]);
+  }, [showArchived, spaceId, user]);
 
   useEffect(() => {
     if (!open) {
@@ -83,8 +87,7 @@ export default function SpaceFindPodsDialog({
   const search = async (): Promise<void> => {
     setError('');
     try {
-      const safe = query.replace(/[%_,()]/g, '');
-      setRows(await searchDbPods(spaceId, safe));
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -118,11 +121,11 @@ export default function SpaceFindPodsDialog({
           <DialogBody>
             <Stack gap={4}>
               <Text color="fg.muted">
-                Join open pods or request access. Archived pods you own (or all of them, if you own the space) can be
-                shown on the space page with the switch below.
+                Join open pods or request access. The switch lists archived pods you own, or every archived pod if you
+                own the space. It does not change the pods on the space page.
               </Text>
               {canShowArchivedSwitch ? (
-                <Switch.Root checked={showArchived} onCheckedChange={(e) => onShowArchivedChange(e.checked)}>
+                <Switch.Root checked={showArchived} onCheckedChange={(e) => setShowArchived(e.checked)}>
                   <Switch.HiddenInput />
                   <Switch.Control>
                     <Switch.Thumb />
@@ -146,14 +149,17 @@ export default function SpaceFindPodsDialog({
                 <Stack key={row.id} borderWidth="1px" borderColor="border.emphasized" p={3} borderRadius="md">
                   <Text>
                     {row.name ?? featureKindLabel(row.feature)} · {row.visibility}
+                    {row.status === PodStatus.ARCHIVED ? ' · archived' : ''}
                   </Text>
-                  <SpaceFindPodsPageJoinAction
-                    podId={row.id}
-                    visibility={row.visibility}
-                    isMember={memberPodIds.includes(row.id)}
-                    isRequested={requestedPodIds.includes(row.id)}
-                    onJoin={(podId, visibility) => void join(podId, visibility)}
-                  />
+                  {row.status === PodStatus.ACTIVE ? (
+                    <SpaceFindPodsPageJoinAction
+                      podId={row.id}
+                      visibility={row.visibility}
+                      isMember={memberPodIds.includes(row.id)}
+                      isRequested={requestedPodIds.includes(row.id)}
+                      onJoin={(podId, visibility) => void join(podId, visibility)}
+                    />
+                  ) : null}
                 </Stack>
               ))}
               {rows.length === 0 ? <Text color="fg.muted">No pods to join.</Text> : null}

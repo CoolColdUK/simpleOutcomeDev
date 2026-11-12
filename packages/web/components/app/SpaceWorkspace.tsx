@@ -4,7 +4,7 @@ import {useCallback, useEffect, useState} from 'react';
 import Link from 'next/link';
 import {useParams} from 'next/navigation';
 import {Alert, Badge, Button, Heading, HStack, SimpleGrid, Stack, Text} from '@chakra-ui/react';
-import {canManageSpace, filterAccessiblePods, spaceRoleLabel, SpaceRole} from '@so/model';
+import {canManageSpace, filterAccessiblePods, PodStatus, spaceRoleLabel, SpaceRole} from '@so/model';
 import useSupabaseAuthState from '@/lib/supabase/useSupabaseAuthState';
 import getDbSpace from '@/lib/api/db/getDbSpace';
 import getDbSpaceMemberRole from '@/lib/api/db/getDbSpaceMemberRole';
@@ -17,6 +17,38 @@ import SpaceWorkspacePodCard from '@/components/app/SpaceWorkspacePodCard';
 import SpaceCreatePodDialog from '@/components/app/SpaceCreatePodDialog';
 import SpaceCreateInviteDialog from '@/components/app/SpaceCreateInviteDialog';
 import SpaceFindPodsDialog from '@/components/app/SpaceFindPodsDialog';
+import SpaceWorkspacePodFilter from '@/components/app/SpaceWorkspacePodFilter';
+import type {SpacePodListFilter} from '@/components/app/SpaceWorkspacePodFilter';
+
+function podsForList(
+  pods: readonly DbPod[],
+  memberPodIds: readonly string[],
+  spaceRole: SpaceRole,
+  userId: string,
+  filter: SpacePodListFilter,
+): readonly DbPod[] {
+  const accessible = filterAccessiblePods({
+    pods,
+    memberPodIds,
+    spaceRole,
+    userId,
+    showArchived: filter !== 'active',
+  });
+  if (filter === 'archived') {
+    return accessible.filter((pod) => pod.status === PodStatus.ARCHIVED);
+  }
+  return accessible;
+}
+
+function emptyPodsMessage(filter: SpacePodListFilter): string {
+  if (filter === 'archived') {
+    return 'No archived pods.';
+  }
+  if (filter === 'active') {
+    return 'No active pods. Find or create one.';
+  }
+  return 'No pods yet. Find or create one.';
+}
 
 export default function SpaceWorkspace() {
   const params = useParams<{spaceId: string}>();
@@ -27,7 +59,7 @@ export default function SpaceWorkspace() {
   const [role, setRole] = useState<SpaceRole>(SpaceRole.USER);
   const [pods, setPods] = useState<readonly DbPod[]>([]);
   const [memberships, setMemberships] = useState<readonly DbPodMembership[]>([]);
-  const [showArchived, setShowArchived] = useState(false);
+  const [podListFilter, setPodListFilter] = useState<SpacePodListFilter>('active');
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -73,13 +105,7 @@ export default function SpaceWorkspace() {
   }
 
   const memberPodIds = memberships.map((m) => m.podId);
-  const visible = filterAccessiblePods({
-    pods,
-    memberPodIds,
-    spaceRole: role,
-    userId: user?.id ?? '',
-    showArchived,
-  });
+  const visible = podsForList(pods, memberPodIds, role, user?.id ?? '', podListFilter);
   const canCreate = canManageSpace(role);
   const isOwner = role === SpaceRole.OWNER;
   const canShowArchivedSwitch = isOwner || pods.some((p) => p.createdBy === user?.id && p.status === 'archived');
@@ -116,10 +142,13 @@ export default function SpaceWorkspace() {
         </Alert.Root>
       ) : null}
       <Stack gap={3}>
-        <HStack justify="space-between" align="center" gap={3}>
-          <Heading as="h2" size="md">
-            Pods
-          </Heading>
+        <HStack justify="space-between" align="center" gap={3} flexWrap="wrap">
+          <HStack gap={3} flexWrap="wrap">
+            <Heading as="h2" size="md">
+              Pods
+            </Heading>
+            <SpaceWorkspacePodFilter value={podListFilter} onChange={setPodListFilter} />
+          </HStack>
           <HStack gap={2}>
             {spaceId !== undefined ? (
               <Button variant="outline" colorPalette="brand" size="sm" onClick={() => setFindOpen(true)}>
@@ -134,7 +163,7 @@ export default function SpaceWorkspace() {
           </HStack>
         </HStack>
         {visible.length === 0 ? (
-          <Text color="fg.muted">No pods yet. Find or create one.</Text>
+          <Text color="fg.muted">{emptyPodsMessage(podListFilter)}</Text>
         ) : (
           <SimpleGrid columns={{base: 1, md: 2, lg: 3}} gap={3} w="full">
             {visible.map((pod) => (
@@ -153,9 +182,7 @@ export default function SpaceWorkspace() {
           <SpaceFindPodsDialog
             open={findOpen}
             spaceId={spaceId}
-            showArchived={showArchived}
             canShowArchivedSwitch={canShowArchivedSwitch}
-            onShowArchivedChange={setShowArchived}
             onClose={() => setFindOpen(false)}
             onJoined={() => void load()}
           />
