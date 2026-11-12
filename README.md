@@ -15,8 +15,8 @@ Marketing site and personal app shell. Monorepo: `packages/web` (Next.js), `pack
 2. **Actions → Create Vercel project** (once; no Git import).
 3. **Actions → Production** to build and deploy the main app and apply Supabase migrations.
 
-Client sites (`packages/sites`) deploy separately. See [plan/feature/salon-sites.md](plan/feature/salon-sites.md): one Vercel project, **Actions → Create Vercel sites project**, then **Actions → Sites production**. Do not connect Git. Sites production takes `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITES_ROOT_DOMAIN`, and optional `SITES_SALES_EMAIL` from GitHub. Do not set those on the Vercel project. The manual checklist in that plan names the three demo CNAMEs.
+Client sites (`packages/sites`) deploy separately. See [plan/feature/salon-sites.md](plan/feature/salon-sites.md): one Vercel project, **Actions → Create Vercel sites project**, then **Actions → Sites production**. Do not connect Git. Sites production takes its env from GitHub ([setup.md](setup.md)) and does not use values set on the Vercel project. The manual checklist in that plan names the three demo CNAMEs.
 
-See `AGENTS.md`.
+Env vars, local database, and GitHub Actions are in [setup.md](setup.md). See `AGENTS.md`.
 
 Todo list storage: after production migrate, confirm `moddatetime` and bucket `pod-private` in the Supabase dashboard.
