@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import {siteSeoSchema} from './siteSeoSchema';
 import {siteSectionSchema} from './siteSectionSchema';
 import {siteBodySchema, siteHttpUrlSchema, siteSectionIdSchema, siteShortTextSchema} from './siteTextSchema';
 import {siteThemeSchema} from './siteThemeSchema';
@@ -23,6 +24,7 @@ export const siteDocumentSchema = v.strictObject({
   footer: v.strictObject({
     text: siteBodySchema,
   }),
+  seo: v.optional(siteSeoSchema),
 });
 
 export interface SiteDocument extends v.InferOutput<typeof siteDocumentSchema> {}

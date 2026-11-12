@@ -61,6 +61,29 @@ Resend must accept `Website enquiry via Simple Outcome <info@simpleoutcome.dev>`
 
 Do not put server secrets in `NEXT_PUBLIC_` names. Sites production reads them from GitHub and writes `.vercel/.env.production.local` during the build. It fails if any required value is empty, and it does not print the values.
 
+## Site SEO
+
+No extra environment variable. The main app’s `NEXT_PUBLIC_WEB_URL` is only for `packages/web`.
+
+Indexing follows the request host and `public.site.custom_domain`:
+
+- `*.localhost` and `*.simpleoutcome.dev` (`NEXT_PUBLIC_SITES_ROOT_DOMAIN`) are `noindex, nofollow`. The sitemap is empty, `robots.txt` does not link it, and the page has no JSON-LD. `*.simpleoutcome.dev` also sends `X-Robots-Tag: noindex, nofollow`.
+- A live site on the client’s own domain is `index, follow`. The canonical URL is `https://{custom_domain}/`. The sitemap is that homepage, and `robots.txt` links it. The page includes one `BeautySalon` JSON-LD block.
+- If a row already has `custom_domain`, a leftover `*.simpleoutcome.dev` host canonicals to that domain and stays `noindex`.
+
+`custom_domain` is the column, not a field in the document. Optional `document.seo` (strict, `schemaVersion` stays `1`; empty strings count as missing):
+
+| Field | When empty |
+| --- | --- |
+| `title` | `businessName` |
+| `description` | Business name, area, and up to three service names. Not `footer.text`. Max 160 characters. |
+| `locale` | `en-GB`. v1 allows only `en-GB`, and `<html lang>` is `en-GB`. |
+| `ogImageUrl` | No `og:image`. When set, it must be `https`. |
+| `googleBusinessProfileUrl` | Left out of `sameAs`. When set, it must be `https`. |
+| `geo` | Omitted. Both `latitude` and `longitude`, or neither. The app does not geocode. |
+
+Paste `ogImageUrl` in SQL until photo uploads exist. Point the client’s domain at the sites Vercel project. There is no sitemap index across salons.
+
 ## Database
 
 Migrations live in `supabase/migrations`. Production applies them with **Actions → Production** (`supabase db push`). Do not run that push from a laptop against production.

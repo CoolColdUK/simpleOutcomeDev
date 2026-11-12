@@ -1,43 +1,54 @@
-import type {Metadata} from 'next';
-import {headers} from 'next/headers';
+import {siteBeautySalonJsonLd, resolveSiteHost} from '@so/model';
 import {notFound} from 'next/navigation';
-import {resolveSiteHost} from '@so/model';
 import SitePageView from '@/components/SitePageView';
 import {readSitesPublicEnv} from '@/lib/env';
 import {loadSiteForHostCached} from '@/lib/site/loadSiteForHost';
+import readRequestHost from '@/lib/site/readRequestHost';
+import siteIsIndexable from '@/lib/site/siteIsIndexable';
+import sitePageMetadata from '@/lib/site/sitePageMetadata';
 
 export const dynamic = 'force-dynamic';
 
-async function requestHost(): Promise<string> {
-  const headerList = await headers();
-  return headerList.get('x-site-host') ?? headerList.get('host') ?? '';
-}
-
 async function currentSite() {
-  return loadSiteForHostCached(await requestHost());
+  return loadSiteForHostCached(await readRequestHost());
 }
 
-function shouldNoindex(host: string, status: 'demo' | 'live' | undefined): boolean {
+export async function generateMetadata() {
+  const host = await readRequestHost();
   const env = readSitesPublicEnv();
   const resolved = resolveSiteHost({host, rootDomain: env.rootDomain});
-  return resolved.kind === 'demo-subdomain' || resolved.kind === 'local' || status === 'demo' || status === undefined;
+  const site = await currentSite();
+  return sitePageMetadata({
+    host,
+    indexable: siteIsIndexable(resolved.kind, site?.status),
+    customDomain: site?.customDomain,
+    document: site?.document,
+  });
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  const host = await requestHost();
-  const site = await currentSite();
-  const noindex = shouldNoindex(host, site?.status);
-  return {
-    title: site?.document.businessName ?? 'Site not found',
-    description: site?.document.footer.text,
-    robots: noindex ? {index: false, follow: false} : {index: true, follow: true},
-  };
+function jsonLdHtml(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
 export default async function Page() {
+  const host = await readRequestHost();
+  const env = readSitesPublicEnv();
+  const resolved = resolveSiteHost({host, rootDomain: env.rootDomain});
   const site = await currentSite();
   if (!site) {
     notFound();
   }
-  return <SitePageView site={site} />;
+  const canonical = site.customDomain === undefined ? undefined : `https://${site.customDomain}/`;
+  const jsonLd =
+    siteIsIndexable(resolved.kind, site.status) && canonical !== undefined
+      ? siteBeautySalonJsonLd(site.document, canonical)
+      : undefined;
+  return (
+    <>
+      {jsonLd === undefined ? null : (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: jsonLdHtml(jsonLd)}} />
+      )}
+      <SitePageView site={site} />
+    </>
+  );
 }

@@ -1,5 +1,8 @@
 export {SITE_PRESET_IDS, sitePresetIdSchema, type SitePresetId} from './sitePresetId';
 export {siteDocumentSchema, type SiteDocument} from './siteDocumentSchema';
+export {siteSeoSchema, type SiteSeo} from './siteSeoSchema';
+export {siteSeoDescription, siteSeoLocale, siteSeoTitle} from './siteSeoDescription';
+export {siteBeautySalonJsonLd, type SiteBeautySalonJsonLd} from './siteBeautySalonJsonLd';
 export {siteSectionSchema, type SiteSection} from './siteSectionSchema';
 export {siteThemeSchema, type SiteTheme} from './siteThemeSchema';
 export {type SiteMedia} from './siteMediaSchema';
