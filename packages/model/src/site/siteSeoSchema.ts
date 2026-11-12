@@ -30,8 +30,8 @@ export const siteSeoSchema = v.strictObject({
     v.pipe(
       v.string(),
       v.trim(),
-      v.check((value) => value.length === 0 || value === 'en-GB', 'Locale must be en-GB'),
-      v.transform((value) => (value.length === 0 ? undefined : value)),
+      v.union([v.literal(''), v.literal('en-GB')]),
+      v.transform((value): 'en-GB' | undefined => (value === '' ? undefined : 'en-GB')),
     ),
   ),
   ogImageUrl: optionalHttpsUrl(),

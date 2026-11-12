@@ -1,6 +1,6 @@
 'use client';
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {
   Alert,
   Button,
@@ -35,6 +35,12 @@ interface FindPodRow {
   readonly status: PodStatus;
 }
 
+export interface SpaceFindPodsSearchRequest {
+  readonly text: string;
+  readonly archived: boolean;
+  readonly nonce: number;
+}
+
 export interface SpaceFindPodsDialogProps {
   readonly open: boolean;
   readonly spaceId: string;
@@ -52,45 +58,39 @@ export default function SpaceFindPodsDialog({
 }: SpaceFindPodsDialogProps) {
   const {user} = useSupabaseAuthState();
   const [query, setQuery] = useState('');
-  const queryRef = useRef(query);
-  queryRef.current = query;
-  const [showArchived, setShowArchived] = useState(false);
+  const [request, setRequest] = useState<SpaceFindPodsSearchRequest>({text: '', archived: false, nonce: 0});
   const [error, setError] = useState('');
   const [memberPodIds, setMemberPodIds] = useState<readonly string[]>([]);
   const [requestedPodIds, setRequestedPodIds] = useState<readonly string[]>([]);
   const [rows, setRows] = useState<readonly FindPodRow[]>([]);
 
-  const load = useCallback(async (): Promise<void> => {
+  const load = useCallback(async (text: string, archived: boolean): Promise<void> => {
     if (user === undefined) {
       return;
     }
-    const safe = queryRef.current.replace(/[%_,()]/g, '');
+    const safe = text.replace(/[%_,()]/g, '');
     const [found, memberships] = await Promise.all([
-      searchDbPods(spaceId, safe, showArchived),
+      searchDbPods(spaceId, safe, archived),
       listDbMyPodMemberships(user.id),
     ]);
     setRows(found);
     setMemberPodIds(memberships.map((m) => m.podId));
-  }, [showArchived, spaceId, user]);
+  }, [spaceId, user]);
 
   useEffect(() => {
     if (!open) {
       return;
     }
     void Promise.resolve()
-      .then(() => load())
+      .then(() => load(request.text, request.archived))
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : String(e));
       });
-  }, [load, open]);
+  }, [load, open, request]);
 
-  const search = async (): Promise<void> => {
+  const search = (): void => {
     setError('');
-    try {
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
+    setRequest((current) => ({text: query, archived: current.archived, nonce: current.nonce + 1}));
   };
 
   const join = async (podId: string, visibility: PodVisibility): Promise<void> => {
@@ -102,7 +102,7 @@ export default function SpaceFindPodsDialog({
         await createDbPodJoinRequest(podId);
         setRequestedPodIds([...requestedPodIds, podId]);
       }
-      await load();
+      await load(request.text, request.archived);
       onJoined();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -125,7 +125,12 @@ export default function SpaceFindPodsDialog({
                 own the space. It does not change the pods on the space page.
               </Text>
               {canShowArchivedSwitch ? (
-                <Switch.Root checked={showArchived} onCheckedChange={(e) => setShowArchived(e.checked)}>
+                <Switch.Root
+                  checked={request.archived}
+                  onCheckedChange={(event) => {
+                    setRequest((current) => ({text: query, archived: event.checked, nonce: current.nonce + 1}));
+                  }}
+                >
                   <Switch.HiddenInput />
                   <Switch.Control>
                     <Switch.Thumb />
