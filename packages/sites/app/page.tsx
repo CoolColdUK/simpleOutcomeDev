@@ -39,6 +39,5 @@ export default async function Page() {
   if (!site) {
     notFound();
   }
-  const {salesEmail} = readSitesPublicEnv();
-  return <SitePageView site={site} salesEmail={salesEmail} />;
+  return <SitePageView site={site} />;
 }

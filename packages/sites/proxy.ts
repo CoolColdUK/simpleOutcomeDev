@@ -9,6 +9,9 @@ export function proxy(request: NextRequest) {
   const resolved = resolveSiteHost({host, rootDomain});
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-site-host', host);
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    return NextResponse.next({request: {headers: requestHeaders}});
+  }
   const url = request.nextUrl.clone();
   if (url.pathname !== '/') {
     url.pathname = '/';

@@ -2,6 +2,7 @@ import type {SiteDocument, SiteSection} from '@so/model';
 import SiteSectionAbout from '@/components/SiteSectionAbout';
 import SiteSectionBookingCta from '@/components/SiteSectionBookingCta';
 import SiteSectionContact from '@/components/SiteSectionContact';
+import SiteSectionContactForm from '@/components/SiteSectionContactForm';
 import SiteSectionFaq from '@/components/SiteSectionFaq';
 import SiteSectionGallery from '@/components/SiteSectionGallery';
 import SiteSectionHero from '@/components/SiteSectionHero';
@@ -12,7 +13,7 @@ import SiteSectionServices from '@/components/SiteSectionServices';
 import SiteSectionSplitCta from '@/components/SiteSectionSplitCta';
 import SiteSectionTeam from '@/components/SiteSectionTeam';
 
-function renderSection(section: SiteSection, document: SiteDocument) {
+function renderSection(section: SiteSection, document: SiteDocument, status: 'demo' | 'live') {
   if (section.type === 'hero') {
     return <SiteSectionHero section={section} booking={document.booking} />;
   }
@@ -40,6 +41,9 @@ function renderSection(section: SiteSection, document: SiteDocument) {
   if (section.type === 'contact') {
     return <SiteSectionContact section={section} />;
   }
+  if (section.type === 'contactForm') {
+    return <SiteSectionContactForm section={section} status={status} />;
+  }
   if (section.type === 'faq') {
     return <SiteSectionFaq section={section} />;
   }
@@ -49,6 +53,6 @@ function renderSection(section: SiteSection, document: SiteDocument) {
   return <SiteSectionSplitCta section={section} />;
 }
 
-export default function SiteSections({document}: {document: SiteDocument}) {
-  return document.sections.map((section) => <div key={section.id}>{renderSection(section, document)}</div>);
+export default function SiteSections({document, status}: {document: SiteDocument; status: 'demo' | 'live'}) {
+  return document.sections.map((section) => <div key={section.id}>{renderSection(section, document, status)}</div>);
 }

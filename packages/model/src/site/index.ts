@@ -17,3 +17,7 @@ export {
 } from './resolveSiteHost';
 export {SITE_PRESETS} from './sitePresets';
 export {SITE_DEMOS, findSiteDemo, type SiteDemo} from './siteDemos';
+export {SITE_MESSAGE_DEMO_RECIPIENT, SITE_MESSAGE_FROM, siteMessageFormOffered, siteMessageRecipient, siteMessageSubject} from './siteMessageRecipient';
+export type {SiteMessageRecipientInput} from './siteMessageRecipient';
+export {safeParseSiteMessage, siteMessageRequestSchema} from './siteMessageSchema';
+export type {SiteMessageParseFailure, SiteMessageParseSuccess, SiteMessageRequest} from './siteMessageSchema';

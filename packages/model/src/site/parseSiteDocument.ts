@@ -10,9 +10,6 @@ function channelHrefOk(section: Extract<SiteSection, {type: 'contact'}>, index: 
   if (channel.kind === 'phone') {
     return channel.href.startsWith('tel:+');
   }
-  if (channel.kind === 'email') {
-    return channel.href.startsWith('mailto:');
-  }
   return channel.href.startsWith('https://') || channel.href.startsWith('http://');
 }
 

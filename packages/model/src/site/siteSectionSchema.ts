@@ -36,7 +36,7 @@ const siteFullAddressSchema = v.strictObject({
 });
 
 const siteChannelSchema = v.strictObject({
-  kind: v.picklist(['phone', 'email', 'whatsapp', 'instagram']),
+  kind: v.picklist(['phone', 'whatsapp', 'instagram']),
   label: siteShortTextSchema,
   href: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(300)),
 });
@@ -153,6 +153,15 @@ export const siteSectionSchema = v.variant('type', [
       title: siteShortTextSchema,
       intro: v.optional(siteBodySchema),
       channels: v.pipe(v.array(siteChannelSchema), v.maxLength(8)),
+    }),
+  }),
+  v.strictObject({
+    id: siteSectionIdSchema,
+    type: v.literal('contactForm'),
+    props: v.strictObject({
+      title: siteShortTextSchema,
+      intro: v.optional(siteBodySchema),
+      submitLabel: siteShortTextSchema,
     }),
   }),
   v.strictObject({

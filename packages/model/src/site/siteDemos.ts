@@ -55,6 +55,7 @@ function homeDemo(input: {
         {label: 'Reviews', sectionId: 'reviews'},
         {label: 'Find us', sectionId: 'find-us'},
         {label: 'Contact', sectionId: 'contact'},
+        {label: 'Message', sectionId: 'message'},
       ],
     },
     sections: [
@@ -113,6 +114,15 @@ function homeDemo(input: {
           title: 'Contact',
           ...(input.contactIntro === undefined ? {} : {intro: input.contactIntro}),
           channels: input.channels,
+        },
+      },
+      {
+        id: 'message',
+        type: 'contactForm',
+        props: {
+          title: 'Send a message',
+          intro: 'Ask a question and we will reply by email.',
+          submitLabel: 'Send message',
         },
       },
     ],

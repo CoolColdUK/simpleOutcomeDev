@@ -6,7 +6,7 @@ import {safeParseSiteDocument} from './safeParseSiteDocument';
 import {SITE_PRESETS} from './sitePresets';
 import {SITE_PRESET_IDS} from './sitePresetId';
 
-const DEMO_SECTION_TYPES = ['hero', 'about', 'services', 'gallery', 'reviews', 'bookingCta', 'hoursLocation', 'contact'];
+const DEMO_SECTION_TYPES = ['hero', 'about', 'services', 'gallery', 'reviews', 'bookingCta', 'hoursLocation', 'contact', 'contactForm'];
 
 describe('parseSiteDocument', () => {
   it('accepts every preset', () => {
@@ -96,6 +96,23 @@ describe('parseSiteDocument', () => {
     }
     channel.href = 'https://example.com';
     expect(safeParseSiteDocument(contact)).toBeUndefined();
+  });
+
+  it('accepts a contact form section and rejects a public email channel', () => {
+    const document = findSiteDemo('newbeauty')?.document;
+    if (document === undefined) {
+      throw new Error('expected a demo');
+    }
+    const form = document.sections.find((section) => section.type === 'contactForm');
+    expect(form?.type === 'contactForm' && form.props.submitLabel).toBe('Send message');
+    expect(parseSiteDocument(document).businessName).toBe('New Beauty');
+    const withEmail = structuredClone(findSiteDemo('soniasnails')?.document);
+    const contact = withEmail?.sections.find((section) => section.type === 'contact');
+    if (contact?.type !== 'contact') {
+      throw new Error('expected contact');
+    }
+    contact.props.channels = [{kind: 'email', label: 'Email', href: 'mailto:salon@example.com'} as unknown as (typeof contact.props.channels)[number]];
+    expect(safeParseSiteDocument(withEmail)).toBeUndefined();
   });
 
   it('rejects unknown keys and a house number on a home address', () => {

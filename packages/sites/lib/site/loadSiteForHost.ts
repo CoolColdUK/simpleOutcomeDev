@@ -4,20 +4,24 @@ import {cache} from 'react';
 import {readSitesPublicEnv, type SitesSupabaseEnv} from '@/lib/env';
 
 export interface LoadedSite {
+  readonly id: string | undefined;
   readonly slug: string;
   readonly customDomain: string | undefined;
   readonly status: 'demo' | 'live';
   readonly preset: SitePresetId;
   readonly document: SiteDocument;
   readonly demoHost: boolean;
+  readonly messagesEnabled: boolean;
 }
 
 interface SiteRow {
+  id: string;
   slug: string;
   custom_domain: string | null;
   status: string;
   preset: string;
   document: unknown;
+  messages_enabled: boolean;
 }
 
 function isPresetId(value: string): value is SitePresetId {
@@ -34,6 +38,8 @@ function fromDemo(slug: string): LoadedSite | undefined {
       preset: demo.preset,
       document: parseSiteDocument(demo.document),
       demoHost: true,
+      id: undefined,
+      messagesEnabled: true,
     };
   }
   if (!slug.startsWith('preview-')) {
@@ -50,12 +56,14 @@ function fromDemo(slug: string): LoadedSite | undefined {
     preset: presetId,
     document: parseSiteDocument(SITE_PRESETS[presetId]),
     demoHost: true,
+    id: undefined,
+    messagesEnabled: true,
   };
 }
 
 async function fromSupabase(env: SitesSupabaseEnv, column: 'slug' | 'custom_domain', value: string, demoHost: boolean): Promise<LoadedSite | undefined> {
   const supabase = createClient(env.url, env.anonKey, {auth: {persistSession: false, autoRefreshToken: false}});
-  const {data, error} = await supabase.from('site').select('slug, custom_domain, status, preset, document').eq(column, value).maybeSingle();
+  const {data, error} = await supabase.from('site').select('id, slug, custom_domain, status, preset, document, messages_enabled').eq(column, value).maybeSingle();
   if (error) {
     throw new Error('Could not load site');
   }
@@ -74,6 +82,8 @@ async function fromSupabase(env: SitesSupabaseEnv, column: 'slug' | 'custom_doma
     preset: row.preset,
     document,
     demoHost,
+    id: row.id,
+    messagesEnabled: row.messages_enabled,
   };
 }
 
