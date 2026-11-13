@@ -293,6 +293,17 @@ body {
   min-height: 44px;
   font-size: 16px;
   align-self: flex-start;
+  max-width: 100%;
+}
+
+.contact-form button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.contact-turnstile {
+  width: 100%;
+  max-width: 100%;
 }
 
 .contact-error {
