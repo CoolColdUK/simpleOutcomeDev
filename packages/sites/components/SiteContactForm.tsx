@@ -31,6 +31,15 @@ const LIVE_NOTICE = 'Your message is emailed to the salon. Simple Outcome does n
 const DEMO_NOTICE = 'This is a sample. Your message is emailed to Simple Outcome, not the salon. It is not stored.';
 const CAPTCHA_RETRY = 'Please try again.';
 
+function draftFromForm(form: HTMLFormElement): SiteMessageDraft {
+  const data = new FormData(form);
+  const read = (key: string): string => {
+    const value = data.get(key);
+    return typeof value === 'string' ? value : '';
+  };
+  return {name: read('name'), email: read('email'), message: read('message'), companyWebsite: read('company_website')};
+}
+
 async function postSiteMessage(draft: SiteMessageDraft, turnstileToken: string): Promise<SiteMessagePayload> {
   const response = await fetch('/api/site-message', {
     method: 'POST',
@@ -63,8 +72,6 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
   const [success, setSuccess] = useState('');
   const [sending, setSending] = useState(false);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
-  const draft = useRef<SiteMessageDraft>({name, email, message, companyWebsite});
-  draft.current = {name, email, message, companyWebsite};
 
   useEffect(() => {
     mounted.current = true;
@@ -93,7 +100,7 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
     setFormError(payload.message ?? 'The message could not be sent. Try again.');
   };
 
-  const submit = async (): Promise<void> => {
+  const submit = async (form: HTMLFormElement): Promise<void> => {
     if (busy.current) {
       return;
     }
@@ -101,14 +108,14 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
     setSending(true);
     setFormError('');
     setErrors({});
-    const started = draft.current;
+    const typed = draftFromForm(form);
     try {
-      if (started.companyWebsite.trim() !== '') {
-        applyResponse(await postSiteMessage(draft.current, ''), false);
+      if (typed.companyWebsite.trim() !== '') {
+        applyResponse(await postSiteMessage(typed, ''), false);
         return;
       }
       if (siteKey.length === 0) {
-        applyResponse(await postSiteMessage(draft.current, ''), false);
+        applyResponse(await postSiteMessage(typed, ''), false);
         return;
       }
       const container = widgetRef.current;
@@ -124,7 +131,7 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
         }
         return;
       }
-      applyResponse(await postSiteMessage(draft.current, challenge.token), true);
+      applyResponse(await postSiteMessage(draftFromForm(form), challenge.token), true);
     } catch {
       if (mounted.current) {
         setFormError('The message could not be sent. Try again.');
@@ -146,7 +153,7 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
       className="contact-form"
       onSubmit={(event) => {
         event.preventDefault();
-        void submit();
+        void submit(event.currentTarget);
       }}
     >
       <p>{status === 'demo' ? DEMO_NOTICE : LIVE_NOTICE}</p>
