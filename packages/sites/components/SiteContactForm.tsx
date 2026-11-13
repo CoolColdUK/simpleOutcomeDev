@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useId, useRef, useState} from 'react';
-import Script from 'next/script';
+import {removeTurnstileWidget, requestTurnstileToken} from '@/lib/siteMessage/requestTurnstileToken';
 
 export interface SiteContactFormProps {
   readonly status: 'demo' | 'live';
@@ -12,18 +12,47 @@ interface FieldErrors {
   readonly name?: string;
   readonly email?: string;
   readonly message?: string;
-  readonly turnstileToken?: string;
+}
+
+interface SiteMessagePayload {
+  readonly ok?: boolean;
+  readonly message?: string;
+  readonly field?: string;
+}
+
+interface SiteMessageDraft {
+  readonly name: string;
+  readonly email: string;
+  readonly message: string;
+  readonly companyWebsite: string;
 }
 
 const LIVE_NOTICE = 'Your message is emailed to the salon. Simple Outcome does not store it. It is used only so the salon can reply.';
 const DEMO_NOTICE = 'This is a sample. Your message is emailed to Simple Outcome, not the salon. It is not stored.';
+const CAPTCHA_RETRY = 'Please try again.';
 
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (element: HTMLElement, options: {sitekey: string; callback: (token: string) => void}) => string;
-    };
-  }
+function draftFromForm(form: HTMLFormElement): SiteMessageDraft {
+  const data = new FormData(form);
+  const read = (key: string): string => {
+    const value = data.get(key);
+    return typeof value === 'string' ? value : '';
+  };
+  return {name: read('name'), email: read('email'), message: read('message'), companyWebsite: read('company_website')};
+}
+
+async function postSiteMessage(draft: SiteMessageDraft, turnstileToken: string): Promise<SiteMessagePayload> {
+  const response = await fetch('/api/site-message', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      name: draft.name,
+      email: draft.email,
+      message: draft.message,
+      company_website: draft.companyWebsite,
+      turnstileToken,
+    }),
+  });
+  return (await response.json()) as SiteMessagePayload;
 }
 
 export default function SiteContactForm({status, submitLabel}: SiteContactFormProps) {
@@ -31,58 +60,87 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
   const emailId = useId();
   const messageId = useId();
   const widgetRef = useRef<HTMLDivElement>(null);
-  const rendered = useRef(false);
+  const widgetIdRef = useRef<string | undefined>(undefined);
+  const mounted = useRef(true);
+  const busy = useRef(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [companyWebsite, setCompanyWebsite] = useState('');
-  const [token, setToken] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState('');
   const [success, setSuccess] = useState('');
   const [sending, setSending] = useState(false);
-  const [scriptReady, setScriptReady] = useState(false);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
 
   useEffect(() => {
-    if (!scriptReady || rendered.current || siteKey.length === 0 || widgetRef.current === null || window.turnstile === undefined) {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      removeTurnstileWidget(widgetIdRef.current);
+    };
+  }, []);
+
+  const applyResponse = (payload: SiteMessagePayload, captchaRan: boolean): void => {
+    if (!mounted.current) {
       return;
     }
-    rendered.current = true;
-    window.turnstile.render(widgetRef.current, {sitekey: siteKey, callback: setToken});
-  }, [scriptReady, siteKey]);
+    if (payload.ok === true) {
+      setSuccess(payload.message ?? 'Message sent.');
+      return;
+    }
+    if (payload.field === 'turnstileToken') {
+      setFormError(captchaRan ? CAPTCHA_RETRY : (payload.message ?? CAPTCHA_RETRY));
+      return;
+    }
+    if (payload.field === 'name' || payload.field === 'email' || payload.field === 'message') {
+      setErrors({[payload.field]: payload.message ?? 'Enter a message'});
+      return;
+    }
+    setFormError(payload.message ?? 'The message could not be sent. Try again.');
+  };
 
-  const submit = async (): Promise<void> => {
+  const submit = async (form: HTMLFormElement): Promise<void> => {
+    if (busy.current) {
+      return;
+    }
+    busy.current = true;
     setSending(true);
     setFormError('');
     setErrors({});
+    const typed = draftFromForm(form);
     try {
-      const response = await fetch('/api/site-message', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          name,
-          email,
-          message,
-          company_website: companyWebsite,
-          turnstileToken: token,
-        }),
-      });
-      const payload = (await response.json()) as {readonly ok?: boolean; readonly message?: string; readonly field?: string};
-      if (payload.ok === true) {
-        setSuccess(payload.message ?? 'Message sent.');
+      if (typed.companyWebsite.trim() !== '') {
+        applyResponse(await postSiteMessage(typed, ''), false);
         return;
       }
-      if (payload.field === 'name' || payload.field === 'email' || payload.field === 'message' || payload.field === 'turnstileToken') {
-        const text = payload.message ?? 'Enter a message';
-        setErrors({[payload.field]: text});
+      if (siteKey.length === 0) {
+        applyResponse(await postSiteMessage(typed, ''), false);
         return;
       }
-      setFormError(payload.message ?? 'The message could not be sent. Try again.');
+      const container = widgetRef.current;
+      if (container === null) {
+        setFormError(CAPTCHA_RETRY);
+        return;
+      }
+      const challenge = await requestTurnstileToken(container, siteKey, widgetIdRef.current);
+      widgetIdRef.current = challenge.widgetId;
+      if (!challenge.ok) {
+        if (mounted.current) {
+          setFormError(CAPTCHA_RETRY);
+        }
+        return;
+      }
+      applyResponse(await postSiteMessage(draftFromForm(form), challenge.token), true);
     } catch {
-      setFormError('The message could not be sent. Try again.');
+      if (mounted.current) {
+        setFormError('The message could not be sent. Try again.');
+      }
     } finally {
-      setSending(false);
+      busy.current = false;
+      if (mounted.current) {
+        setSending(false);
+      }
     }
   };
 
@@ -95,7 +153,7 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
       className="contact-form"
       onSubmit={(event) => {
         event.preventDefault();
-        void submit();
+        void submit(event.currentTarget);
       }}
     >
       <p>{status === 'demo' ? DEMO_NOTICE : LIVE_NOTICE}</p>
@@ -126,19 +184,13 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
           />
         </label>
       </div>
-      {siteKey.length > 0 ? (
-        <>
-          <Script
-            src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-            strategy="afterInteractive"
-            onLoad={() => setScriptReady(true)}
-          />
-          <div ref={widgetRef} />
-          {errors.turnstileToken ? <span className="contact-error">{errors.turnstileToken}</span> : null}
-        </>
+      {siteKey.length > 0 ? <div ref={widgetRef} className="contact-turnstile" /> : null}
+      {formError !== '' ? (
+        <p className="contact-error" role="alert">
+          {formError}
+        </p>
       ) : null}
-      {formError !== '' ? <p className="contact-error">{formError}</p> : null}
-      <button className="btn" type="submit" disabled={sending}>
+      <button className="btn" type="submit" disabled={sending} aria-busy={sending}>
         {sending ? 'Sending…' : submitLabel}
       </button>
     </form>
