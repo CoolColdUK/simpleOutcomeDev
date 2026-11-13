@@ -24,3 +24,14 @@ export {SITE_MESSAGE_DEMO_RECIPIENT, SITE_MESSAGE_FROM, siteMessageFormOffered, 
 export type {SiteMessageRecipientInput} from './siteMessageRecipient';
 export {safeParseSiteMessage, siteMessageRequestSchema} from './siteMessageSchema';
 export type {SiteMessageParseFailure, SiteMessageParseSuccess, SiteMessageRequest} from './siteMessageSchema';
+export {
+  SITE_COMPONENT_CATALOG,
+  SITE_SECTION_TYPES,
+  isSiteAdminHost,
+  nextSiteRevisionNumber,
+  siteComponentsList,
+  type SiteComponentEntry,
+  type SiteComponentField,
+  type SiteComponentsList,
+  type SiteSectionType,
+} from './siteComponentCatalog';

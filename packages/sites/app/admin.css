@@ -1,0 +1,195 @@
+.admin {
+  --admin-bg: #f4f1ea;
+  --admin-fg: #2f3329;
+  --admin-card: #fffdf8;
+  --admin-accent: #6f7d5c;
+  --admin-border: #d7d2c6;
+  --admin-danger: #8b3a3a;
+  font-family: Verdana, sans-serif;
+  color: var(--admin-fg);
+  background: var(--admin-bg);
+  min-height: 100vh;
+}
+
+.admin a {
+  color: var(--admin-accent);
+}
+
+.admin-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.admin-banner {
+  background: #efe6c8;
+  border: 1px solid #d2c28a;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-card {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.admin-card h1,
+.admin-card h2 {
+  margin-top: 0;
+}
+
+.admin-form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 28rem;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form textarea {
+  font: inherit;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-form textarea {
+  min-height: 6rem;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin button,
+.admin .admin-button {
+  font: inherit;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  background: var(--admin-accent);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.admin button.secondary,
+.admin .admin-button.secondary {
+  background: #5a5f52;
+}
+
+.admin button.danger,
+.admin .admin-button.danger {
+  background: var(--admin-danger);
+}
+
+.admin button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-error {
+  color: var(--admin-danger);
+  margin: 0;
+}
+
+.admin-ok {
+  color: #3d5c3a;
+  margin: 0;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1px solid var(--admin-border);
+  vertical-align: top;
+}
+
+.admin-editor {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 960px) {
+  .admin-editor {
+    grid-template-columns: 220px 1fr 320px;
+    align-items: start;
+  }
+}
+
+.admin-palette,
+.admin-section-list,
+.admin-props {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  padding: 0.85rem;
+}
+
+.admin-section-item {
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 0.55rem;
+  margin-bottom: 0.45rem;
+  background: #fff;
+  cursor: grab;
+}
+
+.admin-section-item.selected {
+  outline: 2px solid var(--admin-accent);
+}
+
+.admin-preview {
+  margin-top: 1rem;
+  border: 1px dashed var(--admin-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.admin-muted {
+  color: #6a6f63;
+  font-size: 0.9rem;
+}

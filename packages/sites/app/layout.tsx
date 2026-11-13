@@ -4,6 +4,7 @@ import {siteSeoLocale} from '@so/model';
 import {loadSiteForHostCached} from '@/lib/site/loadSiteForHost';
 import readRequestHost from '@/lib/site/readRequestHost';
 import './globals.css';
+import './admin.css';
 
 export const dynamic = 'force-dynamic';
 

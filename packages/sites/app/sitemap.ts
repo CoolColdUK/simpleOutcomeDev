@@ -12,8 +12,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const env = readSitesPublicEnv();
   const resolved = resolveSiteHost({host, rootDomain: env.rootDomain});
   const site = resolved.kind === 'unknown' ? undefined : await loadSiteForHostCached(host);
-  if (!siteIsIndexable(resolved.kind, site?.status) || site?.customDomain === undefined) {
+  if (!siteIsIndexable(resolved.kind, site?.status)) {
     return [];
   }
-  return [{url: `https://${site.customDomain}/`, changeFrequency: 'monthly'}];
+  return [{url: `https://${host.split(':')[0] ?? host}/`, changeFrequency: 'monthly'}];
 }

@@ -76,12 +76,13 @@ export async function POST(request: Request) {
   if (deliveryEmail === 'unconfigured') {
     return json(503, {ok: false, message: 'This form is not available right now.'});
   }
-  const recipient = siteMessageRecipient({status: site.status, deliveryEmail});
+  const messageStatus = site.status === 'demo' ? 'demo' : 'live';
+  const recipient = siteMessageRecipient({status: messageStatus, deliveryEmail});
   if (recipient === undefined) {
     return json(422, {ok: false, message: 'This salon is not accepting messages.'});
   }
   const sent = await sendSiteMessage({
-    status: site.status,
+    status: messageStatus,
     recipient,
     name: parsed.value.name,
     email: parsed.value.email,

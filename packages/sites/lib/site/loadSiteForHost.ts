@@ -1,13 +1,25 @@
-import {findSiteDemo, parseSiteDocument, resolveSiteHost, SITE_PRESETS, SITE_PRESET_IDS, type SiteDocument, type SitePresetId} from '@so/model';
+import {
+  findSiteDemo,
+  isSiteAdminHost,
+  parseSiteDocument,
+  resolveSiteHost,
+  SITE_PRESETS,
+  SITE_PRESET_IDS,
+  type SiteDocument,
+  type SitePresetId,
+} from '@so/model';
 import {createClient} from '@supabase/supabase-js';
 import {cache} from 'react';
 import {readSitesPublicEnv, type SitesSupabaseEnv} from '@/lib/env';
+import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
+
+export type LoadedSiteStatus = 'demo' | 'draft' | 'live' | 'archived';
 
 export interface LoadedSite {
   readonly id: string | undefined;
   readonly slug: string;
   readonly customDomain: string | undefined;
-  readonly status: 'demo' | 'live';
+  readonly status: LoadedSiteStatus;
   readonly preset: SitePresetId;
   readonly document: SiteDocument;
   readonly demoHost: boolean;
@@ -26,6 +38,10 @@ interface SiteRow {
 
 function isPresetId(value: string): value is SitePresetId {
   return SITE_PRESET_IDS.some((id) => id === value);
+}
+
+function isLoadedStatus(value: string): value is LoadedSiteStatus {
+  return value === 'demo' || value === 'draft' || value === 'live' || value === 'archived';
 }
 
 function fromDemo(slug: string): LoadedSite | undefined {
@@ -61,20 +77,10 @@ function fromDemo(slug: string): LoadedSite | undefined {
   };
 }
 
-async function fromSupabase(env: SitesSupabaseEnv, column: 'slug' | 'custom_domain', value: string, demoHost: boolean): Promise<LoadedSite | undefined> {
-  const supabase = createClient(env.url, env.anonKey, {auth: {persistSession: false, autoRefreshToken: false}});
-  const {data, error} = await supabase.from('site').select('id, slug, custom_domain, status, preset, document, messages_enabled').eq(column, value).maybeSingle();
-  if (error) {
-    throw new Error('Could not load site');
-  }
-  if (!data) {
-    return undefined;
-  }
-  const row = data as SiteRow;
-  if ((row.status !== 'demo' && row.status !== 'live') || !isPresetId(row.preset)) {
+function toLoaded(row: SiteRow, document: SiteDocument, demoHost: boolean): LoadedSite {
+  if (!isLoadedStatus(row.status) || !isPresetId(row.preset)) {
     throw new Error('Site row is invalid');
   }
-  const document = parseSiteDocument(row.document);
   return {
     slug: row.slug,
     customDomain: row.custom_domain === null ? undefined : row.custom_domain,
@@ -87,8 +93,87 @@ async function fromSupabase(env: SitesSupabaseEnv, column: 'slug' | 'custom_doma
   };
 }
 
+async function fromDemoRow(env: SitesSupabaseEnv, slug: string): Promise<LoadedSite | undefined> {
+  const supabase = createClient(env.url, env.anonKey, {auth: {persistSession: false, autoRefreshToken: false}});
+  const {data, error} = await supabase
+    .from('site')
+    .select('id, slug, custom_domain, status, preset, document, messages_enabled')
+    .eq('slug', slug)
+    .eq('status', 'demo')
+    .maybeSingle();
+  if (error) {
+    throw new Error('Could not load site');
+  }
+  if (!data) {
+    return undefined;
+  }
+  const row = data as SiteRow;
+  return toLoaded(row, parseSiteDocument(row.document), true);
+}
+
+async function fromSlugDraft(slug: string, demoHost: boolean): Promise<LoadedSite | undefined> {
+  const supabase = createSitesServiceClient();
+  const {data: site, error: siteError} = await supabase
+    .from('site')
+    .select('id, slug, custom_domain, status, preset, document, messages_enabled')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (siteError) {
+    throw new Error('Could not load site');
+  }
+  if (!site) {
+    return undefined;
+  }
+  const row = site as SiteRow;
+  if (row.status === 'demo') {
+    return toLoaded(row, parseSiteDocument(row.document), true);
+  }
+  const {data: draft, error: draftError} = await supabase.from('site_draft').select('document').eq('site_id', row.id).maybeSingle();
+  if (draftError) {
+    throw new Error('Could not load site draft');
+  }
+  if (draft === null) {
+    return undefined;
+  }
+  return toLoaded(row, parseSiteDocument((draft as {document: unknown}).document), demoHost);
+}
+
+async function fromCustomDomain(host: string): Promise<LoadedSite | undefined> {
+  const supabase = createSitesServiceClient();
+  const {data: site, error: siteError} = await supabase
+    .from('site')
+    .select('id, slug, custom_domain, status, preset, document, messages_enabled')
+    .eq('custom_domain', host)
+    .eq('status', 'live')
+    .maybeSingle();
+  if (siteError) {
+    throw new Error('Could not load site');
+  }
+  if (!site) {
+    return undefined;
+  }
+  const row = site as SiteRow;
+  const {data: revision, error: revisionError} = await supabase
+    .from('site_revision')
+    .select('document')
+    .eq('site_id', row.id)
+    .order('version_number', {ascending: false})
+    .limit(1)
+    .maybeSingle();
+  if (revisionError) {
+    throw new Error('Could not load site revision');
+  }
+  if (revision === null) {
+    return undefined;
+  }
+  return toLoaded(row, parseSiteDocument((revision as {document: unknown}).document), false);
+}
+
 export async function loadSiteForHost(host: string): Promise<LoadedSite | undefined> {
   const env = readSitesPublicEnv();
+  if (isSiteAdminHost(host, env.rootDomain)) {
+    return undefined;
+  }
   const resolved = resolveSiteHost({host, rootDomain: env.rootDomain});
   if (resolved.kind === 'unknown') {
     return undefined;
@@ -100,9 +185,18 @@ export async function loadSiteForHost(host: string): Promise<LoadedSite | undefi
     return fromDemo(resolved.slug);
   }
   if (resolved.kind === 'custom-domain') {
-    return fromSupabase(env.supabase, 'custom_domain', resolved.host, false);
+    return fromCustomDomain(resolved.host);
   }
-  return fromSupabase(env.supabase, 'slug', resolved.slug, resolved.kind === 'demo-subdomain');
+  const demoHost = resolved.kind === 'demo-subdomain';
+  try {
+    return await fromSlugDraft(resolved.slug, demoHost);
+  } catch {
+    const demo = await fromDemoRow(env.supabase, resolved.slug);
+    if (demo !== undefined) {
+      return demo;
+    }
+    throw new Error('Could not load site');
+  }
 }
 
 export const loadSiteForHostCached = cache(loadSiteForHost);

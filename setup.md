@@ -35,13 +35,30 @@ Copy [packages/sites/env.example](packages/sites/env.example) to `packages/sites
 
 Leave the Supabase pair empty to use the three bundled demos. Open `http://newbeauty.localhost:3001`, `http://soniasnails.localhost:3001`, or `http://lkbaesthetics.localhost:3001`. Preset previews use the same fallback, for example `http://preview-home-studio.localhost:3001`.
 
-Set both Supabase values, or neither. One of them throws at startup.
+Set both Supabase values, or neither. One of them throws at startup. `SUPABASE_SECRET_KEY` is required to load a client draft on the slug host, to serve a published snapshot on a custom domain, and for the admin editor.
 
 ```bash
 npm run dev:sites
 ```
 
 The sites app is at port **3001**.
+
+### Site admin (`admin.simpleoutcome.dev`)
+
+Open `http://admin.localhost:3001` locally. Production is `https://admin.simpleoutcome.dev` on the same sites Vercel project.
+
+Site logins use `public.site_user`, not Supabase Auth. Insert the first admin once after the migration:
+
+```sql
+insert into public.site_user (email, is_admin)
+values ('you@example.com', true);
+```
+
+That user signs in with Forgot password, sets a password from the emailed link, then can create users and sites in the admin UI. The slug host (`something.simpleoutcome.dev`) shows the working draft. The client’s own domain shows only a version a person published.
+
+### Sites MCP
+
+Admins create a key under **API keys**. Call `https://admin.simpleoutcome.dev/api/mcp/sites` with `Authorization: Bearer <secret>` (same feature split as main-app `/api/mcp/book`). Tools: `sites_list_components`, `sites_list_sites`, `sites_get_draft`, `sites_create_site`, `sites_update_draft`. They do not publish.
 
 | Name | Local | Sites production |
 | --- | --- | --- |
@@ -65,11 +82,11 @@ Do not put server secrets in `NEXT_PUBLIC_` names. Sites production reads them f
 
 No extra environment variable. The main app’s `NEXT_PUBLIC_WEB_URL` is only for `packages/web`.
 
-Indexing follows the request host and `public.site.custom_domain`:
+Indexing follows the request host:
 
-- `*.localhost` and `*.simpleoutcome.dev` (`NEXT_PUBLIC_SITES_ROOT_DOMAIN`) are `noindex, nofollow`. The sitemap is empty, `robots.txt` does not link it, and the page has no JSON-LD. `*.simpleoutcome.dev` also sends `X-Robots-Tag: noindex, nofollow`.
-- A live site on the client’s own domain is `index, follow`. The canonical URL is `https://{custom_domain}/`. The sitemap is that homepage, and `robots.txt` links it. The page includes one `BeautySalon` JSON-LD block.
-- If a row already has `custom_domain`, a leftover `*.simpleoutcome.dev` host canonicals to that domain and stays `noindex`.
+- `*.localhost` and `*.simpleoutcome.dev` (`NEXT_PUBLIC_SITES_ROOT_DOMAIN`) are `noindex, nofollow`. They serve the working draft (or a seeded demo). The sitemap is empty, `robots.txt` does not link it, and the page has no JSON-LD. `*.simpleoutcome.dev` also sends `X-Robots-Tag: noindex, nofollow`. The canonical URL is the request host itself.
+- A live site on the client’s own domain is `index, follow`. That host serves the latest published revision only. The canonical URL is that host. The sitemap is that homepage, and `robots.txt` links it. The page includes one `BeautySalon` JSON-LD block.
+- `admin.simpleoutcome.dev` / `admin.localhost` is the editor and stays `noindex`.
 
 `custom_domain` is the column, not a field in the document. Optional `document.seo` (strict, `schemaVersion` stays `1`; empty strings count as missing):
 
@@ -98,6 +115,7 @@ That applies every migration, including:
 
 - `20261112120000_api_key_kind_and_secret.sql` — API key type (`scoped` / `full`) and the revealable secret. Apply this before creating a key that can be shown again.
 - `20261112130000_site_contact.sql` — `site.messages_enabled`, private `site_contact`, and the enquiry counter. A Supabase-backed site 404s on load until this is applied, because the page selects `messages_enabled`.
+- `20261113100000_site_editor_users_drafts_revisions.sql` — `site_user`, sessions, drafts, revisions, site API keys, and draft/live/archived status.
 
 After the first Production migrate, confirm in the Supabase dashboard:
 

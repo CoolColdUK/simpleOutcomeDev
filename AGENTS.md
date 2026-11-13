@@ -12,6 +12,7 @@
 | Path | Role |
 | --- | --- |
 | `/packages/web` | Next.js app (`@so/web`) |
+| `/packages/sites` | Client sites + admin editor (`@so/sites`) |
 | `/packages/model` | Shared types and valibot schemas (`@so/model`) |
 | `/packages/component` | Shared UI primitives and SVG icons (`@so/component`) |
 

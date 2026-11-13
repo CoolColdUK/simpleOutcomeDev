@@ -13,7 +13,7 @@ import SiteSectionServices from '@/components/SiteSectionServices';
 import SiteSectionSplitCta from '@/components/SiteSectionSplitCta';
 import SiteSectionTeam from '@/components/SiteSectionTeam';
 
-function renderSection(section: SiteSection, document: SiteDocument, status: 'demo' | 'live') {
+function renderSection(section: SiteSection, document: SiteDocument, status: 'demo' | 'draft' | 'live' | 'archived') {
   if (section.type === 'hero') {
     return <SiteSectionHero section={section} booking={document.booking} />;
   }
@@ -53,6 +53,6 @@ function renderSection(section: SiteSection, document: SiteDocument, status: 'de
   return <SiteSectionSplitCta section={section} />;
 }
 
-export default function SiteSections({document, status}: {document: SiteDocument; status: 'demo' | 'live'}) {
+export default function SiteSections({document, status}: {document: SiteDocument; status: 'demo' | 'draft' | 'live' | 'archived'}) {
   return document.sections.map((section) => <div key={section.id}>{renderSection(section, document, status)}</div>);
 }
