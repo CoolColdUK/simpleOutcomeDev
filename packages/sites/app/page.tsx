@@ -1,4 +1,5 @@
 import {isSiteAdminHost, siteBeautySalonJsonLd, resolveSiteHost} from '@so/model';
+import Link from 'next/link';
 import {notFound, redirect} from 'next/navigation';
 import AdminCreateSiteForm from '@/components/admin/AdminCreateSiteForm';
 import AdminShell from '@/components/admin/AdminShell';
@@ -61,9 +62,9 @@ async function AdminHome() {
                 <td>{site.status}</td>
                 <td>{site.custom_domain ?? '—'}</td>
                 <td>
-                  <a href={`/sites/${site.slug}/edit`}>Edit</a>
+                  <Link href={`/sites/${site.slug}/edit`}>Edit</Link>
                   {' · '}
-                  <a href={`/sites/${site.slug}/versions`}>Versions</a>
+                  <Link href={`/sites/${site.slug}/versions`}>Versions</Link>
                 </td>
               </tr>
             ))}

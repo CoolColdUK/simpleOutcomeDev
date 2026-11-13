@@ -6,6 +6,8 @@ import {
   type SiteSection,
   type SiteSectionType,
 } from '@so/model';
+import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import {useMemo, useState} from 'react';
 import SitePageView from '@/components/SitePageView';
 import {createDefaultSection, newSectionId} from '@/lib/admin/defaultSection';
@@ -29,6 +31,7 @@ function moveItem<T>(items: readonly T[], from: number, to: number): T[] {
 }
 
 export default function AdminSiteEditor(props: AdminSiteEditorProps) {
+  const router = useRouter();
   const [document, setDocument] = useState(props.document);
   const [selectedId, setSelectedId] = useState(props.document.sections[0]?.id ?? '');
   const [error, setError] = useState('');
@@ -105,9 +108,9 @@ export default function AdminSiteEditor(props: AdminSiteEditorProps) {
           >
             Publish
           </button>
-          <a className="admin-button secondary" href={`/sites/${props.slug}/versions`}>
+          <Link className="admin-button secondary" href={`/sites/${props.slug}/versions`}>
             Versions
-          </a>
+          </Link>
           <button
             type="button"
             className="danger"
@@ -124,7 +127,8 @@ export default function AdminSiteEditor(props: AdminSiteEditorProps) {
                 setError(payload.error ?? 'Archive failed');
                 return;
               }
-              window.location.href = '/';
+              router.push('/');
+              router.refresh();
             }}
           >
             Archive

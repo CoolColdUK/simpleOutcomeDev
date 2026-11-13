@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {useState} from 'react';
 
 export interface AdminRevisionItem {
@@ -87,7 +88,7 @@ export default function AdminVersionsPanel({
       </table>
       {rows.length === 0 ? <p className="admin-muted">No published versions yet.</p> : null}
       <p>
-        <a href={`/sites/${slug}/edit`}>Back to editor</a>
+        <Link href={`/sites/${slug}/edit`}>Back to editor</Link>
       </p>
     </div>
   );

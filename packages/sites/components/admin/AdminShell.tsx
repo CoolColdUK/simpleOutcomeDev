@@ -1,4 +1,5 @@
 import type {ReactNode} from 'react';
+import Link from 'next/link';
 import type {SiteSessionContext} from '@/lib/admin/siteSession';
 import AdminImpersonationBanner from '@/components/admin/AdminImpersonationBanner';
 import AdminLogoutButton from '@/components/admin/AdminLogoutButton';
@@ -19,10 +20,10 @@ export default function AdminShell({
         ) : null}
         <nav className="admin-nav">
           <div className="admin-nav-links">
-            <a href="/">Sites</a>
-            <a href="/change-password">Password</a>
-            {admin ? <a href="/users">Users</a> : null}
-            {admin ? <a href="/api-keys">API keys</a> : null}
+            <Link href="/">Sites</Link>
+            <Link href="/change-password">Password</Link>
+            {admin ? <Link href="/users">Users</Link> : null}
+            {admin ? <Link href="/api-keys">API keys</Link> : null}
           </div>
           <div className="admin-nav-links">
             <span className="admin-muted">{session.user.email}</span>

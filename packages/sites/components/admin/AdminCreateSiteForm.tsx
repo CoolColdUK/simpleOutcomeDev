@@ -1,9 +1,11 @@
 'use client';
 
 import {SITE_PRESET_IDS} from '@so/model';
+import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 
 export default function AdminCreateSiteForm({ownerEmailDefault}: {ownerEmailDefault: string}) {
+  const router = useRouter();
   const [slug, setSlug] = useState('');
   const [ownerEmail, setOwnerEmail] = useState(ownerEmailDefault);
   const [preset, setPreset] = useState<string>(SITE_PRESET_IDS[0]);
@@ -34,7 +36,7 @@ export default function AdminCreateSiteForm({ownerEmailDefault}: {ownerEmailDefa
           setError(payload.error ?? 'Could not create site');
           return;
         }
-        window.location.href = `/sites/${payload.site.slug}/edit`;
+        router.push(`/sites/${payload.site.slug}/edit`);
       }}
     >
       <label>

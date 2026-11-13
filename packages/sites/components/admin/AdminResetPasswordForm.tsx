@@ -1,8 +1,10 @@
 'use client';
 
+import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 
 export default function AdminResetPasswordForm({token}: {token: string}) {
+  const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -26,7 +28,7 @@ export default function AdminResetPasswordForm({token}: {token: string}) {
           setError(payload.error ?? 'Could not reset password');
           return;
         }
-        window.location.href = '/login';
+        router.push('/login');
       }}
     >
       <label>

@@ -1,8 +1,11 @@
 'use client';
 
+import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 
 export default function AdminLoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,7 +29,8 @@ export default function AdminLoginForm() {
           setError(payload.error ?? 'Could not sign in');
           return;
         }
-        window.location.href = '/';
+        router.push('/');
+        router.refresh();
       }}
     >
       <label>
@@ -48,9 +52,9 @@ export default function AdminLoginForm() {
         <button type="submit" disabled={busy}>
           Sign in
         </button>
-        <a className="admin-button secondary" href="/forgot-password">
+        <Link className="admin-button secondary" href="/forgot-password">
           Forgot password
-        </a>
+        </Link>
       </div>
     </form>
   );

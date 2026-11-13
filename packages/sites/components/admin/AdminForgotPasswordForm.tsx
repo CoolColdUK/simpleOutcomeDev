@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {useState} from 'react';
 
 export default function AdminForgotPasswordForm() {
@@ -33,9 +34,9 @@ export default function AdminForgotPasswordForm() {
         <button type="submit" disabled={busy}>
           Send reset link
         </button>
-        <a className="admin-button secondary" href="/login">
+        <Link className="admin-button secondary" href="/login">
           Back to sign in
-        </a>
+        </Link>
       </div>
     </form>
   );

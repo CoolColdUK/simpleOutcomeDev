@@ -1,6 +1,9 @@
 'use client';
 
+import {useRouter} from 'next/navigation';
+
 export default function AdminImpersonationBanner({email}: {email: string}) {
+  const router = useRouter();
   return (
     <div className="admin-banner">
       <span>
@@ -14,7 +17,8 @@ export default function AdminImpersonationBanner({email}: {email: string}) {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'stop'}),
           });
-          window.location.href = '/';
+          router.push('/');
+          router.refresh();
         }}
       >
         Return to my account

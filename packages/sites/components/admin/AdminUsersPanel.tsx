@@ -1,5 +1,6 @@
 'use client';
 
+import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 
 export interface AdminUserListItem {
@@ -9,6 +10,7 @@ export interface AdminUserListItem {
 }
 
 export default function AdminUsersPanel({users}: {users: readonly AdminUserListItem[]}) {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState('');
@@ -85,7 +87,8 @@ export default function AdminUsersPanel({users}: {users: readonly AdminUserListI
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({userId: user.id, action: 'start'}),
                       });
-                      window.location.href = '/';
+                      router.push('/');
+                      router.refresh();
                     }}
                   >
                     Switch into
