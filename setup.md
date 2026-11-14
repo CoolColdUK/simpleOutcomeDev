@@ -62,21 +62,21 @@ Admins create a key under **API keys**. Call `https://admin.simpleoutcome.dev/ap
 
 | Name | Local | Sites production |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Empty for file demos. Required to load `public.site`. | GitHub variable. Injected at build. Do not set it on the Vercel sites project. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as the URL. | GitHub variable. Injected at build. Do not set it on the Vercel sites project. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Empty for file demos. Required to load `public.site`. | GitHub variable. Injected at build for inlining. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as the URL. | GitHub variable. Injected at build for inlining. |
 | `NEXT_PUBLIC_SITES_ROOT_DOMAIN` | Optional. Defaults to `simpleoutcome.dev`. | GitHub variable. Required. Use `simpleoutcome.dev`. |
 | `NEXT_PUBLIC_SITES_SALES_EMAIL` | Optional. Defaults to `info@simpleoutcome.dev`. The page does not render this address. | GitHub variable `SITES_SALES_EMAIL`. Empty becomes `info@simpleoutcome.dev`. Must be an email when set. |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Empty skips the Turnstile widget. A submit then fails with “Confirm you are a person”. | GitHub variable. Required. Cloudflare Turnstile site key. |
-| `SUPABASE_SECRET_KEY` | Required to send a **live** enquiry (reads `site_contact`). Demos do not read that table. Server only. | GitHub secret. Required. Injected at build. Do not set it on the Vercel sites project. |
-| `RESEND_API_KEY` | Empty: submit returns “This form is not available right now.” after Turnstile passes. | GitHub secret. Required. |
-| `TURNSTILE_SECRET_KEY` | Empty is a configuration error once a token is posted. Server only. | GitHub secret. Required. |
-| `UPSTASH_REDIS_REST_URL` | Leave all three rate-limit values empty to use the in-memory limit (5 per IP and 30 per site each hour, lost on restart). | GitHub variable. Required. Upstash Redis REST URL. |
-| `UPSTASH_REDIS_REST_TOKEN` | Set together with the URL and the pepper, or leave all three empty. A partial set fails closed. | GitHub secret. Required. |
-| `SITES_IP_HASH_PEPPER` | Same. Any non-empty string is enough locally. | GitHub secret. Required. |
+| `SUPABASE_SECRET_KEY` | Required for admin, drafts, published custom domains, and live enquiries. Server only. | GitHub secret. **Sites production** copies it to the Vercel sites project (runtime) and injects it at build. |
+| `RESEND_API_KEY` | Empty: submit returns “This form is not available right now.” after Turnstile passes. | GitHub secret. Synced to Vercel sites (runtime) and injected at build. |
+| `TURNSTILE_SECRET_KEY` | Empty is a configuration error once a token is posted. Server only. | GitHub secret. Synced to Vercel sites and injected at build. |
+| `UPSTASH_REDIS_REST_URL` | Leave all three rate-limit values empty to use the in-memory limit (5 per IP and 30 per site each hour, lost on restart). | GitHub variable. Synced to Vercel sites and injected at build. |
+| `UPSTASH_REDIS_REST_TOKEN` | Set together with the URL and the pepper, or leave all three empty. A partial set fails closed. | GitHub secret. Synced to Vercel sites and injected at build. |
+| `SITES_IP_HASH_PEPPER` | Same. Any non-empty string is enough locally. | GitHub secret. Synced to Vercel sites and injected at build. |
 
 Resend must accept `Website enquiry via Simple Outcome <info@simpleoutcome.dev>`. Verify `info@simpleoutcome.dev` on the domain `simpleoutcome.dev` in Resend before a real send.
 
-Do not put server secrets in `NEXT_PUBLIC_` names. Sites production reads them from GitHub and writes `.vercel/.env.production.local` during the build. It fails if any required value is empty, and it does not print the values.
+Do not put server secrets in `NEXT_PUBLIC_` names. Sites production syncs server env onto the Vercel sites project (so API routes can read them at runtime), then also writes `.vercel/.env.production.local` for the build. It fails if any required value is empty, and it does not print the values.
 
 ## Site SEO
 
@@ -143,7 +143,7 @@ Create the Vercel projects once, with no Git connection: **Create Vercel project
 | Variable | `NEXT_PUBLIC_SUPABASE_URL` | Both apps. |
 | Variable | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Both apps. |
 | Variable | `NEXT_PUBLIC_WEB_URL` | Main app, when syncing Vercel env. |
-| Secret | `SUPABASE_SECRET_KEY` | Main app (copied to Vercel) and sites (build inject). |
+| Secret | `SUPABASE_SECRET_KEY` | Main app and sites (copied to each Vercel project; sites also injects at build). |
 | Variable | `NEXT_PUBLIC_SITES_ROOT_DOMAIN` | Sites. |
 | Variable | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Sites. |
 | Variable | `SITES_SALES_EMAIL` | Sites. Optional. |
