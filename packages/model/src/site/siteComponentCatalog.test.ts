@@ -37,7 +37,9 @@ describe('siteComponentCatalog', () => {
 
   it('detects the admin host', () => {
     expect(isSiteAdminHost('admin.simpleoutcome.dev', 'simpleoutcome.dev')).toBe(true);
+    expect(isSiteAdminHost('admindev.simpleoutcome.dev', 'simpleoutcome.dev')).toBe(true);
     expect(isSiteAdminHost('admin.localhost:3001', 'simpleoutcome.dev')).toBe(true);
+    expect(isSiteAdminHost('dev.simpleoutcome.dev', 'simpleoutcome.dev')).toBe(false);
     expect(isSiteAdminHost('newbeauty.simpleoutcome.dev', 'simpleoutcome.dev')).toBe(false);
   });
 

@@ -54,8 +54,8 @@ export function resolveSiteHost(input: ResolveSiteHostInput): SiteHostResolution
   }
   const demoSlug = slugUnder(host, `.${rootDomain}`);
   if (demoSlug !== undefined) {
-    // Reserved for the site editor host (admin.simpleoutcome.dev).
-    if (demoSlug === 'admin') {
+    // Reserved: admin.simpleoutcome.dev and the staging editor admindev.simpleoutcome.dev.
+    if (demoSlug === 'admin' || demoSlug === 'admindev' || demoSlug === 'dev') {
       return {kind: 'unknown'};
     }
     if (SLUG.test(demoSlug)) {

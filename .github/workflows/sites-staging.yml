@@ -1,7 +1,8 @@
-# Sites staging: deploy packages/sites to the staging sites Vercel project.
+# Sites staging: deploy packages/sites as a Vercel preview on the staging sites project.
 # Env comes from GitHub. *_STAGE is staging-only. Names with no suffix are shared with production.
 # The Vercel project settings stay empty.
-# No version bump, no migrations, no main-app deploy. Migrations run in the Staging workflow.
+# Aliases admindev.simpleoutcome.dev onto that preview. The root domain stays simpleoutcome.dev
+# so that hostname is the editor. No version bump, no migrations, no main-app deploy.
 name: Sites staging
 run-name: 'Sites staging: ${{ inputs.description }}'
 'on':
@@ -48,7 +49,7 @@ jobs:
       - name: Build model
         run: npm run build:model
 
-      - name: Deploy sites to Vercel (staging, prebuilt)
+      - name: Deploy sites to Vercel (staging / preview, prebuilt)
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES_STAGE }}
@@ -56,7 +57,7 @@ jobs:
           # GitHub *_STAGE names, assigned to the names the app reads.
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_STAGE }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE }}
-          NEXT_PUBLIC_SITES_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE }}
+          NEXT_PUBLIC_SITES_ROOT_DOMAIN: simpleoutcome.dev
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           SITES_SALES_EMAIL: ${{ vars.NEXT_PUBLIC_SITES_SALES_EMAIL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY_STAGE }}
@@ -83,10 +84,6 @@ jobs:
           export NEXT_PUBLIC_SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
           if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
             echo '::error::Repository variable NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE is empty.'
-            exit 1
-          fi
-          if [ -z "${NEXT_PUBLIC_SITES_ROOT_DOMAIN:-}" ]; then
-            echo '::error::Repository variable NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE is empty (for example stage.simpleoutcome.dev).'
             exit 1
           fi
           if [ -z "${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}" ]; then
@@ -126,10 +123,10 @@ jobs:
             echo '::error::Variable NEXT_PUBLIC_SITES_SALES_EMAIL is not an email address.'
             exit 1
           fi
-          npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
           node <<'NODE'
           const {mkdirSync, readFileSync, writeFileSync} = require('node:fs');
-          const path = '.vercel/.env.production.local';
+          const path = '.vercel/.env.preview.local';
           const keys = [
             'SUPABASE_PROJECT_REF',
             'NEXT_PUBLIC_SUPABASE_URL',
@@ -180,15 +177,15 @@ jobs:
           for (const key of keys) {
             const expected = `${key}=${quote(values[key])}`;
             if (!written.includes(expected)) {
-              console.error(`::error::${key} in .vercel/.env.production.local does not match GitHub. Refusing to build.`);
+              console.error(`::error::${key} in .vercel/.env.preview.local does not match GitHub. Refusing to build.`);
               process.exit(1);
             }
           }
-          console.log('Wrote build env from GitHub into .vercel/.env.production.local. Values are not printed. Nothing is saved on the Vercel project.');
+          console.log('Wrote build env from GitHub into .vercel/.env.preview.local. Values are not printed. Nothing is saved on the Vercel project.');
           NODE
-          npx vercel build --prod --yes --token="$VERCEL_TOKEN"
+          npx vercel build --environment=preview --yes --token="$VERCEL_TOKEN"
           # Runtime env is this deployment only. It is not stored in the Vercel project settings.
-          deploy_args=(npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")
+          deploy_args=(npx vercel deploy --prebuilt --target=preview --yes --token="$VERCEL_TOKEN" --format json)
           for key in \
             NEXT_PUBLIC_SUPABASE_URL \
             NEXT_PUBLIC_SUPABASE_ANON_KEY \
@@ -204,4 +201,21 @@ jobs:
           do
             deploy_args+=(--env "${key}=${!key}")
           done
-          "${deploy_args[@]}"
+          DEPLOY_JSON="$("${deploy_args[@]}")"
+          PREVIEW_URL="$(printf '%s\n' "$DEPLOY_JSON" | jq -r '.url // empty')"
+          if [ -z "${PREVIEW_URL:-}" ]; then
+            echo '::error::Vercel deploy JSON had no url; raw output follows'
+            printf '%s\n' "$DEPLOY_JSON"
+            exit 1
+          fi
+          # Staging editor. A single hostname can follow a preview; *.simpleoutcome.dev stays on production.
+          STAGING_ALIAS_HOST=admindev.simpleoutcome.dev
+          npx vercel alias set "$PREVIEW_URL" "$STAGING_ALIAS_HOST" --token="$VERCEL_TOKEN"
+          echo "::notice title=Vercel sites staging::${STAGING_ALIAS_HOST} → ${PREVIEW_URL}"
+          {
+            echo "## Vercel preview (sites staging)"
+            echo
+            echo "**Alias:** https://${STAGING_ALIAS_HOST}"
+            echo
+            echo "**Deployment:** https://${PREVIEW_URL#https://}"
+          } >> "$GITHUB_STEP_SUMMARY"

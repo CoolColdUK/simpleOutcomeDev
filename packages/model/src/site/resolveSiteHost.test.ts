@@ -20,6 +20,8 @@ describe('resolveSiteHost', () => {
     expect(resolveSiteHost({host: 'simple-outcome-sites.vercel.app', rootDomain}).kind).toBe('unknown');
     expect(resolveSiteHost({host: 'a.b.simpleoutcome.dev', rootDomain}).kind).toBe('unknown');
     expect(resolveSiteHost({host: 'admin.simpleoutcome.dev', rootDomain}).kind).toBe('unknown');
+    expect(resolveSiteHost({host: 'admindev.simpleoutcome.dev', rootDomain}).kind).toBe('unknown');
+    expect(resolveSiteHost({host: 'dev.simpleoutcome.dev', rootDomain}).kind).toBe('unknown');
     expect(resolveSiteHost({host: 'admin.localhost:3001', rootDomain}).kind).toBe('unknown');
   });
 

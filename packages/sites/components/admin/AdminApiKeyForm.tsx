@@ -44,7 +44,7 @@ export default function AdminApiKeyForm() {
       <button type="submit" disabled={busy}>
         Create API key
       </button>
-      <p className="admin-muted">Use Authorization: Bearer on https://admin.simpleoutcome.dev/api/mcp/sites</p>
+      <p className="admin-muted">Use Authorization: Bearer on /api/mcp/sites on this host.</p>
     </form>
   );
 }

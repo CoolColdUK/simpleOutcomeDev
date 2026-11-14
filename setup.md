@@ -20,7 +20,7 @@ Local dev uses the **staging** Supabase project. Put that project's URL, anon ke
 | --- | --- | --- |
 | `SUPABASE_PROJECT_REF` | Required. Staging project ref. The API URL is `https://<ref>.supabase.co`. | GitHub variable `SUPABASE_PROJECT_REF_PROD`. Workflows build `NEXT_PUBLIC_SUPABASE_URL` from it. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Required. Staging anon key, not the secret. | GitHub variable `NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD`. |
-| `NEXT_PUBLIC_SITES_ROOT_DOMAIN` | Staging root domain, for example `stage.simpleoutcome.dev`. The site URL is `https://` plus this domain. | GitHub variable `NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD`. |
+| `NEXT_PUBLIC_SITES_ROOT_DOMAIN` | Staging web host `dev.simpleoutcome.dev`. The site URL is `https://` plus this domain. | GitHub variable `NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD`. |
 | `SUPABASE_SECRET_KEY` | Staging secret key. Required for `/api/mcp` and the agent REST routes. Server only. Do not prefix with `NEXT_PUBLIC_`. | GitHub secret `SUPABASE_SECRET_KEY_PROD`. Passed to that deployment as `SUPABASE_SECRET_KEY`. |
 | `NEXT_PUBLIC_APP_VERSION` | Optional. | Set by the Production workflow. |
 | `NEXT_PUBLIC_GIT_COMMIT` | Optional. | Set by the Production workflow. |
@@ -47,7 +47,7 @@ The sites app is at port **3001**.
 
 ### Site admin (`admin.simpleoutcome.dev`)
 
-Open `http://admin.localhost:3001` locally. Production is `https://admin.simpleoutcome.dev` on the same sites Vercel project.
+Open `http://admin.localhost:3001` locally. Production is `https://admin.simpleoutcome.dev` on the production sites project. Staging is `https://admindev.simpleoutcome.dev` on the staging sites project.
 
 Site logins use `public.site_user`, not Supabase Auth. Insert the first admin once after the migration:
 
@@ -135,7 +135,7 @@ Create the production Vercel projects once, with no Git connection: **Create Ver
 
 Staging is **Actions → Staging** (migrations + main app) and **Actions → Sites staging**. Neither bumps a version or publishes a GitHub release. GitHub holds the staging values (`*_STAGE`). The workflows inject them for that build and that deployment. No workflow writes env onto a Vercel project. Create the staging projects once, with no Git connection, before the first staging deploy. Run **Create Vercel project** with project name `simple-outcome-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_STAGE`. Run **Create Vercel sites project** with project name `simple-outcome-sites-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_SITES_STAGE`. Target `prod` writes `VERCEL_PROJECT_ID_PROD` or `VERCEL_PROJECT_ID_SITES_PROD` and must keep the existing production project names.
 
-**Staging** deploys a Vercel preview, then aliases `NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE` (`stage.simpleoutcome.dev`) onto that deployment. Add that hostname on the staging web project before the first run. Turn off Deployment Protection on that project, or the preview asks visitors to log in to Vercel. **Sites staging** still deploys with `--prod` on the staging sites project. `*.stage.simpleoutcome.dev` (including `admin.stage.simpleoutcome.dev`) only follows a production deployment, so a preview alias cannot cover every salon hostname. After the first Staging migrate, confirm `moddatetime` and bucket `pod-private` on the **staging** Supabase project, and insert the first `site_user` there.
+**Staging** deploys a Vercel preview, then aliases `dev.simpleoutcome.dev` onto that deployment. Add that hostname on the staging web project before the first run. **Sites staging** deploys a preview and aliases `admindev.simpleoutcome.dev`. Add that hostname on the staging sites project. The sites build keeps root domain `simpleoutcome.dev`, so that host is the editor. Turn off Deployment Protection on both staging projects, or a preview asks visitors to log in to Vercel. `*.simpleoutcome.dev` salon hosts stay on the production sites project. After the first Staging migrate, confirm `moddatetime` and bucket `pod-private` on the **staging** Supabase project, and insert the first `site_user` there.
 
 | Kind | Name | Used by |
 | --- | --- | --- |
@@ -168,7 +168,7 @@ A GitHub name with no `_PROD` or `_STAGE` suffix is shared by production and sta
 | Variable | `VERCEL_PROJECT_ID_SITES_STAGE` | Staging sites app. |
 | Variable | `NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE` | Mapped to `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Same anon key as local `.env.local`. |
 | Secret | `SUPABASE_SECRET_KEY_STAGE` | Mapped to `SUPABASE_SECRET_KEY`. Same secret as local `.env.local`. |
-| Variable | `NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE` | Mapped to `NEXT_PUBLIC_SITES_ROOT_DOMAIN`. `stage.simpleoutcome.dev`. |
+| Variable | `NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE` | Unused. Staging hardcodes `dev.simpleoutcome.dev` for the web app and `simpleoutcome.dev` for sites. |
 
 Local `.env.local` keeps the unprefixed names the apps read. Fill both files from the staging project:
 
@@ -176,7 +176,6 @@ Local `.env.local` keeps the unprefixed names the apps read. Fill both files fro
 SUPABASE_PROJECT_REF=<staging project ref>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<staging anon key>
 SUPABASE_SECRET_KEY=<staging secret key>
-NEXT_PUBLIC_SITES_ROOT_DOMAIN=stage.simpleoutcome.dev
 ```
 
-The Supabase URL is `https://<ref>.supabase.co`. The web URL is `https://stage.simpleoutcome.dev`. Do not commit either file.
+On the web app, set `NEXT_PUBLIC_SITES_ROOT_DOMAIN=dev.simpleoutcome.dev`. On sites, keep `NEXT_PUBLIC_SITES_ROOT_DOMAIN=simpleoutcome.dev` so `admin.localhost` stays the editor. The Supabase URL is `https://<ref>.supabase.co`. The staging web URL is `https://dev.simpleoutcome.dev`. The staging editor is `https://admindev.simpleoutcome.dev`. Do not commit either file.

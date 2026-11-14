@@ -1,6 +1,6 @@
 # Staging: Supabase migrations + Vercel (packages/web). No version bump and no GitHub release.
 # Env comes from GitHub (*_STAGE). The Vercel project settings stay empty.
-# Deploys a preview, then aliases NEXT_PUBLIC_SITES_ROOT_DOMAIN onto that deployment.
+# Deploys a preview, then aliases dev.simpleoutcome.dev onto that deployment.
 name: Staging
 run-name: 'Staging: ${{ inputs.description }}'
 'on':
@@ -104,7 +104,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           # GitHub *_STAGE names, assigned to the names the app reads.
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_STAGE }}
-          NEXT_PUBLIC_SITES_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE }}
+          NEXT_PUBLIC_SITES_ROOT_DOMAIN: dev.simpleoutcome.dev
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY_STAGE }}
           NEXT_PUBLIC_APP_VERSION: staging
@@ -121,10 +121,6 @@ jobs:
           fi
           if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
             echo '::error::Repository variable SUPABASE_PROJECT_REF_STAGE is empty.'
-            exit 1
-          fi
-          if [ -z "${NEXT_PUBLIC_SITES_ROOT_DOMAIN:-}" ]; then
-            echo '::error::Repository variable NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE is empty.'
             exit 1
           fi
           if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
@@ -206,7 +202,7 @@ jobs:
           do
             deploy_args+=(--env "${key}=${!key}")
           done
-          # Point the stable staging hostname at this preview (domain must already exist on the Vercel project).
+          # Point the stable staging hostname at this preview (domain must exist on the Vercel project + DNS).
           # https://vercel.com/docs/cli/alias — the alias is a hostname, with no scheme.
           DEPLOY_JSON="$("${deploy_args[@]}")"
           PREVIEW_URL="$(printf '%s\n' "$DEPLOY_JSON" | jq -r '.url // empty')"
@@ -215,15 +211,13 @@ jobs:
             printf '%s\n' "$DEPLOY_JSON"
             exit 1
           fi
-          alias_host="${NEXT_PUBLIC_SITES_ROOT_DOMAIN#https://}"
-          alias_host="${alias_host#http://}"
-          alias_host="${alias_host%%/*}"
-          npx vercel alias set "$PREVIEW_URL" "$alias_host" --token="$VERCEL_TOKEN"
-          echo "::notice title=Vercel staging::${alias_host} → ${PREVIEW_URL}"
+          STAGING_ALIAS_HOST=dev.simpleoutcome.dev
+          npx vercel alias set "$PREVIEW_URL" "$STAGING_ALIAS_HOST" --token="$VERCEL_TOKEN"
+          echo "::notice title=Vercel staging::${STAGING_ALIAS_HOST} → ${PREVIEW_URL}"
           {
             echo "## Vercel preview (staging)"
             echo
-            echo "**Alias:** https://${alias_host}"
+            echo "**Alias:** https://${STAGING_ALIAS_HOST}"
             echo
             echo "**Deployment:** https://${PREVIEW_URL#https://}"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -191,5 +191,5 @@ export function isSiteAdminHost(host: string, rootDomain: string): boolean {
   const normalised = host.trim().toLowerCase().replace(/\.$/, '');
   const withoutPort = normalised.replace(/:\d+$/, '');
   const root = rootDomain.trim().toLowerCase();
-  return withoutPort === `admin.${root}` || withoutPort === 'admin.localhost';
+  return withoutPort === `admin.${root}` || withoutPort === `admindev.${root}` || withoutPort === 'admin.localhost';
 }
