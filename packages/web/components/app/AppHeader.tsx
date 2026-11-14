@@ -5,6 +5,7 @@ import {Box, Flex, HStack, IconButton, Text, useSlotRecipe} from '@chakra-ui/rea
 import {SettingsIcon, SignOutIcon} from '@so/component';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 import AppIconTooltip from '@/components/app/AppIconTooltip';
+import BrandMark from '@/components/brand/BrandMark';
 
 export default function AppHeader() {
   const recipe = useSlotRecipe({key: 'appHeader'});
@@ -19,7 +20,10 @@ export default function AppHeader() {
     <Box as="header" className="no-print" css={styles.root}>
       <Flex css={styles.inner}>
         <Text asChild css={styles.brand}>
-          <Link href="/app">SimpleOutcome</Link>
+          <Link href="/app">
+            <BrandMark />
+            SimpleOutcome
+          </Link>
         </Text>
         <HStack gap={2}>
           <AppIconTooltip label="Settings">

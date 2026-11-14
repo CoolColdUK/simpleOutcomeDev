@@ -1,3 +1,4 @@
+import AdminBrand from '@/components/admin/AdminBrand';
 import AdminResetPasswordForm from '@/components/admin/AdminResetPasswordForm';
 import {requireAdminHostPage} from '@/lib/admin/requireAdminHost';
 
@@ -18,6 +19,9 @@ export default async function ResetPasswordPage({
     <div className="admin">
       <div className="admin-shell">
         <div className="admin-card">
+          <div className="admin-auth-brand">
+            <AdminBrand />
+          </div>
           <h1>Set password</h1>
           {token.length === 0 ? <p className="admin-error">Reset link is missing or invalid.</p> : null}
           <AdminResetPasswordForm token={token} />

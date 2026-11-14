@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import {Box, Button, Heading, Icon, Link, Text, Tooltip} from '@chakra-ui/react';
 import {useState} from 'react';
+import BrandMark from '@/components/brand/BrandMark';
 import ContactUsDialog from './ContactUsDialog';
 
 const HERO_IMAGE_SRC = '/images/bailey-zindel-NRQV-hBF10M-unsplash.jpg';
@@ -32,21 +33,8 @@ export default function HeroSection() {
         zIndex={2}
       />
       <Box position="relative" zIndex={3} pl={{base: 6, md: 16}} pr={{base: 6, md: 0}} py={{base: 12, md: 20}} maxW="700px">
-        <Box display="flex" alignItems="center" mb={6}>
-          <Box
-            w="40px"
-            h="40px"
-            borderRadius="full"
-            bg="brand.500"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            mr={3}
-          >
-            <Text color="brand.700" fontWeight="900" fontSize="22px">
-              &#9881;
-            </Text>
-          </Box>
+        <Box display="flex" alignItems="center" gap={3} mb={6}>
+          <BrandMark size={40} />
           <Text color="fg.default" fontWeight="900" letterSpacing="0.08em">
             SIMPLE OUTCOME
           </Text>

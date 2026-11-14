@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import Link from 'next/link';
 import type {SiteSessionContext} from '@/lib/admin/siteSession';
+import AdminBrand from '@/components/admin/AdminBrand';
 import AdminImpersonationBanner from '@/components/admin/AdminImpersonationBanner';
 import AdminLogoutButton from '@/components/admin/AdminLogoutButton';
 
@@ -20,6 +21,7 @@ export default function AdminShell({
         ) : null}
         <nav className="admin-nav">
           <div className="admin-nav-links">
+            <AdminBrand />
             <Link href="/">Sites</Link>
             <Link href="/change-password">Password</Link>
             {admin ? <Link href="/users">Users</Link> : null}

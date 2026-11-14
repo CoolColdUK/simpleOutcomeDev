@@ -3,6 +3,7 @@
 import {useState} from 'react';
 import Link from 'next/link';
 import {Alert, Box, Button, Field, Heading, Input, Stack, Text, useSlotRecipe} from '@chakra-ui/react';
+import BrandMark from '@/components/brand/BrandMark';
 import getSupabaseBrowserClient from '@/lib/supabase/getSupabaseBrowserClient';
 
 export default function AppLoginForm() {
@@ -35,9 +36,15 @@ export default function AppLoginForm() {
   return (
     <Box as="main" css={styles.root}>
       <Stack css={styles.inner} gap={6}>
-        <Heading as="h1" size="lg" textAlign="center">
-          Sign in
-        </Heading>
+        <Stack align="center" gap={2}>
+          <BrandMark size={48} />
+          <Text fontWeight="800" letterSpacing="0.08em" fontSize="sm">
+            SIMPLE OUTCOME
+          </Text>
+          <Heading as="h1" size="lg">
+            Sign in
+          </Heading>
+        </Stack>
         <Field.Root>
           <Field.Label>Email</Field.Label>
           <Input

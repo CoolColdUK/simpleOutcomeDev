@@ -15,6 +15,26 @@
   color: var(--admin-accent);
 }
 
+.admin a.admin-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--admin-fg);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
+.admin-brand img {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+
+.admin-auth-brand {
+  margin-bottom: 1rem;
+}
+
 .admin-shell {
   max-width: 1100px;
   margin: 0 auto;

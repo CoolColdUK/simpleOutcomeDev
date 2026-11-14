@@ -14,9 +14,20 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export const metadata: Metadata = {
-  title: 'Site',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const host = await readRequestHost();
+  const env = readSitesPublicEnv();
+  if (!isSiteAdminHost(host, env.rootDomain)) {
+    return {title: 'Site'};
+  }
+  return {
+    title: 'Site',
+    icons: {
+      icon: [{url: '/brand/mark.svg', type: 'image/svg+xml'}],
+      apple: [{url: '/brand/apple-touch-icon.png', sizes: '180x180'}],
+    },
+  };
+}
 
 export default async function RootLayout({children}: {children: ReactNode}) {
   const host = await readRequestHost();

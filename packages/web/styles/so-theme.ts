@@ -22,6 +22,9 @@ const appHeaderRecipe = defineSlotRecipe({
     },
     brand: {
       fontWeight: '800',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '2',
     },
   },
 });

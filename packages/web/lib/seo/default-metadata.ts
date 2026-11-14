@@ -49,6 +49,7 @@ export function buildWebsiteJsonLd(): Record<string, unknown> {
     '@type': 'Organization',
     name: site.appName,
     url: site.webUrl,
+    logo: `${site.webUrl}/icons/icon-512.png`,
     description: site.description,
     contactPoint: {
       '@type': 'ContactPoint',

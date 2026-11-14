@@ -3,6 +3,7 @@
 import {Box, Button, Flex, Link as ChakraLink, SimpleGrid, Text} from '@chakra-ui/react';
 import dayjs from 'dayjs';
 import {useState} from 'react';
+import BrandMark from '@/components/brand/BrandMark';
 import ContactUsDialog from './ContactUsDialog';
 
 export default function Footer() {
@@ -13,9 +14,12 @@ export default function Footer() {
       <Box maxW="6xl" mx="auto" px={{base: 4, md: 8}}>
         <SimpleGrid columns={{base: 1, md: 3}} gap={8}>
           <Box>
-            <Text fontSize="xl" fontWeight="700" mb={3}>
-              SimpleOutcome
-            </Text>
+            <Flex align="center" gap={2} mb={3}>
+              <BrandMark size={32} />
+              <Text fontSize="xl" fontWeight="700">
+                SimpleOutcome
+              </Text>
+            </Flex>
             <Text fontSize="sm" color="fg.muted">
               Building innovative digital solutions that solve real-world problems. We focus on creating user-friendly
               applications that make a difference.

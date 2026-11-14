@@ -1,3 +1,4 @@
+import AdminBrand from '@/components/admin/AdminBrand';
 import AdminForgotPasswordForm from '@/components/admin/AdminForgotPasswordForm';
 import {requireAdminHostPage} from '@/lib/admin/requireAdminHost';
 
@@ -12,6 +13,9 @@ export default async function ForgotPasswordPage() {
     <div className="admin">
       <div className="admin-shell">
         <div className="admin-card">
+          <div className="admin-auth-brand">
+            <AdminBrand />
+          </div>
           <h1>Forgot password</h1>
           <p className="admin-muted">We email a reset link to the address on the site account. First login uses this to set a password.</p>
           <AdminForgotPasswordForm />
