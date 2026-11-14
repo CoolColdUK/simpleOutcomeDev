@@ -46,9 +46,9 @@ jobs:
         id: vercel
         env:
           SYNC_ENV: ${{ inputs.sync_env }}
-          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          WEB_URL: ${{ secrets.NEXT_PUBLIC_WEB_URL }}
+          SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
         run: |
           set -euo pipefail
           API='https://api.vercel.com'
@@ -225,5 +225,5 @@ jobs:
             echo
             echo 'GitHub secret still required: `VERCEL_TOKEN`.'
             echo
-            echo 'Do not set build env on this Vercel project. Sites production reads `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from GitHub secrets, `NEXT_PUBLIC_SITES_ROOT_DOMAIN` from a GitHub variable, and optional `SITES_SALES_EMAIL` (default info@simpleoutcome.dev). Do not set `SUPABASE_SECRET_KEY`.'
+            echo 'Do not set build env on this Vercel project. Sites production reads `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SITES_ROOT_DOMAIN` from GitHub variables, plus optional `SITES_SALES_EMAIL` (default info@simpleoutcome.dev). Inject `SUPABASE_SECRET_KEY` from a GitHub secret at build; do not set it on the Vercel project.'
           } >> "$GITHUB_STEP_SUMMARY"

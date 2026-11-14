@@ -16,9 +16,9 @@ Copy [packages/web/env.example](packages/web/env.example) to `packages/web/.env.
 
 | Name | Local | Production |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Required. Supabase → Project Settings → API. | GitHub secret. The **Create Vercel project** workflow copies it onto the Vercel project. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Required. Same API page. The anon key, not the secret. | GitHub secret. Copied onto the Vercel project with the URL. |
-| `NEXT_PUBLIC_WEB_URL` | Optional. Defaults to `https://simpleoutcome.dev`. Used for SEO, sitemap, and robots. | GitHub secret `NEXT_PUBLIC_WEB_URL`, copied onto Vercel when you sync env. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Required. Supabase → Project Settings → API. | GitHub variable. The **Create Vercel project** workflow copies it onto the Vercel project. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Required. Same API page. The anon key, not the secret. | GitHub variable. Copied onto the Vercel project with the URL. |
+| `NEXT_PUBLIC_WEB_URL` | Optional. Defaults to `https://simpleoutcome.dev`. Used for SEO, sitemap, and robots. | GitHub variable. Copied onto Vercel when you sync env. |
 | `SUPABASE_SECRET_KEY` | Required for `/api/mcp` and the agent REST routes. Not required to sign in and use the app. Server only. Do not prefix with `NEXT_PUBLIC_`. | GitHub secret. **Production** writes it to the Vercel project as a sensitive production env var. |
 | `NEXT_PUBLIC_APP_VERSION` | Optional. | Set by the Production workflow. |
 | `NEXT_PUBLIC_GIT_COMMIT` | Optional. | Set by the Production workflow. |
@@ -62,8 +62,8 @@ Admins create a key under **API keys**. Call `https://admin.simpleoutcome.dev/ap
 
 | Name | Local | Sites production |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Empty for file demos. Required to load `public.site`. | GitHub secret. Injected at build. Do not set it on the Vercel sites project. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as the URL. | GitHub secret. Injected at build. Do not set it on the Vercel sites project. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Empty for file demos. Required to load `public.site`. | GitHub variable. Injected at build. Do not set it on the Vercel sites project. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as the URL. | GitHub variable. Injected at build. Do not set it on the Vercel sites project. |
 | `NEXT_PUBLIC_SITES_ROOT_DOMAIN` | Optional. Defaults to `simpleoutcome.dev`. | GitHub variable. Required. Use `simpleoutcome.dev`. |
 | `NEXT_PUBLIC_SITES_SALES_EMAIL` | Optional. Defaults to `info@simpleoutcome.dev`. The page does not render this address. | GitHub variable `SITES_SALES_EMAIL`. Empty becomes `info@simpleoutcome.dev`. Must be an email when set. |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Empty skips the Turnstile widget. A submit then fails with “Confirm you are a person”. | GitHub variable. Required. Cloudflare Turnstile site key. |
@@ -140,9 +140,9 @@ Create the Vercel projects once, with no Git connection: **Create Vercel project
 | Secret | `SUPABASE_ACCESS_TOKEN` | Production `db push`. Dashboard → Account → Access Tokens. |
 | Secret | `SUPABASE_PRODUCTION_DB_PASSWORD` | Production `db push`. |
 | Variable | `SUPABASE_PRODUCTION_PROJECT_REF` | The ref in `https://<ref>.supabase.co`. |
-| Secret | `NEXT_PUBLIC_SUPABASE_URL` | Both apps. |
-| Secret | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Both apps. |
-| Secret | `NEXT_PUBLIC_WEB_URL` | Main app, when syncing Vercel env. |
+| Variable | `NEXT_PUBLIC_SUPABASE_URL` | Both apps. |
+| Variable | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Both apps. |
+| Variable | `NEXT_PUBLIC_WEB_URL` | Main app, when syncing Vercel env. |
 | Secret | `SUPABASE_SECRET_KEY` | Main app (copied to Vercel) and sites (build inject). |
 | Variable | `NEXT_PUBLIC_SITES_ROOT_DOMAIN` | Sites. |
 | Variable | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Sites. |

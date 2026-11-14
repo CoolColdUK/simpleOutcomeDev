@@ -44,9 +44,9 @@ jobs:
         id: vercel
         env:
           SYNC_ENV: ${{ inputs.sync_env }}
-          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          WEB_URL: ${{ secrets.NEXT_PUBLIC_WEB_URL }}
+          SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
         run: |
           set -euo pipefail
           API='https://api.vercel.com'
@@ -222,5 +222,5 @@ jobs:
             echo
             echo 'GitHub secret still required: `VERCEL_TOKEN`.'
             echo
-            echo 'If contact/auth should work on Vercel, set project env (or GitHub secrets used by this workflow): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_WEB_URL`.'
+            echo 'If contact/auth should work on Vercel, set project env (or GitHub variables used by this workflow): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_WEB_URL`.'
           } >> "$GITHUB_STEP_SUMMARY"

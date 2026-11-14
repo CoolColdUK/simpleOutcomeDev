@@ -50,8 +50,8 @@ jobs:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_SITES_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           SITES_SALES_EMAIL: ${{ vars.SITES_SALES_EMAIL }}
@@ -73,11 +73,11 @@ jobs:
             exit 1
           fi
           if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ]; then
-            echo '::error::Repository secret NEXT_PUBLIC_SUPABASE_URL is empty.'
+            echo '::error::Repository variable NEXT_PUBLIC_SUPABASE_URL is empty.'
             exit 1
           fi
           if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
-            echo '::error::Repository secret NEXT_PUBLIC_SUPABASE_ANON_KEY is empty.'
+            echo '::error::Repository variable NEXT_PUBLIC_SUPABASE_ANON_KEY is empty.'
             exit 1
           fi
           if [ -z "${NEXT_PUBLIC_SITES_ROOT_DOMAIN:-}" ]; then
