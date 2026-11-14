@@ -67,6 +67,8 @@ jobs:
         uses: supabase/setup-cli@v2
         with:
           version: latest
+          # Unauthenticated "latest" lookups share the runner IP quota and fail with rate limit exceeded.
+          github-token: ${{ github.token }}
 
       - name: Link Supabase project (staging)
         if: ${{ inputs.deploy_supabase }}
