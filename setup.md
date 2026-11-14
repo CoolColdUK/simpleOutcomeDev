@@ -133,9 +133,9 @@ A live salon gets a row in `public.site_contact` (`delivery_email`) from the SQL
 
 Create the production Vercel projects once, with no Git connection: **Create Vercel project**, then **Create Vercel sites project**. Deploy with **Production** and **Sites production**.
 
-Staging is **Actions → Staging** (migrations + main app) and **Actions → Sites staging**. Neither bumps a version or publishes a GitHub release. GitHub holds the staging values (`*_STAGE`). The workflows inject them for that build and that deployment. No workflow writes env onto a Vercel project. Create the staging projects once, with no Git connection, before the first staging deploy. Run **Create Vercel project** with project name `simple-outcome-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_STAGE`. Run **Create Vercel sites project** with project name `simple-outcome-sites-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_SITES_STAGE`. Target `prod` writes `VERCEL_PROJECT_ID_PROD` or `VERCEL_PROJECT_ID_SITES_PROD` and must keep the existing production project names.
+Staging is **Actions → Staging** (migrations + main app) and **Actions → Sites staging**. Neither bumps a version or publishes a GitHub release. GitHub holds the staging values (`*_STAGE`). The workflows inject them for that build and that deployment. No workflow writes env onto a Vercel project. Staging previews use `VERCEL_PROJECT_ID` and `VERCEL_PROJECT_ID_SITES`. Those projects must already have a production deployment, or Vercel rejects the preview.
 
-**Staging** deploys a Vercel preview, then aliases `dev.simpleoutcome.dev` onto that deployment. Add that hostname on the staging web project before the first run. **Sites staging** deploys a preview and aliases `admindev.simpleoutcome.dev`. Add that hostname on the staging sites project. The sites build keeps root domain `simpleoutcome.dev`, so that host is the editor. Turn off Deployment Protection on both staging projects, or a preview asks visitors to log in to Vercel. `*.simpleoutcome.dev` salon hosts stay on the production sites project. After the first Staging migrate, confirm `moddatetime` and bucket `pod-private` on the **staging** Supabase project, and insert the first `site_user` there.
+**Staging** deploys a preview, then aliases `dev.simpleoutcome.dev`. **Sites staging** deploys a preview, then aliases `admindev.simpleoutcome.dev`. Add those hostnames on those projects. The sites build keeps root domain `simpleoutcome.dev`, so `admindev.simpleoutcome.dev` is the editor. Turn off Deployment Protection, or a preview asks visitors to log in to Vercel. After the first Staging migrate, confirm `moddatetime` and bucket `pod-private` on the **staging** Supabase project, and insert the first `site_user` there.
 
 | Kind | Name | Used by |
 | --- | --- | --- |
@@ -164,8 +164,8 @@ A GitHub name with no `_PROD` or `_STAGE` suffix is shared by production and sta
 | --- | --- | --- |
 | Secret | `SUPABASE_DB_PASSWORD_STAGE` | Staging `db push`. Read as `SUPABASE_DB_PASSWORD`. `supabase link` ignores `--password`. |
 | Variable | `SUPABASE_PROJECT_REF_STAGE` | Staging project ref. Passed to `supabase link`. `NEXT_PUBLIC_SUPABASE_URL` is `https://<ref>.supabase.co`. |
-| Variable | `VERCEL_PROJECT_ID_STAGE` | Staging main app. |
-| Variable | `VERCEL_PROJECT_ID_SITES_STAGE` | Staging sites app. |
+| Variable | `VERCEL_PROJECT_ID` | Staging web preview. |
+| Variable | `VERCEL_PROJECT_ID_SITES` | Sites staging preview. |
 | Variable | `NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE` | Mapped to `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Same anon key as local `.env.local`. |
 | Secret | `SUPABASE_SECRET_KEY_STAGE` | Mapped to `SUPABASE_SECRET_KEY`. Same secret as local `.env.local`. |
 | Variable | `NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE` | Unused. Staging hardcodes `dev.simpleoutcome.dev` for the web app and `simpleoutcome.dev` for sites. |

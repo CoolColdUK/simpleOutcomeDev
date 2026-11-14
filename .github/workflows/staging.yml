@@ -129,7 +129,7 @@ jobs:
         if: ${{ inputs.deploy_vercel }}
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_STAGE }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           # GitHub *_STAGE names, assigned to the names the app reads.
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_STAGE }}
@@ -145,7 +145,7 @@ jobs:
             exit 1
           fi
           if [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
-            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_STAGE.'
+            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID.'
             exit 1
           fi
           if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
@@ -163,6 +163,7 @@ jobs:
           fi
           echo "NEXT_PUBLIC_GIT_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           export NEXT_PUBLIC_GIT_COMMIT="$(git rev-parse HEAD)"
+          # Preview on the production Vercel project. That project already has a production deployment.
           npx vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
           node <<'NODE'
           const {mkdirSync, readFileSync, writeFileSync} = require('node:fs');

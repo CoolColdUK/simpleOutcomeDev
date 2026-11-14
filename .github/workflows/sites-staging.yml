@@ -52,7 +52,7 @@ jobs:
       - name: Deploy sites to Vercel (staging / preview, prebuilt)
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES_STAGE }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           # GitHub *_STAGE names, assigned to the names the app reads.
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_STAGE }}
@@ -74,7 +74,7 @@ jobs:
             exit 1
           fi
           if [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
-            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_SITES_STAGE.'
+            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_SITES.'
             exit 1
           fi
           if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
@@ -123,6 +123,7 @@ jobs:
             echo '::error::Variable NEXT_PUBLIC_SITES_SALES_EMAIL is not an email address.'
             exit 1
           fi
+          # Preview on the production sites project. That project already has a production deployment.
           npx vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
           node <<'NODE'
           const {mkdirSync, readFileSync, writeFileSync} = require('node:fs');
