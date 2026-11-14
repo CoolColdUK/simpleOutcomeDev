@@ -148,38 +148,7 @@ jobs:
 
       # Dashboard: Framework Preset = Next.js, Root Directory = packages/web, “Include files outside root” on.
       # Disable Git→Vercel auto-deploy if you only want GHA deploys.
-      - name: Sync SUPABASE_SECRET_KEY to Vercel (production)
-        if: ${{ inputs.deploy_vercel }}
-        env:
-          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_PROD }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY_PROD }}
-        run: |
-          set -euo pipefail
-          if [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
-            echo '::error::Add repository secret SUPABASE_SECRET_KEY_PROD (Supabase secret key for server-side API routes).'
-            exit 1
-          fi
-          if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo '::error::Add repository secret VERCEL_TOKEN (https://vercel.com/account/tokens).'
-            exit 1
-          fi
-          if printf '%s' "$SUPABASE_SECRET_KEY" | npx vercel env update SUPABASE_SECRET_KEY \
-            --environment=production \
-            --sensitive \
-            --yes \
-            --token="$VERCEL_TOKEN"; then
-            echo 'Updated SUPABASE_SECRET_KEY on Vercel (production).'
-          else
-            printf '%s' "$SUPABASE_SECRET_KEY" | npx vercel env add SUPABASE_SECRET_KEY \
-              --environment=production \
-              --sensitive \
-              --yes \
-              --token="$VERCEL_TOKEN"
-            echo 'Added SUPABASE_SECRET_KEY on Vercel (production).'
-          fi
-
+      # Env stays on GitHub. This deploy writes .env for the build and passes the same values for this deployment only.
       - name: Deploy web to Vercel (production, prebuilt)
         if: ${{ inputs.deploy_vercel }}
         env:
@@ -265,10 +234,22 @@ jobs:
               process.exit(1);
             }
           }
-          console.log('Wrote build env from GitHub *_PROD into .vercel/.env.production.local. Values are not printed.');
+          console.log('Wrote build env from GitHub into .vercel/.env.production.local. Values are not printed. Nothing is saved on the Vercel project.');
           NODE
           npx vercel build --prod --yes --token="$VERCEL_TOKEN"
-          npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"
+          deploy_args=(npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")
+          for key in \
+            SUPABASE_PROJECT_REF \
+            NEXT_PUBLIC_SUPABASE_URL \
+            NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            NEXT_PUBLIC_SITES_ROOT_DOMAIN \
+            SUPABASE_SECRET_KEY \
+            NEXT_PUBLIC_APP_VERSION \
+            NEXT_PUBLIC_GIT_COMMIT
+          do
+            deploy_args+=(--env "${key}=${!key}")
+          done
+          "${deploy_args[@]}"
 
       - name: Push tag and commit
         run: |

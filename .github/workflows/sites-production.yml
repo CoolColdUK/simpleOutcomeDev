@@ -45,78 +45,6 @@ jobs:
       - name: Build model
         run: npm run build:model
 
-      # Server secrets are not inlined into the Next bundle. Prebuilt deploy only gets
-      # them at runtime if they exist on the Vercel project (same pattern as main-app Production).
-      - name: Sync sites server env to Vercel (production)
-        env:
-          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES_PROD }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY_PROD }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
-          UPSTASH_REDIS_REST_URL: ${{ vars.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          SITES_IP_HASH_PEPPER: ${{ secrets.SITES_IP_HASH_PEPPER }}
-        run: |
-          set -euo pipefail
-          if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo '::error::Add repository secret VERCEL_TOKEN.'
-            exit 1
-          fi
-          if [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
-            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_SITES_PROD.'
-            exit 1
-          fi
-          upsert_sensitive() {
-            local name="$1"
-            local value="$2"
-            if [ -z "${value}" ]; then
-              echo "::error::${name} is empty."
-              exit 1
-            fi
-            if printf '%s' "$value" | npx vercel env update "$name" \
-              --environment=production \
-              --sensitive \
-              --yes \
-              --token="$VERCEL_TOKEN"; then
-              echo "Updated ${name} on Vercel sites (production)."
-            else
-              printf '%s' "$value" | npx vercel env add "$name" \
-                --environment=production \
-                --sensitive \
-                --yes \
-                --token="$VERCEL_TOKEN"
-              echo "Added ${name} on Vercel sites (production)."
-            fi
-          }
-          upsert_plain() {
-            local name="$1"
-            local value="$2"
-            if [ -z "${value}" ]; then
-              echo "::error::${name} is empty."
-              exit 1
-            fi
-            if printf '%s' "$value" | npx vercel env update "$name" \
-              --environment=production \
-              --yes \
-              --token="$VERCEL_TOKEN"; then
-              echo "Updated ${name} on Vercel sites (production)."
-            else
-              printf '%s' "$value" | npx vercel env add "$name" \
-                --environment=production \
-                --yes \
-                --token="$VERCEL_TOKEN"
-              echo "Added ${name} on Vercel sites (production)."
-            fi
-          }
-          upsert_sensitive SUPABASE_SECRET_KEY "$SUPABASE_SECRET_KEY"
-          upsert_sensitive RESEND_API_KEY "$RESEND_API_KEY"
-          upsert_sensitive TURNSTILE_SECRET_KEY "$TURNSTILE_SECRET_KEY"
-          upsert_plain UPSTASH_REDIS_REST_URL "$UPSTASH_REDIS_REST_URL"
-          upsert_sensitive UPSTASH_REDIS_REST_TOKEN "$UPSTASH_REDIS_REST_TOKEN"
-          upsert_sensitive SITES_IP_HASH_PEPPER "$SITES_IP_HASH_PEPPER"
-
       - name: Deploy sites to Vercel (production, prebuilt)
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
@@ -255,7 +183,24 @@ jobs:
               process.exit(1);
             }
           }
-          console.log('Overrode build env in .vercel/.env.production.local from GitHub. Values are not printed.');
+          console.log('Wrote build env from GitHub into .vercel/.env.production.local. Values are not printed. Nothing is saved on the Vercel project.');
           NODE
           npx vercel build --prod --yes --token="$VERCEL_TOKEN"
-          npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"
+          deploy_args=(npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")
+          for key in \
+            SUPABASE_PROJECT_REF \
+            NEXT_PUBLIC_SUPABASE_URL \
+            NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            NEXT_PUBLIC_SITES_ROOT_DOMAIN \
+            NEXT_PUBLIC_SITES_SALES_EMAIL \
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY \
+            SUPABASE_SECRET_KEY \
+            RESEND_API_KEY \
+            TURNSTILE_SECRET_KEY \
+            UPSTASH_REDIS_REST_URL \
+            UPSTASH_REDIS_REST_TOKEN \
+            SITES_IP_HASH_PEPPER
+          do
+            deploy_args+=(--env "${key}=${!key}")
+          done
+          "${deploy_args[@]}"

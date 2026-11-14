@@ -21,7 +21,7 @@ Local dev uses the **staging** Supabase project. Put that project's URL, anon ke
 | `SUPABASE_PROJECT_REF` | Required. Staging project ref. The API URL is `https://<ref>.supabase.co`. | GitHub variable `SUPABASE_PROJECT_REF_PROD`. Workflows build `NEXT_PUBLIC_SUPABASE_URL` from it. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Required. Staging anon key, not the secret. | GitHub variable `NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD`. |
 | `NEXT_PUBLIC_SITES_ROOT_DOMAIN` | Staging root domain, for example `stage.simpleoutcome.dev`. The site URL is `https://` plus this domain. | GitHub variable `NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD`. |
-| `SUPABASE_SECRET_KEY` | Staging secret key. Required for `/api/mcp` and the agent REST routes. Server only. Do not prefix with `NEXT_PUBLIC_`. | GitHub secret `SUPABASE_SECRET_KEY_PROD`. **Production** writes it to the production Vercel project as `SUPABASE_SECRET_KEY`. |
+| `SUPABASE_SECRET_KEY` | Staging secret key. Required for `/api/mcp` and the agent REST routes. Server only. Do not prefix with `NEXT_PUBLIC_`. | GitHub secret `SUPABASE_SECRET_KEY_PROD`. Passed to that deployment as `SUPABASE_SECRET_KEY`. |
 | `NEXT_PUBLIC_APP_VERSION` | Optional. | Set by the Production workflow. |
 | `NEXT_PUBLIC_GIT_COMMIT` | Optional. | Set by the Production workflow. |
 
@@ -69,16 +69,16 @@ Admins create a key under **API keys**. Call `https://admin.simpleoutcome.dev/ap
 | `NEXT_PUBLIC_SITES_ROOT_DOMAIN` | Optional. Defaults to `simpleoutcome.dev`. | GitHub variable `NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD`. Required. `simpleoutcome.dev`. |
 | `NEXT_PUBLIC_SITES_SALES_EMAIL` | Optional. Defaults to `info@simpleoutcome.dev`. The page does not render this address. | GitHub variable `NEXT_PUBLIC_SITES_SALES_EMAIL`. Shared by production and staging. Empty becomes `info@simpleoutcome.dev`. Must be an email when set. |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Empty skips the Turnstile widget. A submit then fails with “Confirm you are a person”. | GitHub variable. Required. Cloudflare Turnstile site key. |
-| `SUPABASE_SECRET_KEY` | Required for admin, drafts, published custom domains, and live enquiries. Server only. | GitHub secret `SUPABASE_SECRET_KEY_PROD`. **Sites production** copies it to the Vercel sites project as `SUPABASE_SECRET_KEY` and injects it at build. |
-| `RESEND_API_KEY` | Empty: submit returns “This form is not available right now.” after Turnstile passes. | GitHub secret. Synced to Vercel sites (runtime) and injected at build. |
-| `TURNSTILE_SECRET_KEY` | Empty is a configuration error once a token is posted. Server only. | GitHub secret. Synced to Vercel sites and injected at build. |
-| `UPSTASH_REDIS_REST_URL` | Leave all three rate-limit values empty to use the in-memory limit (5 per IP and 30 per site each hour, lost on restart). | GitHub variable. Synced to Vercel sites and injected at build. |
-| `UPSTASH_REDIS_REST_TOKEN` | Set together with the URL and the pepper, or leave all three empty. A partial set fails closed. | GitHub secret. Synced to Vercel sites and injected at build. |
-| `SITES_IP_HASH_PEPPER` | Same. Any non-empty string is enough locally. | GitHub secret. Synced to Vercel sites and injected at build. |
+| `SUPABASE_SECRET_KEY` | Required for admin, drafts, published custom domains, and live enquiries. Server only. | GitHub secret `SUPABASE_SECRET_KEY_PROD`. Written into the build env and passed to that deployment as `SUPABASE_SECRET_KEY`. |
+| `RESEND_API_KEY` | Empty: submit returns “This form is not available right now.” after Turnstile passes. | GitHub secret. Written into the build env and passed to that deployment. |
+| `TURNSTILE_SECRET_KEY` | Empty is a configuration error once a token is posted. Server only. | GitHub secret. Written into the build env and passed to that deployment. |
+| `UPSTASH_REDIS_REST_URL` | Leave all three rate-limit values empty to use the in-memory limit (5 per IP and 30 per site each hour, lost on restart). | GitHub variable. Written into the build env and passed to that deployment. |
+| `UPSTASH_REDIS_REST_TOKEN` | Set together with the URL and the pepper, or leave all three empty. A partial set fails closed. | GitHub secret. Written into the build env and passed to that deployment. |
+| `SITES_IP_HASH_PEPPER` | Same. Any non-empty string is enough locally. | GitHub secret. Written into the build env and passed to that deployment. |
 
 Resend must accept `Website enquiry via Simple Outcome <info@simpleoutcome.dev>`. Verify `info@simpleoutcome.dev` on the domain `simpleoutcome.dev` in Resend before a real send.
 
-Do not put server secrets in `NEXT_PUBLIC_` names. Sites production syncs server env onto the Vercel sites project (so API routes can read them at runtime), then also writes `.vercel/.env.production.local` for the build. It fails if any required value is empty, and it does not print the values.
+Do not put server secrets in `NEXT_PUBLIC_` names. Deploys read GitHub, write `.vercel/.env.production.local` for the build, and pass the same values to that deployment. They do not save env on the Vercel project. A deploy fails if a required value is empty, and it does not print the values.
 
 ## Site SEO
 
@@ -133,7 +133,7 @@ A live salon gets a row in `public.site_contact` (`delivery_email`) from the SQL
 
 Create the production Vercel projects once, with no Git connection: **Create Vercel project**, then **Create Vercel sites project**. Deploy with **Production** and **Sites production**.
 
-Staging is **Actions → Staging** (migrations + main app) and **Actions → Sites staging**. Neither bumps a version or publishes a GitHub release. Each targets a separate Vercel project's production environment, so the workflow still uses `--prod`. GitHub holds the staging values (`*_STAGE`). The workflows inject them for that build and that deployment. They do not call `vercel env add`, so the staging Vercel project settings stay empty. Create the staging projects once, with no Git connection, before the first staging deploy. Run **Create Vercel project** with project name `simple-outcome-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_STAGE`. Run **Create Vercel sites project** with project name `simple-outcome-sites-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_SITES_STAGE`. Leave env sync off. Target `prod` writes `VERCEL_PROJECT_ID_PROD` or `VERCEL_PROJECT_ID_SITES_PROD` and must keep the existing production project names.
+Staging is **Actions → Staging** (migrations + main app) and **Actions → Sites staging**. Neither bumps a version or publishes a GitHub release. Each targets a separate Vercel project's production environment, so the workflow still uses `--prod`. GitHub holds the staging values (`*_STAGE`). The workflows inject them for that build and that deployment. No workflow writes env onto a Vercel project. Create the staging projects once, with no Git connection, before the first staging deploy. Run **Create Vercel project** with project name `simple-outcome-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_STAGE`. Run **Create Vercel sites project** with project name `simple-outcome-sites-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_SITES_STAGE`. Target `prod` writes `VERCEL_PROJECT_ID_PROD` or `VERCEL_PROJECT_ID_SITES_PROD` and must keep the existing production project names.
 
 Point `stage.simpleoutcome.dev` at the staging web project. Point `*.stage.simpleoutcome.dev` (including `admin.stage.simpleoutcome.dev`) at the staging sites project. After the first Staging migrate, confirm `moddatetime` and bucket `pod-private` on the **staging** project, and insert the first `site_user` there.
 

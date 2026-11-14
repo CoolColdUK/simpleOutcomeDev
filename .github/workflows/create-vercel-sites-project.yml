@@ -25,11 +25,6 @@ run-name: 'Create Vercel sites project: ${{ inputs.project_name }}'
         required: false
         type: boolean
         default: true
-      sync_env:
-        description: 'Optional. Copy public env onto the Vercel project. Sites production does not use those copies.'
-        required: false
-        type: boolean
-        default: true
 
 jobs:
   create:
@@ -53,12 +48,6 @@ jobs:
 
       - name: Create or update Vercel project
         id: vercel
-        env:
-          SYNC_ENV: ${{ inputs.sync_env }}
-          ENV_SUFFIX: ${{ inputs.target == 'stage' && 'STAGE' || 'PROD' }}
-          SUPABASE_PROJECT_REF: ${{ inputs.target == 'stage' && vars.SUPABASE_PROJECT_REF_STAGE || vars.SUPABASE_PROJECT_REF_PROD }}
-          SUPABASE_ANON_KEY: ${{ inputs.target == 'stage' && vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE || vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD }}
-          SITES_ROOT_DOMAIN: ${{ inputs.target == 'stage' && vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE || vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD }}
         run: |
           set -euo pipefail
           if [ "$TARGET" = 'stage' ] && [ "$PROJECT_NAME" = 'simple-outcome-sites' ]; then
@@ -160,47 +149,6 @@ jobs:
           echo "project_id=${PROJECT_ID}" >> "$GITHUB_OUTPUT"
           echo "Created/updated project ${PROJECT_NAME} (${PROJECT_ID})"
 
-          upsert_env() {
-            KEY="$1"
-            VALUE="$2"
-            if [ -z "$VALUE" ]; then
-              echo "Skipping ${KEY} (secret not set on GitHub)."
-              return 0
-            fi
-            BODY="$(jq -n --arg key "$KEY" --arg value "$VALUE" '{
-              key: $key,
-              value: $value,
-              type: "plain",
-              target: ["production", "preview", "development"]
-            }')"
-            CODE="$(curl -sS -o /tmp/vercel-env.json -w '%{http_code}' \
-              -X POST \
-              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
-              -H 'Content-Type: application/json' \
-              -d "$BODY" \
-              "${API}/v10/projects/${PROJECT_ID}/env?teamId=${TEAM}&upsert=true")"
-            if [ "$CODE" != '200' ] && [ "$CODE" != '201' ]; then
-              echo "::warning::Could not set ${KEY} on Vercel (HTTP ${CODE})"
-              cat /tmp/vercel-env.json
-              return 0
-            fi
-            echo "Set ${KEY} on Vercel."
-          }
-
-          if [ "$SYNC_ENV" = 'true' ]; then
-            if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
-              echo "::error::Repository variable SUPABASE_PROJECT_REF_${ENV_SUFFIX} is empty."
-              exit 1
-            fi
-            if [ -z "${SITES_ROOT_DOMAIN:-}" ]; then
-              echo "::error::Repository variable NEXT_PUBLIC_SITES_ROOT_DOMAIN_${ENV_SUFFIX} is empty."
-              exit 1
-            fi
-            upsert_env NEXT_PUBLIC_SUPABASE_URL "https://${SUPABASE_PROJECT_REF}.supabase.co"
-            upsert_env NEXT_PUBLIC_SUPABASE_ANON_KEY "$SUPABASE_ANON_KEY"
-            upsert_env NEXT_PUBLIC_SITES_ROOT_DOMAIN "$SITES_ROOT_DOMAIN"
-          fi
-
       - name: Write GitHub Actions variables
         if: ${{ inputs.upsert_github_vars }}
         env:
@@ -250,5 +198,5 @@ jobs:
             echo
             echo 'GitHub secret still required: `VERCEL_TOKEN`.'
             echo
-            echo 'Sites production syncs server secrets (`SUPABASE_SECRET_KEY`, Resend, Turnstile, Upstash, pepper) onto this Vercel project for runtime, and injects `NEXT_PUBLIC_*` from GitHub variables at build.'
+            echo 'This workflow does not copy env onto the Vercel project. Deploys read GitHub and write `.vercel/.env.production.local` before the build.'
           } >> "$GITHUB_STEP_SUMMARY"
