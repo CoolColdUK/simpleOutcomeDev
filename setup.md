@@ -145,7 +145,7 @@ Staging is **Actions → Staging** (migrations + main app) and **Actions → Sit
 | Variable | `VERCEL_PROJECT_ID_PROD` | Production main app. |
 | Variable | `VERCEL_PROJECT_ID_SITES_PROD` | Production sites app. |
 | Secret | `SUPABASE_ACCESS_TOKEN` | Production and staging `db push`. Dashboard → Account → Access Tokens. |
-| Secret | `SUPABASE_DB_PASSWORD_PROD` | Production `db push`. Passed to `supabase link` as the database password. |
+| Secret | `SUPABASE_DB_PASSWORD_PROD` | Production `db push`. Read as `SUPABASE_DB_PASSWORD`. `supabase link` ignores `--password`. |
 | Variable | `SUPABASE_PROJECT_REF_PROD` | Production project ref. Passed to `supabase link`. `NEXT_PUBLIC_SUPABASE_URL` is `https://<ref>.supabase.co`. |
 | Variable | `NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD` | Both apps. Mapped to `NEXT_PUBLIC_SUPABASE_ANON_KEY`. |
 | Secret | `SUPABASE_SECRET_KEY_PROD` | Main app and sites. Mapped to `SUPABASE_SECRET_KEY`. |
@@ -162,7 +162,7 @@ A GitHub name with no `_PROD` or `_STAGE` suffix is shared by production and sta
 
 | Kind | Name | Used by |
 | --- | --- | --- |
-| Secret | `SUPABASE_DB_PASSWORD_STAGE` | Staging `db push`. Database password of the staging project. |
+| Secret | `SUPABASE_DB_PASSWORD_STAGE` | Staging `db push`. Read as `SUPABASE_DB_PASSWORD`. `supabase link` ignores `--password`. |
 | Variable | `SUPABASE_PROJECT_REF_STAGE` | Staging project ref. Passed to `supabase link`. `NEXT_PUBLIC_SUPABASE_URL` is `https://<ref>.supabase.co`. |
 | Variable | `VERCEL_PROJECT_ID_STAGE` | Staging main app. |
 | Variable | `VERCEL_PROJECT_ID_SITES_STAGE` | Staging sites app. |

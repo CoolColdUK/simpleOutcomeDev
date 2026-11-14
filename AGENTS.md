@@ -40,9 +40,9 @@ GitHub Actions **Staging** pushes `supabase/migrations` to the staging Supabase 
 | Kind | Name | Purpose |
 | --- | --- | --- |
 | Secret | `SUPABASE_ACCESS_TOKEN` | Personal access token from Supabase Dashboard → Account → Access Tokens |
-| Secret | `SUPABASE_DB_PASSWORD_PROD` | Database password for the production project. Passed to `supabase link` as the database password. |
+| Secret | `SUPABASE_DB_PASSWORD_PROD` | Database password for the production project. Read by `supabase db push` as `SUPABASE_DB_PASSWORD`. |
 | Variable | `SUPABASE_PROJECT_REF_PROD` | Production project ref. Passed to `supabase link`. The API URL is `https://<ref>.supabase.co`. |
-| Secret | `SUPABASE_DB_PASSWORD_STAGE` | Database password for the staging project. Passed to `supabase link` as the database password. |
+| Secret | `SUPABASE_DB_PASSWORD_STAGE` | Database password for the staging project. Read by `supabase db push` as `SUPABASE_DB_PASSWORD`. |
 | Variable | `SUPABASE_PROJECT_REF_STAGE` | Staging project ref. Passed to `supabase link`. The API URL is `https://<ref>.supabase.co`. |
 | Secret | `SUPABASE_SECRET_KEY_STAGE` | Staging service role key. Local `.env.local` uses this value as `SUPABASE_SECRET_KEY`. Staging Vercel projects stay empty; GitHub supplies env per deployment. |
 
