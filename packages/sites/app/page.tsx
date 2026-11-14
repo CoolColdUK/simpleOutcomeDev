@@ -77,12 +77,19 @@ async function AdminHome() {
             ))}
           </tbody>
         </table>
-        {sites.length === 0 && listError.length === 0 ? <p className="admin-muted">No sites yet.</p> : null}
+        {sites.length === 0 && listError.length === 0 ? (
+          <p className="admin-muted">
+            {actingIsAdmin(session)
+              ? 'No client sites yet.'
+              : 'No sites assigned yet. Ask an admin to create one for you.'}
+          </p>
+        ) : null}
       </div>
       {actingIsAdmin(session) ? (
         <div className="admin-card">
           <h2>Create site</h2>
-          <AdminCreateSiteForm ownerEmailDefault={session.user.email} />
+          <p className="admin-muted">Assign a site to a user. Users may own multiple sites; only admins can create them.</p>
+          <AdminCreateSiteForm />
         </div>
       ) : null}
     </AdminShell>

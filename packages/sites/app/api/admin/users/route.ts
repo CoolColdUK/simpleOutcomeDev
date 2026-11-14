@@ -1,4 +1,5 @@
 import {NextResponse} from 'next/server';
+import {listSiteUsersForOwnerPicker} from '@/lib/admin/listSiteUsersForOwnerPicker';
 import {requireAdminHostApi} from '@/lib/admin/requireAdminHost';
 import {actingIsAdmin} from '@/lib/admin/requireSiteSession';
 import {loadSiteSession} from '@/lib/admin/siteSession';
@@ -20,7 +21,7 @@ async function sessionOr401(): Promise<{session: NonNullable<Awaited<ReturnType<
   return {session};
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   const blocked = await requireAdminHostApi();
   if (blocked !== undefined) {
     return blocked;
@@ -28,6 +29,21 @@ export async function GET(): Promise<Response> {
   const auth = await sessionOr401();
   if ('error' in auth) {
     return auth.error;
+  }
+  const url = new URL(request.url);
+  if (url.searchParams.get('forOwnerPicker') === '1') {
+    try {
+      const users = await listSiteUsersForOwnerPicker({
+        query: url.searchParams.get('q') ?? undefined,
+        limit: 5,
+      });
+      return NextResponse.json({users});
+    } catch (err) {
+      return NextResponse.json(
+        {error: err instanceof Error ? err.message : 'Could not list users'},
+        {status: 500},
+      );
+    }
   }
   const supabase = createSitesServiceClient();
   const {data, error} = await supabase.from('site_user').select('id, email, is_admin, created_at').order('email');

@@ -116,6 +116,7 @@ That applies every migration, including:
 - `20261112120000_api_key_kind_and_secret.sql` — API key type (`scoped` / `full`) and the revealable secret. Apply this before creating a key that can be shown again.
 - `20261112130000_site_contact.sql` — `site.messages_enabled`, private `site_contact`, and the enquiry counter. A Supabase-backed site 404s on load until this is applied, because the page selects `messages_enabled`.
 - `20261113100000_site_editor_users_drafts_revisions.sql` — `site_user`, sessions, drafts, revisions, site API keys, and draft/live/archived status.
+- `20261114090000_site_service_role_grants.sql` — service_role write grants on `public.site` (admins create sites for owners).
 
 After the first Production migrate, confirm in the Supabase dashboard:
 

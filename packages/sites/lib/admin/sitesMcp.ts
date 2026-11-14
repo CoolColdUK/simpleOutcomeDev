@@ -5,7 +5,13 @@ import {
   siteComponentsList,
   type SitePresetId,
 } from '@so/model';
-import {createSiteForOwner, loadDraftDocument, loadOwnedSiteBySlug, saveDraftDocument} from '@/lib/admin/siteAccess';
+import {
+  createSiteForOwner,
+  loadDraftDocument,
+  loadOwnedSiteBySlug,
+  resolveOwnerIdByEmail,
+  saveDraftDocument,
+} from '@/lib/admin/siteAccess';
 import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
 
 export interface McpTool {
@@ -127,9 +133,16 @@ export async function callSitesMcpTool(name: string, args: Record<string, unknow
     if (!isPresetId(presetRaw)) {
       throw new Error('Invalid preset');
     }
+    if (ownerEmail.length === 0) {
+      throw new Error('ownerEmail is required');
+    }
+    const ownerId = await resolveOwnerIdByEmail(ownerEmail);
+    if (ownerId === undefined) {
+      throw new Error('Owner email not found');
+    }
     const document =
       args.document === undefined ? parseSiteDocument(SITE_PRESETS[presetRaw]) : parseSiteDocument(args.document);
-    const site = await createSiteForOwner({slug, ownerEmail, preset: presetRaw, document});
+    const site = await createSiteForOwner({slug, ownerId, preset: presetRaw, document});
     return {site: {slug: site.slug, status: site.status, ownerId: site.owner_id}};
   }
   if (name === 'sites_update_draft') {
