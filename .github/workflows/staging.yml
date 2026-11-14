@@ -1,6 +1,6 @@
 # Staging: Supabase migrations + Vercel (packages/web). No version bump and no GitHub release.
 # Env comes from GitHub (*_STAGE). The Vercel project settings stay empty.
-# Uses the staging Vercel project's production environment (its live URL is staging).
+# Deploys a preview, then aliases NEXT_PUBLIC_SITES_ROOT_DOMAIN onto that deployment.
 name: Staging
 run-name: 'Staging: ${{ inputs.description }}'
 'on':
@@ -96,7 +96,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase db push --remote --yes
 
-      - name: Deploy web to Vercel (staging, prebuilt)
+      - name: Deploy web to Vercel (staging / preview, prebuilt)
         if: ${{ inputs.deploy_vercel }}
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
@@ -138,10 +138,10 @@ jobs:
           fi
           echo "NEXT_PUBLIC_GIT_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           export NEXT_PUBLIC_GIT_COMMIT="$(git rev-parse HEAD)"
-          npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
           node <<'NODE'
           const {mkdirSync, readFileSync, writeFileSync} = require('node:fs');
-          const path = '.vercel/.env.production.local';
+          const path = '.vercel/.env.preview.local';
           const keys = [
             'SUPABASE_PROJECT_REF',
             'NEXT_PUBLIC_SUPABASE_URL',
@@ -187,15 +187,15 @@ jobs:
           for (const key of keys) {
             const expected = `${key}=${quote(values[key])}`;
             if (!written.includes(expected)) {
-              console.error(`::error::${key} in .vercel/.env.production.local does not match GitHub. Refusing to build.`);
+              console.error(`::error::${key} in .vercel/.env.preview.local does not match GitHub. Refusing to build.`);
               process.exit(1);
             }
           }
-          console.log('Wrote build env from GitHub into .vercel/.env.production.local. Values are not printed. Nothing is saved on the Vercel project.');
+          console.log('Wrote build env from GitHub into .vercel/.env.preview.local. Values are not printed. Nothing is saved on the Vercel project.');
           NODE
-          npx vercel build --prod --yes --token="$VERCEL_TOKEN"
+          npx vercel build --environment=preview --yes --token="$VERCEL_TOKEN"
           # Runtime env is this deployment only. It is not stored in the Vercel project settings.
-          deploy_args=(npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")
+          deploy_args=(npx vercel deploy --prebuilt --target=preview --yes --token="$VERCEL_TOKEN" --format json)
           for key in \
             NEXT_PUBLIC_SUPABASE_URL \
             NEXT_PUBLIC_SUPABASE_ANON_KEY \
@@ -206,4 +206,24 @@ jobs:
           do
             deploy_args+=(--env "${key}=${!key}")
           done
-          "${deploy_args[@]}"
+          # Point the stable staging hostname at this preview (domain must already exist on the Vercel project).
+          # https://vercel.com/docs/cli/alias — the alias is a hostname, with no scheme.
+          DEPLOY_JSON="$("${deploy_args[@]}")"
+          PREVIEW_URL="$(printf '%s\n' "$DEPLOY_JSON" | jq -r '.url // empty')"
+          if [ -z "${PREVIEW_URL:-}" ]; then
+            echo '::error::Vercel deploy JSON had no url; raw output follows'
+            printf '%s\n' "$DEPLOY_JSON"
+            exit 1
+          fi
+          alias_host="${NEXT_PUBLIC_SITES_ROOT_DOMAIN#https://}"
+          alias_host="${alias_host#http://}"
+          alias_host="${alias_host%%/*}"
+          npx vercel alias set "$PREVIEW_URL" "$alias_host" --token="$VERCEL_TOKEN"
+          echo "::notice title=Vercel staging::${alias_host} → ${PREVIEW_URL}"
+          {
+            echo "## Vercel preview (staging)"
+            echo
+            echo "**Alias:** https://${alias_host}"
+            echo
+            echo "**Deployment:** https://${PREVIEW_URL#https://}"
+          } >> "$GITHUB_STEP_SUMMARY"
