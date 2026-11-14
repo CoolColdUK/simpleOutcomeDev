@@ -20,11 +20,11 @@ export interface SiteConfig {
 }
 
 const SITE_APP_NAME = 'SimpleOutcome';
-const SITE_DEFAULT_TITLE = 'SimpleOutcome - Innovative Digital Solutions & Portfolio';
+const SITE_DEFAULT_TITLE = 'SimpleOutcome - Websites for Companies';
 const SITE_DESCRIPTION =
-  'SimpleOutcome creates innovative digital solutions including CraftySmile (e-commerce management) and GoalJar (personal finance tracking). Professional portfolio showcasing web development and product design expertise.';
+  'SimpleOutcome helps companies design and build websites. We partner with teams to ship clear, reliable sites.';
 const SITE_KEYWORDS =
-  'SimpleOutcome, portfolio, web development, digital solutions, e-commerce management, personal finance, CraftySmile, GoalJar, software development, product design, React, Next.js, TypeScript';
+  'SimpleOutcome, website design, web development, company websites, web agency, Next.js, TypeScript';
 
 const DEFAULT_ROOT_DOMAIN = 'simpleoutcome.dev';
 

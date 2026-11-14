@@ -42,6 +42,9 @@ export default function HeroSection() {
         <Heading as="h1" color="fg.default" fontWeight="800" fontSize={{base: '2.2rem', md: '3.2rem'}} lineHeight="1.1" mb={4}>
           LET&apos;S GET YOU <Box as="span" color="brand.500">GOING</Box>
         </Heading>
+        <Text color="fg.default" fontSize={{base: 'lg', md: 'xl'}} lineHeight="1.5" maxW="36rem">
+          We help companies design and build websites.
+        </Text>
         <Button colorPalette="brand" size="lg" mt={4} borderRadius="full" onClick={() => setOpen(true)}>
           REQUEST A QUOTE
         </Button>

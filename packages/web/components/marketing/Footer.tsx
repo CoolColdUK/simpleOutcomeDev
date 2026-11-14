@@ -1,6 +1,6 @@
 'use client';
 
-import {Box, Button, Flex, Link as ChakraLink, SimpleGrid, Text} from '@chakra-ui/react';
+import {Box, Button, Flex, SimpleGrid, Text} from '@chakra-ui/react';
 import dayjs from 'dayjs';
 import {useState} from 'react';
 import BrandMark from '@/components/brand/BrandMark';
@@ -12,7 +12,7 @@ export default function Footer() {
   return (
     <Box as="footer" bg="bg.paper" color="fg.default" py={12} mt="auto" borderTopWidth="1px" borderColor="border.subtle">
       <Box maxW="6xl" mx="auto" px={{base: 4, md: 8}}>
-        <SimpleGrid columns={{base: 1, md: 3}} gap={8}>
+        <SimpleGrid columns={{base: 1, md: 2}} gap={8}>
           <Box>
             <Flex align="center" gap={2} mb={3}>
               <BrandMark size={32} />
@@ -21,27 +21,15 @@ export default function Footer() {
               </Text>
             </Flex>
             <Text fontSize="sm" color="fg.muted">
-              Building innovative digital solutions that solve real-world problems. We focus on creating user-friendly
-              applications that make a difference.
+              We help companies design and build websites that are clear, fast, and ready for their customers.
             </Text>
-          </Box>
-          <Box>
-            <Text fontWeight="600" mb={3}>
-              Products
-            </Text>
-            <Flex direction="column" gap={2}>
-              <ChakraLink href="https://craftysmile.com" target="_blank" rel="noopener noreferrer" color="fg.muted">
-                CraftySmile
-              </ChakraLink>
-              <Text color="fg.muted">GoalJar (Coming Soon)</Text>
-            </Flex>
           </Box>
           <Box>
             <Text fontWeight="600" mb={3}>
               Contact
             </Text>
             <Text fontSize="sm" color="fg.muted" mb={3}>
-              Get in touch with us for collaborations, questions, or feedback.
+              Tell us about the website you want to build.
             </Text>
             <Button variant="outline" colorPalette="brand" onClick={() => setOpen(true)}>
               Contact
