@@ -1,14 +1,13 @@
 'use client';
 
-import {
-  SITE_COMPONENT_CATALOG,
-  type SiteDocument,
-  type SiteSection,
-  type SiteSectionType,
-} from '@so/model';
+import {SITE_COMPONENT_CATALOG, type SiteDocument, type SiteSection, type SiteSectionType} from '@so/model';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useMemo, useState} from 'react';
+import AdminAddSectionDialog from '@/components/admin/AdminAddSectionDialog';
+import AdminSectionList from '@/components/admin/AdminSectionList';
+import AdminSectionSettings from '@/components/admin/AdminSectionSettings';
+import AdminSiteConfig from '@/components/admin/AdminSiteConfig';
 import SitePageView from '@/components/SitePageView';
 import {createDefaultSection, newSectionId} from '@/lib/admin/defaultSection';
 
@@ -20,28 +19,20 @@ export interface AdminSiteEditorProps {
   readonly customDomain: string | undefined;
 }
 
-function moveItem<T>(items: readonly T[], from: number, to: number): T[] {
-  const next = [...items];
-  const [item] = next.splice(from, 1);
-  if (item === undefined) {
-    return next;
-  }
-  next.splice(to, 0, item);
-  return next;
-}
+const NAV_SKIP: readonly SiteSectionType[] = ['hero', 'bookingCta', 'splitCta'];
 
 export default function AdminSiteEditor(props: AdminSiteEditorProps) {
   const router = useRouter();
   const [document, setDocument] = useState(props.document);
-  const [selectedId, setSelectedId] = useState(props.document.sections[0]?.id ?? '');
+  const [settingsId, setSettingsId] = useState<string | undefined>(undefined);
+  const [addOpen, setAddOpen] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | undefined>(undefined);
 
-  const selected = useMemo(
-    () => document.sections.find((section) => section.id === selectedId),
-    [document.sections, selectedId],
+  const settingsSection = useMemo(
+    () => document.sections.find((section) => section.id === settingsId),
+    [document.sections, settingsId],
   );
 
   const previewSite = {
@@ -72,6 +63,41 @@ export default function AdminSiteEditor(props: AdminSiteEditorProps) {
     }
     setMessage('Draft saved. The slug subdomain shows this copy.');
     return true;
+  };
+
+  const addSection = (type: SiteSectionType): void => {
+    const id = newSectionId(type);
+    const section = createDefaultSection(type, id);
+    const entry = SITE_COMPONENT_CATALOG.find((item) => item.type === type);
+    const links = NAV_SKIP.includes(type) || document.nav.links.length >= 8
+      ? document.nav.links
+      : [...document.nav.links, {label: entry?.label ?? type, sectionId: id}];
+    setDocument({...document, sections: [...document.sections, section], nav: {links}});
+  };
+
+  const deleteSection = (id: string): void => {
+    const sections = document.sections.filter((item) => item.id !== id);
+    const remaining = document.nav.links.filter((link) => link.sectionId !== id);
+    const fallbackId = sections[0]?.id;
+    const links =
+      remaining.length > 0 || fallbackId === undefined
+        ? remaining
+        : [{label: 'Section', sectionId: fallbackId}];
+    setDocument({
+      ...document,
+      sections,
+      nav: {links},
+    });
+    if (settingsId === id) {
+      setSettingsId(undefined);
+    }
+  };
+
+  const replaceSection = (next: SiteSection): void => {
+    setDocument({
+      ...document,
+      sections: document.sections.map((section) => (section.id === next.id ? next : section)),
+    });
   };
 
   return (
@@ -138,181 +164,36 @@ export default function AdminSiteEditor(props: AdminSiteEditorProps) {
         {message ? <p className="admin-ok">{message}</p> : null}
       </div>
 
-      <div className="admin-card">
-        <div className="admin-form" style={{maxWidth: '100%'}}>
-          <label>
-            Business name
-            <input
-              value={document.businessName}
-              onChange={(e) => setDocument({...document, businessName: e.target.value})}
-            />
-          </label>
-          <label>
-            Booking label
-            <input
-              value={document.booking.label}
-              onChange={(e) => setDocument({...document, booking: {...document.booking, label: e.target.value}})}
-            />
-          </label>
-          <label>
-            Booking URL
-            <input
-              value={document.booking.href}
-              onChange={(e) => setDocument({...document, booking: {...document.booking, href: e.target.value}})}
-            />
-          </label>
-          <label>
-            Footer
-            <textarea
-              value={document.footer.text}
-              onChange={(e) => setDocument({...document, footer: {text: e.target.value}})}
-            />
-          </label>
-        </div>
+      <AdminSiteConfig siteDocument={document} onChange={setDocument} />
+
+      <div className="admin-section-toolbar">
+        <button type="button" onClick={() => setAddOpen(true)}>
+          Add section
+        </button>
       </div>
+      <AdminAddSectionDialog
+        open={addOpen}
+        siteDocument={document}
+        onClose={() => setAddOpen(false)}
+        onAdd={addSection}
+      />
 
-      <div className="admin-editor">
-        <div className="admin-palette">
-          <h2>Add section</h2>
-          {SITE_COMPONENT_CATALOG.map((entry) => (
-            <button
-              key={entry.type}
-              type="button"
-              className="secondary"
-              style={{display: 'block', width: '100%', marginBottom: '0.4rem'}}
-              onClick={() => {
-                const id = newSectionId(entry.type as SiteSectionType);
-                const section = createDefaultSection(entry.type as SiteSectionType, id);
-                setDocument({
-                  ...document,
-                  sections: [...document.sections, section],
-                  nav: {
-                    links: [
-                      ...document.nav.links,
-                      ...(entry.type === 'hero' || entry.type === 'bookingCta' || entry.type === 'splitCta'
-                        ? []
-                        : [{label: entry.label, sectionId: id}]),
-                    ].slice(0, 8),
-                  },
-                });
-                setSelectedId(id);
-              }}
-            >
-              {entry.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="admin-section-list">
-          <h2>Sections</h2>
-          {document.sections.map((section, index) => (
-            <div
-              key={section.id}
-              className={`admin-section-item${section.id === selectedId ? ' selected' : ''}`}
-              draggable
-              onDragStart={() => setDragIndex(index)}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={() => {
-                if (dragIndex === undefined || dragIndex === index) {
-                  return;
-                }
-                setDocument({...document, sections: moveItem(document.sections, dragIndex, index)});
-                setDragIndex(undefined);
-              }}
-              onClick={() => setSelectedId(section.id)}
-            >
-              <strong>{section.type}</strong>
-              <div className="admin-muted">{section.id}</div>
-              <div className="admin-actions" style={{marginTop: '0.4rem'}}>
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={index === 0}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setDocument({...document, sections: moveItem(document.sections, index, index - 1)});
-                  }}
-                >
-                  Up
-                </button>
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={index === document.sections.length - 1}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setDocument({...document, sections: moveItem(document.sections, index, index + 1)});
-                  }}
-                >
-                  Down
-                </button>
-                <button
-                  type="button"
-                  className="danger"
-                  disabled={document.sections.length <= 1}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    const sections = document.sections.filter((item) => item.id !== section.id);
-                    setDocument({
-                      ...document,
-                      sections,
-                      nav: {links: document.nav.links.filter((link) => link.sectionId !== section.id)},
-                    });
-                    if (selectedId === section.id) {
-                      setSelectedId(sections[0]?.id ?? '');
-                    }
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="admin-props">
-          <h2>Selected</h2>
-          {selected === undefined ? (
-            <p className="admin-muted">Select a section</p>
-          ) : (
-            <label>
-              Section JSON
-              <textarea
-                style={{minHeight: '18rem', fontFamily: 'monospace', fontSize: '0.8rem'}}
-                value={JSON.stringify(selected, null, 2)}
-                onChange={(event) => {
-                  try {
-                    const next = JSON.parse(event.target.value) as SiteSection;
-                    setDocument({
-                      ...document,
-                      sections: document.sections.map((section) => (section.id === selected.id ? next : section)),
-                    });
-                    setSelectedId(next.id);
-                    setError('');
-                  } catch {
-                    setError('Section JSON is invalid');
-                  }
-                }}
-              />
-            </label>
-          )}
-          <label style={{display: 'grid', gap: '0.35rem', marginTop: '0.75rem'}}>
-            Nav links JSON
-            <textarea
-              style={{minHeight: '8rem', fontFamily: 'monospace', fontSize: '0.8rem'}}
-              value={JSON.stringify(document.nav.links, null, 2)}
-              onChange={(event) => {
-                try {
-                  const links = JSON.parse(event.target.value) as SiteDocument['nav']['links'];
-                  setDocument({...document, nav: {links}});
-                  setError('');
-                } catch {
-                  setError('Nav JSON is invalid');
-                }
-              }}
-            />
-          </label>
-        </div>
+      <div className={settingsSection === undefined ? 'admin-editor' : 'admin-editor with-settings'}>
+        <AdminSectionList
+          sections={document.sections}
+          settingsId={settingsId}
+          onReorder={(sections) => setDocument({...document, sections})}
+          onOpenSettings={setSettingsId}
+          onDelete={deleteSection}
+        />
+        {settingsSection === undefined ? null : (
+          <AdminSectionSettings
+            section={settingsSection}
+            sectionIds={document.sections.map((section) => section.id)}
+            onChange={replaceSection}
+            onClose={() => setSettingsId(undefined)}
+          />
+        )}
       </div>
 
       <div className="admin-preview">

@@ -186,19 +186,26 @@
 }
 
 @media (min-width: 960px) {
-  .admin-editor {
-    grid-template-columns: 220px 1fr 320px;
+  .admin-editor.with-settings {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
     align-items: start;
   }
 }
 
-.admin-palette,
 .admin-section-list,
 .admin-props {
   background: var(--admin-card);
   border: 1px solid var(--admin-border);
   border-radius: 12px;
   padding: 0.85rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.admin-section-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
 }
 
 .admin-section-item {
@@ -210,8 +217,228 @@
   cursor: grab;
 }
 
-.admin-section-item.selected {
+.admin-section-item.settings-open {
   outline: 2px solid var(--admin-accent);
+}
+
+.admin-section-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.admin-section-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin button.admin-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: transparent;
+  color: var(--admin-fg);
+  border: 1px solid var(--admin-border);
+}
+
+.admin button.admin-icon-button.danger {
+  color: var(--admin-danger);
+  background: transparent;
+}
+
+.admin button.admin-drag-handle {
+  cursor: grab;
+}
+
+.admin-config summary {
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+
+.admin-config summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-config summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.45rem;
+}
+
+.admin-config[open] summary::before {
+  content: '▾';
+}
+
+.admin-config summary {
+  margin-bottom: 0;
+}
+
+.admin-config[open] summary {
+  margin-bottom: 0.9rem;
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin button.admin-tab {
+  background: transparent;
+  color: var(--admin-fg);
+  border-radius: 8px 8px 0 0;
+}
+
+.admin button.admin-tab[aria-selected='true'] {
+  background: var(--admin-accent);
+  color: #fff;
+}
+
+.admin-form-wide {
+  max-width: 42rem;
+}
+
+.admin-form h3 {
+  margin: 0.4rem 0 0;
+}
+
+.admin-hint {
+  color: #6a6f63;
+  font-size: 0.8rem;
+}
+
+.admin-form label.admin-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.admin-colour {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.admin-colour input[type='color'] {
+  width: 2.4rem;
+  height: 2.2rem;
+  padding: 0.15rem;
+}
+
+.admin-repeat-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.admin-repeat {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-form fieldset {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  margin: 0;
+}
+
+.admin-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(47, 51, 41, 0.45);
+}
+
+.admin-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(980px, 100%);
+  max-height: min(86vh, 760px);
+  background: var(--admin-card);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.admin-dialog-head,
+.admin-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-dialog-foot {
+  border-bottom: 0;
+  border-top: 1px solid var(--admin-border);
+  justify-content: flex-end;
+}
+
+.admin-dialog-head h2 {
+  margin: 0;
+}
+
+.admin-dialog-body {
+  display: grid;
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
+}
+
+@media (max-width: 720px) {
+  .admin-dialog-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-dialog-list {
+  overflow: auto;
+  padding: 0.65rem;
+  border-right: 1px solid var(--admin-border);
+}
+
+.admin button.admin-type-option {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  margin-bottom: 0.4rem;
+  text-align: left;
+  background: #fff;
+  color: var(--admin-fg);
+  border: 1px solid var(--admin-border);
+}
+
+.admin button.admin-type-option.selected {
+  border-color: var(--admin-accent);
+  outline: 2px solid var(--admin-accent);
+}
+
+.admin-type-option span {
+  color: #6a6f63;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.admin-section-preview {
+  overflow: auto;
+  padding: 0.75rem;
+  background: #fff;
 }
 
 .admin-preview {
