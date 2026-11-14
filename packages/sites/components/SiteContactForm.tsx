@@ -40,6 +40,11 @@ function draftFromForm(form: HTMLFormElement): SiteMessageDraft {
   return {name: read('name'), email: read('email'), message: read('message'), companyWebsite: read('company_website')};
 }
 
+async function peekSiteMessageLimit(): Promise<SiteMessagePayload> {
+  const response = await fetch('/api/site-message');
+  return (await response.json()) as SiteMessagePayload;
+}
+
 async function postSiteMessage(draft: SiteMessageDraft, turnstileToken: string): Promise<SiteMessagePayload> {
   const response = await fetch('/api/site-message', {
     method: 'POST',
@@ -112,6 +117,11 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
     try {
       if (typed.companyWebsite.trim() !== '') {
         applyResponse(await postSiteMessage(typed, ''), false);
+        return;
+      }
+      const room = await peekSiteMessageLimit();
+      if (room.ok !== true) {
+        applyResponse(room, false);
         return;
       }
       if (siteKey.length === 0) {

@@ -1,6 +1,6 @@
 import {safeParseSiteMessage, siteMessageFormOffered, siteMessageRecipient} from '@so/model';
 import {NextResponse} from 'next/server';
-import {allowSiteMessage} from '@/lib/siteMessage/allowSiteMessage';
+import {allowSiteMessage, peekSiteMessage, type SiteMessageLimit} from '@/lib/siteMessage/allowSiteMessage';
 import {readLiveDeliveryEmail, recordSiteEnquiry} from '@/lib/siteMessage/siteEnquiryStore';
 import {sendSiteMessage} from '@/lib/siteMessage/sendSiteMessage';
 import {verifyTurnstile} from '@/lib/siteMessage/verifyTurnstile';
@@ -38,6 +38,25 @@ async function deliveryEmailFor(site: LoadedSite): Promise<string | undefined | 
   return readLiveDeliveryEmail(site.id);
 }
 
+function limitResponse(limit: SiteMessageLimit) {
+  if (limit === 'unavailable') {
+    return json(503, {ok: false, message: 'This form is not available right now.'});
+  }
+  if (limit === 'limit') {
+    return json(429, {ok: false, message: 'Too many messages. Try again later.'});
+  }
+  return undefined;
+}
+
+export async function GET(request: Request) {
+  const site = await loadSiteForHost(requestHost(request));
+  if (site === undefined) {
+    return json(404, {ok: false, message: 'This site was not found.'});
+  }
+  const limit = await peekSiteMessage(site.id ?? site.slug, clientIp(request)).catch(() => 'unavailable' as const);
+  return limitResponse(limit) ?? json(200, {ok: true});
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => undefined);
   if (!isRecord(body)) {
@@ -66,11 +85,9 @@ export async function POST(request: Request) {
     return json(403, {ok: false, message: 'This form is turned off.'});
   }
   const limit = await allowSiteMessage(site.id ?? site.slug, clientIp(request)).catch(() => 'unavailable' as const);
-  if (limit === 'unavailable') {
-    return json(503, {ok: false, message: 'This form is not available right now.'});
-  }
-  if (limit === 'limit') {
-    return json(429, {ok: false, message: 'Too many messages. Try again later.'});
+  const limited = limitResponse(limit);
+  if (limited !== undefined) {
+    return limited;
   }
   const deliveryEmail = await deliveryEmailFor(site);
   if (deliveryEmail === 'unconfigured') {

@@ -15,6 +15,14 @@ export function hashSiteMessageIp(ip: string, pepper: string): string {
   return createHash('sha256').update(`${pepper}:${ip}`).digest('hex');
 }
 
+function peekMemory(key: string, limit: number, now: number): boolean {
+  const current = memoryBuckets.get(key);
+  if (current === undefined || current.resetAt <= now) {
+    return true;
+  }
+  return current.count < limit;
+}
+
 function takeMemory(key: string, limit: number, now: number): boolean {
   const current = memoryBuckets.get(key);
   if (current === undefined || current.resetAt <= now) {
@@ -42,6 +50,21 @@ function upstashConfig(): {readonly url: string; readonly token: string; readonl
   return {url, token, pepper};
 }
 
+async function readUpstash(url: string, token: string, key: string): Promise<number | undefined> {
+  const response = await fetch(`${url.replace(/\/$/, '')}/get/${encodeURIComponent(key)}`, {
+    headers: {Authorization: `Bearer ${token}`},
+  });
+  if (!response.ok) {
+    return undefined;
+  }
+  const payload = (await response.json()) as {readonly result?: unknown};
+  if (payload.result === null || payload.result === undefined) {
+    return 0;
+  }
+  const count = Number(payload.result);
+  return Number.isNaN(count) ? undefined : count;
+}
+
 async function takeUpstash(url: string, token: string, key: string): Promise<number | undefined> {
   const response = await fetch(`${url.replace(/\/$/, '')}/pipeline`, {
     method: 'POST',
@@ -60,6 +83,27 @@ async function takeUpstash(url: string, token: string, key: string): Promise<num
 }
 
 export type SiteMessageLimit = 'allow' | 'limit' | 'unavailable';
+
+export async function peekSiteMessage(siteKey: string, ip: string): Promise<SiteMessageLimit> {
+  const config = upstashConfig();
+  if (config === undefined) {
+    const hash = hashSiteMessageIp(ip, 'local-dev');
+    const now = Date.now();
+    const ipAllowed = peekMemory(`site-message:${siteKey}:${hash}`, IP_LIMIT, now);
+    const siteAllowed = peekMemory(`site-message:${siteKey}`, SITE_LIMIT, now);
+    return ipAllowed && siteAllowed ? 'allow' : 'limit';
+  }
+  const hash = hashSiteMessageIp(ip, config.pepper);
+  const ipCount = await readUpstash(config.url, config.token, `site-message:${siteKey}:${hash}`);
+  const siteCount = await readUpstash(config.url, config.token, `site-message:${siteKey}`);
+  if (ipCount === undefined || siteCount === undefined) {
+    return 'unavailable';
+  }
+  if (ipCount >= IP_LIMIT || siteCount >= SITE_LIMIT) {
+    return 'limit';
+  }
+  return 'allow';
+}
 
 export async function allowSiteMessage(siteKey: string, ip: string): Promise<SiteMessageLimit> {
   const config = upstashConfig();
