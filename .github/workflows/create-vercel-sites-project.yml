@@ -46,9 +46,9 @@ jobs:
         id: vercel
         env:
           SYNC_ENV: ${{ inputs.sync_env }}
-          SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          WEB_URL: ${{ vars.NEXT_PUBLIC_WEB_URL }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_PROD }}
+          SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD }}
+          SITES_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD }}
         run: |
           set -euo pipefail
           API='https://api.vercel.com'
@@ -174,9 +174,17 @@ jobs:
           }
 
           if [ "$SYNC_ENV" = 'true' ]; then
-            upsert_env NEXT_PUBLIC_SUPABASE_URL "$SUPABASE_URL"
+            if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
+              echo '::error::Repository variable SUPABASE_PROJECT_REF_PROD is empty.'
+              exit 1
+            fi
+            if [ -z "${SITES_ROOT_DOMAIN:-}" ]; then
+              echo '::error::Repository variable NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD is empty.'
+              exit 1
+            fi
+            upsert_env NEXT_PUBLIC_SUPABASE_URL "https://${SUPABASE_PROJECT_REF}.supabase.co"
             upsert_env NEXT_PUBLIC_SUPABASE_ANON_KEY "$SUPABASE_ANON_KEY"
-            upsert_env NEXT_PUBLIC_SITES_ROOT_DOMAIN "simpleoutcome.dev"
+            upsert_env NEXT_PUBLIC_SITES_ROOT_DOMAIN "$SITES_ROOT_DOMAIN"
           fi
 
       - name: Write GitHub Actions variables

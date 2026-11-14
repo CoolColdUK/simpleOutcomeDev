@@ -3,7 +3,6 @@
  * Missing Supabase values throw when this module loads so misconfiguration fails immediately.
  */
 
-import removeStringTrailingSlash from './utils/string/removeStringTrailingSlash';
 import throwIfUndefined from './utils/throwIfUndefined';
 import trimStringOptional from './utils/string/trimStringOptional';
 
@@ -27,7 +26,7 @@ const SITE_DESCRIPTION =
 const SITE_KEYWORDS =
   'SimpleOutcome, portfolio, web development, digital solutions, e-commerce management, personal finance, CraftySmile, GoalJar, software development, product design, React, Next.js, TypeScript';
 
-const DEFAULT_WEB_URL = 'https://simpleoutcome.dev';
+const DEFAULT_ROOT_DOMAIN = 'simpleoutcome.dev';
 
 function resolvePublicSupabase(): PublicSupabaseEnv | undefined {
   const url = trimStringOptional(process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -38,11 +37,12 @@ function resolvePublicSupabase(): PublicSupabaseEnv | undefined {
   return undefined;
 }
 
-const webUrl = removeStringTrailingSlash(trimStringOptional(process.env.NEXT_PUBLIC_WEB_URL) ?? DEFAULT_WEB_URL);
+const rootDomain = trimStringOptional(process.env.NEXT_PUBLIC_SITES_ROOT_DOMAIN) ?? DEFAULT_ROOT_DOMAIN;
+const webUrl = `https://${rootDomain}`;
 
 const publicSupabase = throwIfUndefined(
   resolvePublicSupabase(),
-  'Missing Supabase env: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'Missing Supabase env: set SUPABASE_PROJECT_REF and NEXT_PUBLIC_SUPABASE_ANON_KEY',
 );
 
 const appVersion = trimStringOptional(process.env.NEXT_PUBLIC_APP_VERSION);

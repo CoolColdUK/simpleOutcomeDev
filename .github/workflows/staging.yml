@@ -1,0 +1,209 @@
+# Staging: Supabase migrations + Vercel (packages/web). No version bump and no GitHub release.
+# Env comes from GitHub (*_STAGE). The Vercel project settings stay empty.
+# Uses the staging Vercel project's production environment (its live URL is staging).
+name: Staging
+run-name: 'Staging: ${{ inputs.description }}'
+'on':
+  workflow_dispatch:
+    inputs:
+      description:
+        description: 'Brief description'
+        required: true
+        type: string
+      deploy_supabase:
+        description: 'Push migrations to the staging Supabase project'
+        required: false
+        type: boolean
+        default: true
+      deploy_vercel:
+        description: 'Deploy web to the staging Vercel project'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  deploy_staging:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      HUSKY: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          registry-url: 'https://npm.pkg.github.com'
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: npm-release-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Configure npm for private packages
+        run: |
+          echo "@coolcolduk:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
+
+      - name: Install
+        run: npm ci
+
+      - name: Build model
+        if: ${{ inputs.deploy_vercel }}
+        run: npm run build:model
+
+      - name: Build component
+        if: ${{ inputs.deploy_vercel }}
+        run: npm run build:component
+
+      - name: Setup Supabase CLI
+        if: ${{ inputs.deploy_supabase }}
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+
+      - name: Link Supabase project (staging)
+        if: ${{ inputs.deploy_supabase }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD_STAGE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo '::error::Add repository secret SUPABASE_ACCESS_TOKEN (Supabase Dashboard → Account → Access Tokens).'
+            exit 1
+          fi
+          if [ -z "${SUPABASE_DB_PASSWORD:-}" ]; then
+            echo '::error::Add repository secret SUPABASE_DB_PASSWORD_STAGE (database password for the staging project).'
+            exit 1
+          fi
+          PROJECT_REF="${{ vars.SUPABASE_PROJECT_REF_STAGE }}"
+          if [ -z "${PROJECT_REF:-}" ]; then
+            echo '::error::Add Actions variable SUPABASE_PROJECT_REF_STAGE (the ref in https://<ref>.supabase.co).'
+            exit 1
+          fi
+          supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Push Supabase migrations (staging)
+        if: ${{ inputs.deploy_supabase }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase db push --remote --yes
+
+      - name: Deploy web to Vercel (staging, prebuilt)
+        if: ${{ inputs.deploy_vercel }}
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_STAGE }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # GitHub *_STAGE names, assigned to the names the app reads.
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_STAGE }}
+          NEXT_PUBLIC_SITES_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY_STAGE }}
+          NEXT_PUBLIC_APP_VERSION: staging
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo '::error::Add repository secret VERCEL_TOKEN.'
+            exit 1
+          fi
+          if [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_STAGE.'
+            exit 1
+          fi
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
+            echo '::error::Repository variable SUPABASE_PROJECT_REF_STAGE is empty.'
+            exit 1
+          fi
+          if [ -z "${NEXT_PUBLIC_SITES_ROOT_DOMAIN:-}" ]; then
+            echo '::error::Repository variable NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE is empty.'
+            exit 1
+          fi
+          if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
+            echo '::error::Repository variable NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE is empty.'
+            exit 1
+          fi
+          export NEXT_PUBLIC_SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
+          if [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo '::error::Repository secret SUPABASE_SECRET_KEY_STAGE is empty.'
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_GIT_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          export NEXT_PUBLIC_GIT_COMMIT="$(git rev-parse HEAD)"
+          npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          node <<'NODE'
+          const {mkdirSync, readFileSync, writeFileSync} = require('node:fs');
+          const path = '.vercel/.env.production.local';
+          const keys = [
+            'SUPABASE_PROJECT_REF',
+            'NEXT_PUBLIC_SUPABASE_URL',
+            'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+            'NEXT_PUBLIC_SITES_ROOT_DOMAIN',
+            'SUPABASE_SECRET_KEY',
+            'NEXT_PUBLIC_APP_VERSION',
+            'NEXT_PUBLIC_GIT_COMMIT',
+          ];
+          const values = {};
+          for (const key of keys) {
+            const value = process.env[key];
+            if (value === undefined || value.length === 0) {
+              console.error(`::error::${key} is empty. Refusing to build.`);
+              process.exit(1);
+            }
+            values[key] = value;
+          }
+          mkdirSync('.vercel', {recursive: true});
+          let existing = '';
+          try {
+            existing = readFileSync(path, 'utf8');
+          } catch (error) {
+            if (error.code !== 'ENOENT') {
+              throw error;
+            }
+          }
+          const quote = (value) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
+          const kept = existing.split(/\r?\n/).filter((line) => {
+            if (line.length === 0) {
+              return false;
+            }
+            const eq = line.indexOf('=');
+            if (eq === -1) {
+              return true;
+            }
+            const name = line.slice(0, eq).replace(/^export\s+/, '').trim();
+            return !Object.hasOwn(values, name);
+          });
+          const lines = [...kept, ...keys.map((key) => `${key}=${quote(values[key])}`)];
+          writeFileSync(path, `${lines.join('\n')}\n`);
+          const written = readFileSync(path, 'utf8').split(/\r?\n/);
+          for (const key of keys) {
+            const expected = `${key}=${quote(values[key])}`;
+            if (!written.includes(expected)) {
+              console.error(`::error::${key} in .vercel/.env.production.local does not match GitHub. Refusing to build.`);
+              process.exit(1);
+            }
+          }
+          console.log('Wrote build env from GitHub into .vercel/.env.production.local. Values are not printed. Nothing is saved on the Vercel project.');
+          NODE
+          npx vercel build --prod --yes --token="$VERCEL_TOKEN"
+          # Runtime env is this deployment only. It is not stored in the Vercel project settings.
+          deploy_args=(npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")
+          for key in \
+            NEXT_PUBLIC_SUPABASE_URL \
+            NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            NEXT_PUBLIC_SITES_ROOT_DOMAIN \
+            SUPABASE_SECRET_KEY \
+            NEXT_PUBLIC_APP_VERSION \
+            NEXT_PUBLIC_GIT_COMMIT
+          do
+            deploy_args+=(--env "${key}=${!key}")
+          done
+          "${deploy_args[@]}"

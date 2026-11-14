@@ -33,7 +33,7 @@ function readSupabase(): SitesSupabaseEnv | undefined {
     return undefined;
   }
   if (!hasUrl || !hasKey || url === undefined || anonKey === undefined) {
-    throw new Error('Set both NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, or neither for local file demos');
+    throw new Error('Set SUPABASE_PROJECT_REF and NEXT_PUBLIC_SUPABASE_ANON_KEY, or neither for local file demos');
   }
   return {url, anonKey};
 }

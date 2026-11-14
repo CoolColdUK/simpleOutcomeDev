@@ -29,19 +29,22 @@
 
 Copy [packages/web/env.example](packages/web/env.example) to `packages/web/.env.local`.
 
-Required: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Optional: `NEXT_PUBLIC_WEB_URL`.
+Required: `SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. The Supabase URL is `https://<ref>.supabase.co`. The web URL is `https://$NEXT_PUBLIC_SITES_ROOT_DOMAIN`.
 
 ## 5. Deploy
 
-Production only: GitHub Actions **Production**. That workflow applies `supabase/migrations` (`supabase db push`) then deploys the prebuilt Next.js app to Vercel. Do not import the GitHub repo into Vercel, and do not apply migrations from a local CLI for production.
+GitHub Actions **Staging** pushes `supabase/migrations` to the staging Supabase project and deploys `packages/web` to the staging Vercel project. **Sites staging** deploys `packages/sites` there. **Production** and **Sites production** do the same for production. Do not import the GitHub repo into Vercel, and do not apply migrations from a local CLI for staging or production. Local `.env.local` uses the staging Supabase URL, anon key, and secret key.
 
 **Supabase (required when `deploy_supabase` is on, the default):**
 
 | Kind | Name | Purpose |
 | --- | --- | --- |
 | Secret | `SUPABASE_ACCESS_TOKEN` | Personal access token from Supabase Dashboard → Account → Access Tokens |
-| Secret | `SUPABASE_PRODUCTION_DB_PASSWORD` | Database password for the production project |
-| Variable | `SUPABASE_PRODUCTION_PROJECT_REF` | Project ref (the subdomain in `https://<ref>.supabase.co`) |
+| Secret | `SUPABASE_DB_PASSWORD_PROD` | Database password for the production project. Passed to `supabase link` as the database password. |
+| Variable | `SUPABASE_PROJECT_REF_PROD` | Production project ref. Passed to `supabase link`. The API URL is `https://<ref>.supabase.co`. |
+| Secret | `SUPABASE_DB_PASSWORD_STAGE` | Database password for the staging project. Passed to `supabase link` as the database password. |
+| Variable | `SUPABASE_PROJECT_REF_STAGE` | Staging project ref. Passed to `supabase link`. The API URL is `https://<ref>.supabase.co`. |
+| Secret | `SUPABASE_SECRET_KEY_STAGE` | Staging service role key. Local `.env.local` uses this value as `SUPABASE_SECRET_KEY`. Staging Vercel projects stay empty; GitHub supplies env per deployment. |
 
 ## 6. Todo list (after first feature migration)
 
