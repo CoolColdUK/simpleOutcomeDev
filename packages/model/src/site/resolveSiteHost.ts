@@ -54,6 +54,10 @@ export function resolveSiteHost(input: ResolveSiteHostInput): SiteHostResolution
   }
   const demoSlug = slugUnder(host, `.${rootDomain}`);
   if (demoSlug !== undefined) {
+    // Reserved for the site editor host (admin.simpleoutcome.dev).
+    if (demoSlug === 'admin') {
+      return {kind: 'unknown'};
+    }
     if (SLUG.test(demoSlug)) {
       return {kind: 'demo-subdomain', slug: demoSlug};
     }
@@ -61,6 +65,9 @@ export function resolveSiteHost(input: ResolveSiteHostInput): SiteHostResolution
   }
   const localSlug = slugUnder(host, '.localhost');
   if (localSlug !== undefined) {
+    if (localSlug === 'admin') {
+      return {kind: 'unknown'};
+    }
     if (SLUG.test(localSlug)) {
       return {kind: 'local', slug: localSlug};
     }

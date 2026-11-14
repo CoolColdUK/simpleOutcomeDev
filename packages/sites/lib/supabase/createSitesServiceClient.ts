@@ -1,5 +1,11 @@
 import {createClient, type SupabaseClient} from '@supabase/supabase-js';
 
+export function sitesServiceEnvReady(): boolean {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? '';
+  const secret = process.env.SUPABASE_SECRET_KEY?.trim() ?? '';
+  return url.length > 0 && secret.length > 0;
+}
+
 export default function createSitesServiceClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? '';
   const secret = process.env.SUPABASE_SECRET_KEY?.trim() ?? '';

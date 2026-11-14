@@ -11,7 +11,7 @@ import {
 import {createClient} from '@supabase/supabase-js';
 import {cache} from 'react';
 import {readSitesPublicEnv, type SitesSupabaseEnv} from '@/lib/env';
-import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
+import createSitesServiceClient, {sitesServiceEnvReady} from '@/lib/supabase/createSitesServiceClient';
 
 export type LoadedSiteStatus = 'demo' | 'draft' | 'live' | 'archived';
 
@@ -77,9 +77,9 @@ function fromDemo(slug: string): LoadedSite | undefined {
   };
 }
 
-function toLoaded(row: SiteRow, document: SiteDocument, demoHost: boolean): LoadedSite {
+function toLoaded(row: SiteRow, document: SiteDocument, demoHost: boolean): LoadedSite | undefined {
   if (!isLoadedStatus(row.status) || !isPresetId(row.preset)) {
-    throw new Error('Site row is invalid');
+    return undefined;
   }
   return {
     slug: row.slug,
@@ -101,44 +101,53 @@ async function fromDemoRow(env: SitesSupabaseEnv, slug: string): Promise<LoadedS
     .eq('slug', slug)
     .eq('status', 'demo')
     .maybeSingle();
-  if (error) {
-    throw new Error('Could not load site');
-  }
-  if (!data) {
+  if (error || !data) {
     return undefined;
   }
   const row = data as SiteRow;
-  return toLoaded(row, parseSiteDocument(row.document), true);
+  try {
+    return toLoaded(row, parseSiteDocument(row.document), true);
+  } catch {
+    return undefined;
+  }
 }
 
 async function fromSlugDraft(slug: string, demoHost: boolean): Promise<LoadedSite | undefined> {
+  if (!sitesServiceEnvReady()) {
+    return undefined;
+  }
   const supabase = createSitesServiceClient();
   const {data: site, error: siteError} = await supabase
     .from('site')
     .select('id, slug, custom_domain, status, preset, document, messages_enabled')
     .eq('slug', slug)
     .maybeSingle();
-  if (siteError) {
-    throw new Error('Could not load site');
-  }
-  if (!site) {
+  if (siteError || !site) {
     return undefined;
   }
   const row = site as SiteRow;
   if (row.status === 'demo') {
-    return toLoaded(row, parseSiteDocument(row.document), true);
+    try {
+      return toLoaded(row, parseSiteDocument(row.document), true);
+    } catch {
+      return undefined;
+    }
   }
   const {data: draft, error: draftError} = await supabase.from('site_draft').select('document').eq('site_id', row.id).maybeSingle();
-  if (draftError) {
-    throw new Error('Could not load site draft');
-  }
-  if (draft === null) {
+  if (draftError || draft === null) {
     return undefined;
   }
-  return toLoaded(row, parseSiteDocument((draft as {document: unknown}).document), demoHost);
+  try {
+    return toLoaded(row, parseSiteDocument((draft as {document: unknown}).document), demoHost);
+  } catch {
+    return undefined;
+  }
 }
 
 async function fromCustomDomain(host: string): Promise<LoadedSite | undefined> {
+  if (!sitesServiceEnvReady()) {
+    return undefined;
+  }
   const supabase = createSitesServiceClient();
   const {data: site, error: siteError} = await supabase
     .from('site')
@@ -146,10 +155,7 @@ async function fromCustomDomain(host: string): Promise<LoadedSite | undefined> {
     .eq('custom_domain', host)
     .eq('status', 'live')
     .maybeSingle();
-  if (siteError) {
-    throw new Error('Could not load site');
-  }
-  if (!site) {
+  if (siteError || !site) {
     return undefined;
   }
   const row = site as SiteRow;
@@ -160,13 +166,14 @@ async function fromCustomDomain(host: string): Promise<LoadedSite | undefined> {
     .order('version_number', {ascending: false})
     .limit(1)
     .maybeSingle();
-  if (revisionError) {
-    throw new Error('Could not load site revision');
-  }
-  if (revision === null) {
+  if (revisionError || revision === null) {
     return undefined;
   }
-  return toLoaded(row, parseSiteDocument((revision as {document: unknown}).document), false);
+  try {
+    return toLoaded(row, parseSiteDocument((revision as {document: unknown}).document), false);
+  } catch {
+    return undefined;
+  }
 }
 
 export async function loadSiteForHost(host: string): Promise<LoadedSite | undefined> {
@@ -188,15 +195,11 @@ export async function loadSiteForHost(host: string): Promise<LoadedSite | undefi
     return fromCustomDomain(resolved.host);
   }
   const demoHost = resolved.kind === 'demo-subdomain';
-  try {
-    return await fromSlugDraft(resolved.slug, demoHost);
-  } catch {
-    const demo = await fromDemoRow(env.supabase, resolved.slug);
-    if (demo !== undefined) {
-      return demo;
-    }
-    throw new Error('Could not load site');
+  const fromDraft = await fromSlugDraft(resolved.slug, demoHost);
+  if (fromDraft !== undefined) {
+    return fromDraft;
   }
+  return fromDemoRow(env.supabase, resolved.slug);
 }
 
 export const loadSiteForHostCached = cache(loadSiteForHost);

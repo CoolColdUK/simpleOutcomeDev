@@ -41,11 +41,18 @@ async function AdminHome() {
   if (session === undefined) {
     redirect('/login');
   }
-  const sites = await listSitesForUser(session.user.id, actingIsAdmin(session));
+  let sites: Awaited<ReturnType<typeof listSitesForUser>> = [];
+  let listError = '';
+  try {
+    sites = await listSitesForUser(session.user.id, actingIsAdmin(session));
+  } catch (err) {
+    listError = err instanceof Error ? err.message : 'Could not list sites';
+  }
   return (
     <AdminShell session={session}>
       <div className="admin-card">
         <h1>Sites</h1>
+        {listError ? <p className="admin-error">{listError}</p> : null}
         <table className="admin-table">
           <thead>
             <tr>
@@ -70,7 +77,7 @@ async function AdminHome() {
             ))}
           </tbody>
         </table>
-        {sites.length === 0 ? <p className="admin-muted">No sites yet.</p> : null}
+        {sites.length === 0 && listError.length === 0 ? <p className="admin-muted">No sites yet.</p> : null}
       </div>
       {actingIsAdmin(session) ? (
         <div className="admin-card">

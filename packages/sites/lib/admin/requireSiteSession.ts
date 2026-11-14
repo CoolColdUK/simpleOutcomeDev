@@ -7,7 +7,12 @@ export async function requireSiteSession(): Promise<SiteSessionContext> {
   if (raw === undefined) {
     redirect('/login');
   }
-  const session = await loadSiteSession(raw);
+  let session: SiteSessionContext | undefined;
+  try {
+    session = await loadSiteSession(raw);
+  } catch {
+    session = undefined;
+  }
   if (session === undefined) {
     redirect('/login');
   }
@@ -19,7 +24,11 @@ export async function optionalSiteSession(): Promise<SiteSessionContext | undefi
   if (raw === undefined) {
     return undefined;
   }
-  return loadSiteSession(raw);
+  try {
+    return await loadSiteSession(raw);
+  } catch {
+    return undefined;
+  }
 }
 
 export function actingIsAdmin(session: SiteSessionContext): boolean {

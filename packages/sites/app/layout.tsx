@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import type {Metadata, Viewport} from 'next';
-import {siteSeoLocale} from '@so/model';
+import {isSiteAdminHost, siteSeoLocale} from '@so/model';
+import {readSitesPublicEnv} from '@/lib/env';
 import {loadSiteForHostCached} from '@/lib/site/loadSiteForHost';
 import readRequestHost from '@/lib/site/readRequestHost';
 import './globals.css';
@@ -18,7 +19,16 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({children}: {children: ReactNode}) {
-  const site = await loadSiteForHostCached(await readRequestHost());
+  const host = await readRequestHost();
+  const env = readSitesPublicEnv();
+  if (isSiteAdminHost(host, env.rootDomain)) {
+    return (
+      <html lang="en-GB">
+        <body>{children}</body>
+      </html>
+    );
+  }
+  const site = await loadSiteForHostCached(host);
   const lang = site === undefined ? 'en-GB' : siteSeoLocale(site.document);
   return (
     <html lang={lang}>

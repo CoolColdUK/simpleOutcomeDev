@@ -14,11 +14,13 @@ describe('resolveSiteHost', () => {
     });
   });
 
-  it('treats the apex, www, and vercel.app hosts as unknown', () => {
+  it('treats the apex, www, vercel.app, and admin hosts as unknown', () => {
     expect(resolveSiteHost({host: 'simpleoutcome.dev', rootDomain}).kind).toBe('unknown');
     expect(resolveSiteHost({host: 'www.simpleoutcome.dev', rootDomain}).kind).toBe('unknown');
     expect(resolveSiteHost({host: 'simple-outcome-sites.vercel.app', rootDomain}).kind).toBe('unknown');
     expect(resolveSiteHost({host: 'a.b.simpleoutcome.dev', rootDomain}).kind).toBe('unknown');
+    expect(resolveSiteHost({host: 'admin.simpleoutcome.dev', rootDomain}).kind).toBe('unknown');
+    expect(resolveSiteHost({host: 'admin.localhost:3001', rootDomain}).kind).toBe('unknown');
   });
 
   it('reads a localhost slug and a custom domain', () => {
