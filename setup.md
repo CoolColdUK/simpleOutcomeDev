@@ -133,7 +133,7 @@ A live salon gets a row in `public.site_contact` (`delivery_email`) from the SQL
 
 Create the production Vercel projects once, with no Git connection: **Create Vercel project**, then **Create Vercel sites project**. Deploy with **Production** and **Sites production**.
 
-Staging is **Actions → Staging** (migrations + main app) and **Actions → Sites staging**. Neither bumps a version or publishes a GitHub release. Each targets a separate Vercel project's production environment, so the workflow still uses `--prod`. GitHub holds the staging values (`*_STAGE`). The workflows inject them for that build and that deployment. They do not call `vercel env add`, so the staging Vercel project settings stay empty. Create the projects with env sync off. Do not re-run the create-project workflows with **Write VERCEL_PROJECT_ID_*** left on: that overwrites the production project ids. Create `simple-outcome-stage` and `simple-outcome-sites-stage` in the Vercel dashboard (no Git), or run those workflows with that write switch off and `sync_env` off, then copy the printed project id into `VERCEL_PROJECT_ID_STAGE` and `VERCEL_PROJECT_ID_SITES_STAGE`.
+Staging is **Actions → Staging** (migrations + main app) and **Actions → Sites staging**. Neither bumps a version or publishes a GitHub release. Each targets a separate Vercel project's production environment, so the workflow still uses `--prod`. GitHub holds the staging values (`*_STAGE`). The workflows inject them for that build and that deployment. They do not call `vercel env add`, so the staging Vercel project settings stay empty. Create the staging projects once, with no Git connection, before the first staging deploy. Run **Create Vercel project** with project name `simple-outcome-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_STAGE`. Run **Create Vercel sites project** with project name `simple-outcome-sites-stage` and target `stage`. That writes `VERCEL_PROJECT_ID_SITES_STAGE`. Leave env sync off. Target `prod` writes `VERCEL_PROJECT_ID_PROD` or `VERCEL_PROJECT_ID_SITES_PROD` and must keep the existing production project names.
 
 Point `stage.simpleoutcome.dev` at the staging web project. Point `*.stage.simpleoutcome.dev` (including `admin.stage.simpleoutcome.dev`) at the staging sites project. After the first Staging migrate, confirm `moddatetime` and bucket `pod-private` on the **staging** project, and insert the first `site_user` there.
 
@@ -142,8 +142,8 @@ Point `stage.simpleoutcome.dev` at the staging web project. Point `*.stage.simpl
 | Secret | `VERCEL_TOKEN` | Both deploys. https://vercel.com/account/tokens |
 | Secret | `GH_PAT` | Checkout and npm on GitHub Actions. |
 | Variable | `VERCEL_ORG_ID` | Both Vercel projects. |
-| Variable | `VERCEL_PROJECT_ID_PRODUCTION` | Main app. |
-| Variable | `VERCEL_PROJECT_ID_SITES` | Sites app. |
+| Variable | `VERCEL_PROJECT_ID_PROD` | Production main app. |
+| Variable | `VERCEL_PROJECT_ID_SITES_PROD` | Production sites app. |
 | Secret | `SUPABASE_ACCESS_TOKEN` | Production and staging `db push`. Dashboard → Account → Access Tokens. |
 | Secret | `SUPABASE_DB_PASSWORD_PROD` | Production `db push`. Passed to `supabase link` as the database password. |
 | Variable | `SUPABASE_PROJECT_REF_PROD` | Production project ref. Passed to `supabase link`. `NEXT_PUBLIC_SUPABASE_URL` is `https://<ref>.supabase.co`. |

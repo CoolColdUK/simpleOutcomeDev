@@ -152,7 +152,7 @@ jobs:
         if: ${{ inputs.deploy_vercel }}
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_PRODUCTION }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_PROD }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY_PROD }}
         run: |
@@ -186,7 +186,7 @@ jobs:
           NEXT_PUBLIC_APP_VERSION: ${{ env.NEW_VERSION }}
           NEXT_PUBLIC_GIT_COMMIT: ${{ env.NEXT_PUBLIC_GIT_COMMIT }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_PRODUCTION }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_PROD }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_PROD }}
           NEXT_PUBLIC_SITES_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD }}

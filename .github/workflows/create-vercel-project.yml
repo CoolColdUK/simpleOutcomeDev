@@ -6,12 +6,20 @@ run-name: 'Create Vercel project: ${{ inputs.project_name }}'
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Vercel project name (lowercase, hyphens)'
+        description: 'Vercel project name (lowercase, hyphens). Use a new name for stage, not simple-outcome.'
         required: true
         type: string
         default: 'simple-outcome'
+      target:
+        description: 'GitHub variable that receives the project id'
+        required: true
+        type: choice
+        default: prod
+        options:
+          - prod
+          - stage
       upsert_github_vars:
-        description: 'Write VERCEL_ORG_ID and VERCEL_PROJECT_ID_PRODUCTION as GitHub Actions variables'
+        description: 'Write VERCEL_ORG_ID and VERCEL_PROJECT_ID_PROD or VERCEL_PROJECT_ID_STAGE'
         required: false
         type: boolean
         default: true
@@ -30,6 +38,7 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       GH_TOKEN: ${{ secrets.GH_PAT }}
       PROJECT_NAME: ${{ inputs.project_name }}
+      TARGET: ${{ inputs.target }}
       EXISTING_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
     steps:
       - name: Require VERCEL_TOKEN
@@ -44,11 +53,16 @@ jobs:
         id: vercel
         env:
           SYNC_ENV: ${{ inputs.sync_env }}
-          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_PROD }}
-          SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD }}
-          SITES_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD }}
+          ENV_SUFFIX: ${{ inputs.target == 'stage' && 'STAGE' || 'PROD' }}
+          SUPABASE_PROJECT_REF: ${{ inputs.target == 'stage' && vars.SUPABASE_PROJECT_REF_STAGE || vars.SUPABASE_PROJECT_REF_PROD }}
+          SUPABASE_ANON_KEY: ${{ inputs.target == 'stage' && vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE || vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD }}
+          SITES_ROOT_DOMAIN: ${{ inputs.target == 'stage' && vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_STAGE || vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD }}
         run: |
           set -euo pipefail
+          if [ "$TARGET" = 'stage' ] && [ "$PROJECT_NAME" = 'simple-outcome' ]; then
+            echo '::error::Stage needs its own project name, for example simple-outcome-stage.'
+            exit 1
+          fi
           API='https://api.vercel.com'
 
           vercel_get() {
@@ -173,11 +187,11 @@ jobs:
 
           if [ "$SYNC_ENV" = 'true' ]; then
             if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
-              echo '::error::Repository variable SUPABASE_PROJECT_REF_PROD is empty.'
+              echo "::error::Repository variable SUPABASE_PROJECT_REF_${ENV_SUFFIX} is empty."
               exit 1
             fi
             if [ -z "${SITES_ROOT_DOMAIN:-}" ]; then
-              echo '::error::Repository variable NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD is empty.'
+              echo "::error::Repository variable NEXT_PUBLIC_SITES_ROOT_DOMAIN_${ENV_SUFFIX} is empty."
               exit 1
             fi
             upsert_env NEXT_PUBLIC_SITES_ROOT_DOMAIN "$SITES_ROOT_DOMAIN"
@@ -192,15 +206,20 @@ jobs:
           PROJECT_ID: ${{ steps.vercel.outputs.project_id }}
         run: |
           set -euo pipefail
+          if [ "$TARGET" = 'stage' ] && [ "$PROJECT_NAME" = 'simple-outcome' ]; then
+            echo '::error::Stage needs its own project name, for example simple-outcome-stage.'
+            exit 1
+          fi
+          PROJECT_ID_NAME="VERCEL_PROJECT_ID_$(printf '%s' "$TARGET" | tr '[:lower:]' '[:upper:]')"
           echo "VERCEL_ORG_ID=${ORG_ID}"
-          echo "VERCEL_PROJECT_ID_PRODUCTION=${PROJECT_ID}"
+          echo "${PROJECT_ID_NAME}=${PROJECT_ID}"
           if [ -z "${GH_TOKEN:-}" ]; then
             echo '::warning::GH_PAT is not set. Add the two variables above in GitHub → Settings → Secrets and variables → Actions → Variables.'
             exit 0
           fi
           if gh variable set VERCEL_ORG_ID --body "$ORG_ID" --repo "$GITHUB_REPOSITORY" \
-            && gh variable set VERCEL_PROJECT_ID_PRODUCTION --body "$PROJECT_ID" --repo "$GITHUB_REPOSITORY"; then
-            echo 'Wrote VERCEL_ORG_ID and VERCEL_PROJECT_ID_PRODUCTION.'
+            && gh variable set "$PROJECT_ID_NAME" --body "$PROJECT_ID" --repo "$GITHUB_REPOSITORY"; then
+            echo "Wrote VERCEL_ORG_ID and ${PROJECT_ID_NAME}."
             exit 0
           fi
           echo '::warning::Could not write GitHub variables (GH_PAT needs Variables write on this repo, or use a classic PAT with repo scope). Add them by hand — this does not affect the Vercel project.'
@@ -222,12 +241,12 @@ jobs:
             echo "| Root directory | \`packages/web\` |"
             echo "| Git | not connected |"
             echo
-            echo 'GitHub variables expected by Production:'
+            echo 'GitHub variable written when the write switch is on:'
             echo
             echo '- `VERCEL_ORG_ID`'
-            echo '- `VERCEL_PROJECT_ID_PRODUCTION`'
+            echo "- \`VERCEL_PROJECT_ID_$(printf '%s' "$TARGET" | tr '[:lower:]' '[:upper:]')\`"
             echo
             echo 'GitHub secret still required: `VERCEL_TOKEN`.'
             echo
-            echo 'If contact/auth should work on Vercel, set project env (or GitHub variables used by this workflow): `SUPABASE_PROJECT_REF_PROD`, `NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD`, `NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD`.'
+            echo 'Deploy workflows read GitHub, not the Vercel project settings. Leave env sync off unless you want a copy on the project.'
           } >> "$GITHUB_STEP_SUMMARY"

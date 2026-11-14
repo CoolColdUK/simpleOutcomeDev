@@ -50,7 +50,7 @@ jobs:
       - name: Sync sites server env to Vercel (production)
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES_PROD }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY_PROD }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
@@ -65,7 +65,7 @@ jobs:
             exit 1
           fi
           if [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
-            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_SITES.'
+            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_SITES_PROD.'
             exit 1
           fi
           upsert_sensitive() {
@@ -120,7 +120,7 @@ jobs:
       - name: Deploy sites to Vercel (production, prebuilt)
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES_PROD }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_PROD }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD }}
@@ -141,7 +141,7 @@ jobs:
             exit 1
           fi
           if [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
-            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_SITES (Create Vercel sites project).'
+            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_SITES_PROD (Create Vercel sites project).'
             exit 1
           fi
           if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
