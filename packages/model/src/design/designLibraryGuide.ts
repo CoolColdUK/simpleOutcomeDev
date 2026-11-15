@@ -1,5 +1,5 @@
+import {DESIGN_ATOMS, designAtomOptions, type DesignAtom} from './designAtomOptions';
 import {DESIGN_CATEGORIES} from './designId';
-import type {DesignAtom} from './designNode';
 
 export interface DesignAtomField {
   readonly name: string;
@@ -13,68 +13,29 @@ export interface DesignAtomGuide {
   readonly fields: readonly DesignAtomField[];
 }
 
-export const DESIGN_ATOM_GUIDE: readonly DesignAtomGuide[] = [
-  {
-    atom: 'button',
-    label: 'Button',
-    fields: [
-      {name: 'label', kind: 'string'},
-      {name: 'href', kind: 'string'},
-      {name: 'background', kind: 'string'},
-      {name: 'color', kind: 'string'},
-    ],
-  },
-  {
-    atom: 'iconButton',
-    label: 'Icon button',
-    fields: [
-      {name: 'label', kind: 'string'},
-      {name: 'href', kind: 'string'},
-      {name: 'icon', kind: 'string', values: ['menu', 'close', 'phone', 'arrow']},
-      {name: 'background', kind: 'string'},
-      {name: 'color', kind: 'string'},
-    ],
-  },
-  {
-    atom: 'imageButton',
-    label: 'Image button',
-    fields: [
-      {name: 'label', kind: 'string'},
-      {name: 'href', kind: 'string'},
-      {name: 'src', kind: 'string'},
-      {name: 'alt', kind: 'string'},
-    ],
-  },
-  {
-    atom: 'link',
-    label: 'Link',
-    fields: [
-      {name: 'label', kind: 'string'},
-      {name: 'href', kind: 'string'},
-      {name: 'color', kind: 'string'},
-    ],
-  },
-  {
-    atom: 'switch',
-    label: 'Switch',
-    fields: [
-      {name: 'label', kind: 'string'},
-      {name: 'checked', kind: 'boolean'},
-    ],
-  },
-  {
-    atom: 'text',
-    label: 'Text',
-    fields: [
-      {name: 'text', kind: 'string'},
-      {name: 'role', kind: 'string', values: ['heading', 'body']},
-    ],
-  },
-];
+const ATOM_LABELS: Record<DesignAtom, string> = {
+  button: 'Button',
+  iconButton: 'Icon button',
+  imageButton: 'Image button',
+  link: 'Link',
+  switch: 'Switch',
+  text: 'Text',
+};
+
+export const DESIGN_ATOM_GUIDE: readonly DesignAtomGuide[] = DESIGN_ATOMS.map((atom) => ({
+  atom,
+  label: ATOM_LABELS[atom],
+  fields: designAtomOptions(atom).map((option) => ({
+    name: option.key,
+    kind: option.key === 'checked' ? 'boolean' : 'string',
+    ...(option.key === 'icon' ? {values: ['menu', 'close', 'phone', 'arrow']} : {}),
+    ...(option.key === 'role' ? {values: ['heading', 'body']} : {}),
+  })),
+}));
 
 export interface DesignLibraryGuide {
   readonly atoms: readonly DesignAtomGuide[];
-  readonly moleculePatterns: readonly ['tree', 'accordion'];
+  readonly moleculePatterns: readonly ['tree', 'combine'];
   readonly organismCategories: typeof DESIGN_CATEGORIES;
   readonly node: string;
   readonly colourTokens: string;
@@ -83,9 +44,9 @@ export interface DesignLibraryGuide {
 export function designLibraryGuide(): DesignLibraryGuide {
   return {
     atoms: DESIGN_ATOM_GUIDE,
-    moleculePatterns: ['tree', 'accordion'],
+    moleculePatterns: ['tree', 'combine'],
     organismCategories: DESIGN_CATEGORIES,
-    node: 'Tree children are atoms {id, kind:"atom", atom, props}, molecules {id, kind:"molecule", moleculeId}, or stacks {id, kind:"stack", direction:"row"|"column", gapPx, children}. Accordion molecules use {pattern:"accordion", items:[{id, title, body}]}.',
+    node: 'A molecule is {pattern:"tree"|"combine", layout:{direction,gapPx,align,valign,wrap}, children}. Children are atoms {id, kind:"atom", atom, style, slots} or molecules {id, kind:"molecule", moleculeId}. style holds colours, radius, and border. slots name the content filled later on a template item. Do not put label, href, or text values on the molecule.',
     colourTokens:
       'tokens: {uppercaseHeadings, heroBackground, chakra:{theme:{tokens:{colors:{siteBackground,siteForeground,siteAccent,siteButtonForeground,siteCard}, fonts:{siteHeading,siteBody}, radii:{site}}}}}. Each colour, font, and radius is {value}. Colours are hex. Radius is 0px–32px. heroBackground is "none" or linear-gradient(135deg,#hex,#hex).',
   };

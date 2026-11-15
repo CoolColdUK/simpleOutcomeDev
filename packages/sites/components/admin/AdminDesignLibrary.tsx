@@ -267,13 +267,11 @@ function DraftEditor({
             <a className="design-atom-button">Button</a>
           </div>
         ) : null}
-        {draft.layer === 'molecules' && draft.molecule.document.pattern === 'tree' ? (
-          <DesignPreview nodes={draft.molecule.document.children} molecules={library.molecules} tokens={previewTokens} />
-        ) : null}
-        {draft.layer === 'molecules' && draft.molecule.document.pattern === 'accordion' ? (
+        {draft.layer === 'molecules' ? (
           <DesignPreview
-            nodes={[{id: 'preview-accordion', kind: 'molecule', moleculeId: draft.molecule.id || 'accordion'}]}
-            molecules={[{...draft.molecule, id: draft.molecule.id || 'accordion'}, ...library.molecules]}
+            nodes={draft.molecule.document.children}
+            layout={draft.molecule.document.layout}
+            molecules={[draft.molecule, ...library.molecules.filter((item) => item.id !== draft.molecule.id)]}
             tokens={previewTokens}
           />
         ) : null}

@@ -1,12 +1,14 @@
 'use client';
 
 import {
-  blankAccordionDocument,
+  DESIGN_FLEX_OPTIONS,
+  blankCombineDocument,
   blankMoleculeDocument,
   type DesignColourScheme,
   type DesignColourTokens,
+  type DesignFlex,
+  type DesignFlexKey,
   type DesignMolecule,
-  type DesignMoleculeDocument,
   type DesignOrganism,
 } from '@so/model';
 import AdminDesignNodeEditor from '@/components/admin/AdminDesignNodeEditor';
@@ -125,6 +127,8 @@ export function DesignMoleculeFields({
   onChange: (molecule: DesignMolecule) => void;
 }) {
   const document = molecule.document;
+  const layout = document.layout;
+  const unusedLayout = DESIGN_FLEX_OPTIONS.filter((option) => layout[option.key] === undefined);
   return (
     <>
       <label>
@@ -132,64 +136,164 @@ export function DesignMoleculeFields({
         <select
           value={document.pattern}
           onChange={(event) => {
-            const pattern = event.target.value === 'accordion' ? 'accordion' : 'tree';
-            const next: DesignMoleculeDocument = pattern === 'accordion' ? blankAccordionDocument() : blankMoleculeDocument();
-            onChange({...molecule, document: next});
+            const pattern = event.target.value === 'combine' ? 'combine' : 'tree';
+            const next = pattern === 'combine' ? blankCombineDocument() : blankMoleculeDocument();
+            onChange({...molecule, document: {...next, children: document.children, layout}});
           }}
         >
           <option value="tree">Tree of atoms</option>
-          <option value="accordion">Accordion</option>
+          <option value="combine">Combine</option>
         </select>
       </label>
-      {document.pattern === 'accordion' ? (
-        <AccordionItems items={document.items} onChange={(items) => onChange({...molecule, document: {pattern: 'accordion', items}})} />
-      ) : (
-        <AdminDesignNodeEditor
-          nodes={document.children}
-          molecules={molecules}
-          excludeMoleculeId={molecule.id}
-          onChange={(children) => onChange({...molecule, document: {pattern: 'tree', children}})}
-        />
-      )}
+      <p className="admin-muted">
+        {document.pattern === 'tree'
+          ? 'Lay atoms and molecules out as a flex row or column. Add only the layout options you want.'
+          : 'Combine atoms and other molecules into one larger molecule. Words and links are filled in on the template.'}
+      </p>
+      <label>
+        Add layout option
+        <select
+          value=""
+          onChange={(event) => {
+            const key = flexKey(event.target.value);
+            if (key !== undefined) {
+              onChange({...molecule, document: {...document, layout: {...layout, [key]: flexDefault(key, document.pattern)}}});
+            }
+          }}
+        >
+          <option value="">Choose</option>
+          {unusedLayout.map((option) => (
+            <option key={option.key} value={option.key}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <FlexFields layout={layout} onChange={(next) => onChange({...molecule, document: {...document, layout: next}})} />
+      <AdminDesignNodeEditor
+        nodes={document.children}
+        molecules={molecules}
+        excludeMoleculeId={molecule.id}
+        onChange={(children) => onChange({...molecule, document: {...document, children}})}
+      />
     </>
   );
 }
 
-function AccordionItems({
-  items,
-  onChange,
-}: {
-  items: Extract<DesignMoleculeDocument, {pattern: 'accordion'}>['items'];
-  onChange: (items: Extract<DesignMoleculeDocument, {pattern: 'accordion'}>['items']) => void;
-}) {
+function FlexFields({layout, onChange}: {layout: DesignFlex; onChange: (layout: DesignFlex) => void}) {
   return (
-    <div>
-      {items.map((item, index) => (
-        <div key={item.id} className="design-node">
-          <DesignTextInput
-            label="Question"
-            value={item.title}
-            onChange={(title) => onChange(items.map((entry, itemIndex) => (itemIndex === index ? {...entry, title} : entry)))}
-          />
-          <DesignTextInput
-            label="Answer"
-            value={item.body}
-            onChange={(body) => onChange(items.map((entry, itemIndex) => (itemIndex === index ? {...entry, body} : entry)))}
-          />
-          <button type="button" className="secondary" disabled={items.length < 2} onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}>
-            Remove question
+    <>
+      {layout.direction !== undefined ? (
+        <div className="admin-actions">
+          <label>
+            Direction
+            <select value={layout.direction} onChange={(event) => onChange({...layout, direction: event.target.value === 'column' ? 'column' : 'row'})}>
+              <option value="row">row</option>
+              <option value="column">column</option>
+            </select>
+          </label>
+          <button type="button" className="secondary" onClick={() => onChange(flexWithout(layout, 'direction'))}>
+            Remove
           </button>
         </div>
-      ))}
-      <button
-        type="button"
-        className="secondary"
-        onClick={() => onChange([...items, {id: `item${items.length + 1}`, title: 'Question', body: 'Answer'}])}
-      >
-        Add question
+      ) : null}
+      {layout.gapPx !== undefined ? (
+        <div className="admin-actions">
+          <label>
+            Gap
+            <input type="number" min={0} max={64} value={layout.gapPx} onChange={(event) => onChange({...layout, gapPx: Number(event.target.value)})} />
+          </label>
+          <button type="button" className="secondary" onClick={() => onChange(flexWithout(layout, 'gapPx'))}>
+            Remove
+          </button>
+        </div>
+      ) : null}
+      {layout.align !== undefined ? (
+        <AlignField label="Alignment" value={layout.align} onChange={(align) => onChange({...layout, align})} onRemove={() => onChange(flexWithout(layout, 'align'))} />
+      ) : null}
+      {layout.valign !== undefined ? (
+        <AlignField
+          label="Vertical alignment"
+          value={layout.valign}
+          onChange={(valign) => onChange({...layout, valign})}
+          onRemove={() => onChange(flexWithout(layout, 'valign'))}
+        />
+      ) : null}
+      {layout.wrap !== undefined ? (
+        <div className="admin-actions">
+          <label>
+            Wrap
+            <select value={layout.wrap} onChange={(event) => onChange({...layout, wrap: event.target.value === 'wrap' ? 'wrap' : 'nowrap'})}>
+              <option value="nowrap">nowrap</option>
+              <option value="wrap">wrap</option>
+            </select>
+          </label>
+          <button type="button" className="secondary" onClick={() => onChange(flexWithout(layout, 'wrap'))}>
+            Remove
+          </button>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function AlignField({
+  label,
+  value,
+  onChange,
+  onRemove,
+}: {
+  label: string;
+  value: 'start' | 'center' | 'end' | 'stretch';
+  onChange: (value: 'start' | 'center' | 'end' | 'stretch') => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="admin-actions">
+      <label>
+        {label}
+        <select value={value} onChange={(event) => onChange(alignValue(event.target.value))}>
+          <option value="start">start</option>
+          <option value="center">center</option>
+          <option value="end">end</option>
+          <option value="stretch">stretch</option>
+        </select>
+      </label>
+      <button type="button" className="secondary" onClick={onRemove}>
+        Remove
       </button>
     </div>
   );
+}
+
+function alignValue(value: string): 'start' | 'center' | 'end' | 'stretch' {
+  if (value === 'center' || value === 'end' || value === 'stretch') {
+    return value;
+  }
+  return 'start';
+}
+
+function flexKey(value: string): DesignFlexKey | undefined {
+  return DESIGN_FLEX_OPTIONS.find((option) => option.key === value)?.key;
+}
+
+function flexDefault(key: DesignFlexKey, pattern: 'tree' | 'combine'): DesignFlex[DesignFlexKey] {
+  if (key === 'direction') {
+    return pattern === 'combine' ? 'column' : 'row';
+  }
+  if (key === 'gapPx') {
+    return 12;
+  }
+  if (key === 'wrap') {
+    return 'wrap';
+  }
+  return 'center';
+}
+
+function flexWithout(layout: DesignFlex, key: DesignFlexKey): DesignFlex {
+  const next = {...layout};
+  delete next[key];
+  return next;
 }
 
 export function DesignOrganismFields({

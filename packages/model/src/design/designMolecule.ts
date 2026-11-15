@@ -1,26 +1,21 @@
 import * as v from 'valibot';
-import {siteBodySchema, siteShortTextSchema} from '../site/siteTextSchema';
-import {designNodeIdSchema} from './designId';
 import {designNodeSchema, type DesignNode} from './designNode';
 
-export const designAccordionItemSchema = v.strictObject({
-  id: designNodeIdSchema,
-  title: siteShortTextSchema,
-  body: siteBodySchema,
+export const designFlexSchema = v.strictObject({
+  direction: v.optional(v.picklist(['row', 'column'])),
+  gapPx: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(64))),
+  align: v.optional(v.picklist(['start', 'center', 'end', 'stretch'])),
+  valign: v.optional(v.picklist(['start', 'center', 'end', 'stretch'])),
+  wrap: v.optional(v.picklist(['nowrap', 'wrap'])),
 });
 
-export interface DesignAccordionItem extends v.InferOutput<typeof designAccordionItemSchema> {}
+export type DesignFlex = v.InferOutput<typeof designFlexSchema>;
 
-export const designMoleculeDocumentSchema = v.variant('pattern', [
-  v.strictObject({
-    pattern: v.literal('tree'),
-    children: v.pipe(v.array(designNodeSchema), v.minLength(1), v.maxLength(12)),
-  }),
-  v.strictObject({
-    pattern: v.literal('accordion'),
-    items: v.pipe(v.array(designAccordionItemSchema), v.minLength(1), v.maxLength(12)),
-  }),
-]);
+export const designMoleculeDocumentSchema = v.strictObject({
+  pattern: v.picklist(['tree', 'combine']),
+  layout: designFlexSchema,
+  children: v.pipe(v.array(designNodeSchema), v.minLength(1), v.maxLength(12)),
+});
 
 export type DesignMoleculeDocument = v.InferOutput<typeof designMoleculeDocumentSchema>;
 
@@ -31,8 +26,5 @@ export interface DesignMolecule {
 }
 
 export function moleculeNodes(document: DesignMoleculeDocument): readonly DesignNode[] {
-  if (document.pattern === 'tree') {
-    return document.children;
-  }
-  return [];
+  return document.children;
 }

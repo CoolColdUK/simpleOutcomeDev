@@ -1,4 +1,4 @@
-import {parseDesignId, parseSiteDocument, siteComponentsList} from '@so/model';
+import {parseDesignId, parseDesignTemplateItems, parseSiteDocument, siteComponentsList} from '@so/model';
 import {callDesignMcpTool, DESIGN_MCP_TOOLS} from '@/lib/admin/designMcp';
 import {
   createSiteForOwner,
@@ -90,7 +90,7 @@ const SITE_MCP_TOOLS: readonly McpTool[] = [
   },
   {
     name: 'sites_create_template',
-    description: 'Create a site template. Omit document for a blank page with no header or footer. colourSchemeId links a Chakra colour scheme.',
+    description: 'Create a site template. Omit document for a blank page with no header or footer. colourSchemeId links a Chakra colour scheme. items are molecule placements with the content for each slot.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -98,6 +98,7 @@ const SITE_MCP_TOOLS: readonly McpTool[] = [
         name: {type: 'string'},
         document: {type: 'object'},
         colourSchemeId: {type: 'string'},
+        items: {type: 'array'},
       },
       required: ['id', 'name'],
       additionalProperties: false,
@@ -105,7 +106,7 @@ const SITE_MCP_TOOLS: readonly McpTool[] = [
   },
   {
     name: 'sites_update_template',
-    description: 'Update a site template name, document, and/or colourSchemeId. An empty colourSchemeId clears the link.',
+    description: 'Update a site template name, document, colourSchemeId, and/or molecule items. An empty colourSchemeId clears the link. Each item is {id, moleculeId, values}. values map a node path to slot content.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -113,6 +114,7 @@ const SITE_MCP_TOOLS: readonly McpTool[] = [
         name: {type: 'string'},
         document: {type: 'object'},
         colourSchemeId: {type: 'string'},
+        items: {type: 'array'},
       },
       required: ['id'],
       additionalProperties: false,
@@ -254,7 +256,8 @@ export async function callSitesMcpTool(name: string, args: Record<string, unknow
       throw new Error('Name is required');
     }
     const document = args.document === undefined ? undefined : parseSiteDocument(args.document);
-    const template = await createSiteTemplate({id, name: templateName, document, colourSchemeId: colourSchemeId(args.colourSchemeId)});
+    const items = args.items === undefined ? undefined : parseDesignTemplateItems(args.items);
+    const template = await createSiteTemplate({id, name: templateName, document, colourSchemeId: colourSchemeId(args.colourSchemeId), items});
     return {template};
   }
   if (name === 'sites_update_template') {
@@ -265,10 +268,11 @@ export async function callSitesMcpTool(name: string, args: Record<string, unknow
     }
     const document = args.document === undefined ? undefined : parseSiteDocument(args.document);
     const schemeId = colourSchemeId(args.colourSchemeId);
-    if (templateName === undefined && document === undefined && schemeId === undefined) {
+    const items = args.items === undefined ? undefined : parseDesignTemplateItems(args.items);
+    if (templateName === undefined && document === undefined && schemeId === undefined && items === undefined) {
       throw new Error('Nothing to update');
     }
-    const template = await updateSiteTemplate(id, {name: templateName, document, colourSchemeId: schemeId});
+    const template = await updateSiteTemplate(id, {name: templateName, document, colourSchemeId: schemeId, items});
     return {template};
   }
   if (name === 'sites_delete_template') {

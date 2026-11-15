@@ -2,14 +2,18 @@
 
 import {
   DESIGN_ATOMS,
-  SITE_BLOCK_ICONS,
   blankDesignAtom,
   blankDesignMoleculeUse,
-  blankDesignStack,
+  designAtomOptions,
   type DesignAtom,
+  type DesignAtomNode,
+  type DesignContentKey,
   type DesignMolecule,
   type DesignNode,
+  type DesignStyle,
+  type DesignStyleKey,
 } from '@so/model';
+import {useState} from 'react';
 
 function nextNodeId(): string {
   const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -19,6 +23,19 @@ function nextNodeId(): string {
 
 function isDesignAtom(value: string): value is DesignAtom {
   return DESIGN_ATOMS.some((atom) => atom === value);
+}
+
+function styleDefault(key: DesignStyleKey): DesignStyle[DesignStyleKey] {
+  if (key === 'radiusPx') {
+    return 8;
+  }
+  if (key === 'borderWidthPx') {
+    return 1;
+  }
+  if (key === 'color') {
+    return '#ffffff';
+  }
+  return '#111111';
 }
 
 export default function AdminDesignNodeEditor({
@@ -33,80 +50,47 @@ export default function AdminDesignNodeEditor({
   onChange: (nodes: DesignNode[]) => void;
 }) {
   const choices = molecules.filter((molecule) => molecule.id !== excludeMoleculeId);
-  const replace = (index: number, next: DesignNode): void => {
-    onChange(nodes.map((node, nodeIndex) => (nodeIndex === index ? next : node)));
-  };
   return (
     <div>
       {nodes.map((node, index) => (
         <div key={node.id} className="design-node">
           <div className="admin-actions">
-            <strong>{node.kind === 'atom' ? node.atom : node.kind}</strong>
-            <button
-              type="button"
-              className="secondary"
-              disabled={nodes.length < 2}
-              onClick={() => onChange(nodes.filter((_, nodeIndex) => nodeIndex !== index))}
-            >
+            <strong>{node.kind === 'atom' ? node.atom : 'molecule'}</strong>
+            <button type="button" className="secondary" disabled={nodes.length < 2} onClick={() => onChange(nodes.filter((_, nodeIndex) => nodeIndex !== index))}>
               Remove
             </button>
           </div>
           <NodeFields
             node={node}
             molecules={choices}
-            excludeMoleculeId={excludeMoleculeId}
-            onChange={(next) => replace(index, next)}
+            onChange={(next) => onChange(nodes.map((item, nodeIndex) => (nodeIndex === index ? next : item)))}
           />
         </div>
       ))}
-      <label>
-        Add
-        <select
-          value=""
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value === 'stack') {
-              onChange([...nodes, blankDesignStack(nextNodeId())]);
-              return;
-            }
-            if (value === 'molecule') {
-              const moleculeId = choices[0]?.id;
-              if (moleculeId === undefined) {
-                return;
-              }
+      <OptionMenu
+        label="Add piece"
+        options={[
+          ...DESIGN_ATOMS.map((atom) => ({key: atom, label: atom})),
+          ...(choices.length > 0 ? [{key: 'molecule', label: 'molecule'}] : []),
+        ]}
+        onPick={(key) => {
+          if (key === 'molecule') {
+            const moleculeId = choices[0]?.id;
+            if (moleculeId !== undefined) {
               onChange([...nodes, blankDesignMoleculeUse(nextNodeId(), moleculeId)]);
-              return;
             }
-            if (isDesignAtom(value)) {
-              onChange([...nodes, blankDesignAtom(value, nextNodeId())]);
-            }
-          }}
-        >
-          <option value="">Choose a piece</option>
-          {DESIGN_ATOMS.map((atom) => (
-            <option key={atom} value={atom}>
-              {atom}
-            </option>
-          ))}
-          <option value="stack">stack</option>
-          <option value="molecule">molecule</option>
-        </select>
-      </label>
+            return;
+          }
+          if (isDesignAtom(key)) {
+            onChange([...nodes, blankDesignAtom(key, nextNodeId())]);
+          }
+        }}
+      />
     </div>
   );
 }
 
-function NodeFields({
-  node,
-  molecules,
-  excludeMoleculeId,
-  onChange,
-}: {
-  node: DesignNode;
-  molecules: readonly DesignMolecule[];
-  excludeMoleculeId?: string;
-  onChange: (node: DesignNode) => void;
-}) {
+function NodeFields({node, molecules, onChange}: {node: DesignNode; molecules: readonly DesignMolecule[]; onChange: (node: DesignNode) => void}) {
   if (node.kind === 'molecule') {
     return (
       <label>
@@ -121,127 +105,121 @@ function NodeFields({
       </label>
     );
   }
-  if (node.kind === 'stack') {
-    return (
-      <>
-        <label>
-          Direction
-          <select
-            value={node.direction}
-            onChange={(event) => onChange({...node, direction: event.target.value === 'column' ? 'column' : 'row'})}
-          >
-            <option value="row">row</option>
-            <option value="column">column</option>
-          </select>
-        </label>
-        <label>
-          Gap
-          <input
-            type="number"
-            min={0}
-            max={64}
-            value={node.gapPx}
-            onChange={(event) => onChange({...node, gapPx: Number(event.target.value)})}
-          />
-        </label>
-        <AdminDesignNodeEditor
-          nodes={node.children}
-          molecules={molecules}
-          excludeMoleculeId={excludeMoleculeId}
-          onChange={(children) => onChange({...node, children})}
-        />
-      </>
-    );
-  }
-  if (node.atom === 'button') {
-    const button = node;
-    return (
-      <>
-        <TextField label="Label" value={button.props.label} onChange={(label) => onChange({...button, props: {...button.props, label}})} />
-        <TextField label="URL" value={button.props.href} onChange={(href) => onChange({...button, props: {...button.props, href}})} />
-        <TextField label="Background" value={button.props.background} onChange={(background) => onChange({...button, props: {...button.props, background}})} />
-        <TextField label="Colour" value={button.props.color} onChange={(color) => onChange({...button, props: {...button.props, color}})} />
-      </>
-    );
-  }
-  if (node.atom === 'iconButton') {
-    const iconButton = node;
-    return (
-      <>
-        <TextField label="Label" value={iconButton.props.label} onChange={(label) => onChange({...iconButton, props: {...iconButton.props, label}})} />
-        <TextField label="URL" value={iconButton.props.href} onChange={(href) => onChange({...iconButton, props: {...iconButton.props, href}})} />
-        <TextField label="Background" value={iconButton.props.background} onChange={(background) => onChange({...iconButton, props: {...iconButton.props, background}})} />
-        <TextField label="Colour" value={iconButton.props.color} onChange={(color) => onChange({...iconButton, props: {...iconButton.props, color}})} />
-        <label>
-          Icon
-          <select value={iconButton.props.icon} onChange={(event) => onChange({...iconButton, props: {...iconButton.props, icon: iconOf(event.target.value)}})}>
-            {SITE_BLOCK_ICONS.map((icon) => (
-              <option key={icon} value={icon}>
-                {icon}
-              </option>
-            ))}
-          </select>
-        </label>
-      </>
-    );
-  }
-  if (node.atom === 'imageButton') {
-    return (
-      <>
-        <TextField label="Label" value={node.props.label} onChange={(label) => onChange({...node, props: {...node.props, label}})} />
-        <TextField label="URL" value={node.props.href} onChange={(href) => onChange({...node, props: {...node.props, href}})} />
-        <TextField label="Image URL" value={node.props.src} onChange={(src) => onChange({...node, props: {...node.props, src}})} />
-        <TextField label="Alt" value={node.props.alt} onChange={(alt) => onChange({...node, props: {...node.props, alt}})} />
-      </>
-    );
-  }
-  if (node.atom === 'link') {
-    return (
-      <>
-        <TextField label="Label" value={node.props.label} onChange={(label) => onChange({...node, props: {...node.props, label}})} />
-        <TextField label="URL" value={node.props.href} onChange={(href) => onChange({...node, props: {...node.props, href}})} />
-        <TextField label="Colour" value={node.props.color} onChange={(color) => onChange({...node, props: {...node.props, color}})} />
-      </>
-    );
-  }
-  if (node.atom === 'switch') {
-    return (
-      <>
-        <TextField label="Label" value={node.props.label} onChange={(label) => onChange({...node, props: {...node.props, label}})} />
-        <label>
-          <input
-            type="checkbox"
-            checked={node.props.checked}
-            onChange={(event) => onChange({...node, props: {...node.props, checked: event.target.checked}})}
-          />{' '}
-          Checked
-        </label>
-      </>
-    );
-  }
+  return <AtomFields node={node} onChange={onChange} />;
+}
+
+function AtomFields({node, onChange}: {node: DesignAtomNode; onChange: (node: DesignNode) => void}) {
+  const options = designAtomOptions(node.atom);
+  const available = options.filter((option) => (option.group === 'content' ? !node.slots.includes(option.key) : node.style[option.key as DesignStyleKey] === undefined));
   return (
     <>
-      <TextField label="Text" value={node.props.text} onChange={(text) => onChange({...node, props: {...node.props, text}})} />
-      <label>
-        Role
-        <select value={node.props.role} onChange={(event) => onChange({...node, props: {...node.props, role: event.target.value === 'heading' ? 'heading' : 'body'}})}>
-          <option value="body">body</option>
-          <option value="heading">heading</option>
-        </select>
-      </label>
+      <OptionMenu
+        label="Add option"
+        options={available.map((option) => ({key: option.key, label: option.label}))}
+        onPick={(key) => {
+          const option = options.find((item) => item.key === key);
+          if (option === undefined) {
+            return;
+          }
+          if (option.group === 'content') {
+            onChange({...node, slots: [...node.slots, option.key as DesignContentKey]});
+            return;
+          }
+          const styleKey = option.key as DesignStyleKey;
+          onChange({...node, style: {...node.style, [styleKey]: styleDefault(styleKey)}});
+        }}
+      />
+      {node.slots.map((slot) => (
+        <div key={slot} className="admin-actions">
+          <span>{options.find((option) => option.key === slot)?.label ?? slot}</span>
+          <span className="admin-muted">Filled in on the template</span>
+          <button type="button" className="secondary" onClick={() => onChange({...node, slots: node.slots.filter((item) => item !== slot)})}>
+            Remove
+          </button>
+        </div>
+      ))}
+      {options
+        .filter((option) => option.group === 'style' && node.style[option.key as DesignStyleKey] !== undefined)
+        .map((option) => (
+          <StyleField
+            key={option.key}
+            optionKey={option.key as DesignStyleKey}
+            label={option.label}
+            value={node.style[option.key as DesignStyleKey]}
+            onChange={(value) => onChange({...node, style: {...node.style, [option.key]: value}})}
+            onRemove={() => onChange({...node, style: styleWithout(node.style, option.key as DesignStyleKey)})}
+          />
+        ))}
     </>
   );
 }
 
-function iconOf(value: string): (typeof SITE_BLOCK_ICONS)[number] {
-  return SITE_BLOCK_ICONS.find((icon) => icon === value) ?? 'menu';
+function StyleField({
+  optionKey,
+  label,
+  value,
+  onChange,
+  onRemove,
+}: {
+  optionKey: DesignStyleKey;
+  label: string;
+  value: DesignStyle[DesignStyleKey];
+  onChange: (value: DesignStyle[DesignStyleKey]) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="admin-actions">
+      {optionKey === 'radiusPx' || optionKey === 'borderWidthPx' ? (
+        <label>
+          {label}
+          <input type="number" min={0} max={optionKey === 'radiusPx' ? 32 : 8} value={Number(value)} onChange={(event) => onChange(Number(event.target.value))} />
+        </label>
+      ) : (
+        <label>
+          {label}
+          <input value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} />
+        </label>
+      )}
+      <button type="button" className="secondary" onClick={onRemove}>
+        Remove
+      </button>
+    </div>
+  );
 }
 
-function TextField({label, value, onChange}: {label: string; value: string; onChange: (value: string) => void}) {
+function styleWithout(style: DesignStyle, key: DesignStyleKey): DesignStyle {
+  const next = {...style};
+  delete next[key];
+  return next;
+}
+
+function OptionMenu({label, options, onPick}: {label: string; options: readonly {key: string; label: string}[]; onPick: (key: string) => void}) {
+  const [open, setOpen] = useState(false);
+  if (options.length === 0) {
+    return null;
+  }
   return (
-    <label>
-      {label}
-      <input value={value} onChange={(event) => onChange(event.target.value)} />
-    </label>
+    <div>
+      <button type="button" className="secondary" onClick={() => setOpen(!open)}>
+        {label}
+      </button>
+      {open ? (
+        <div className="design-option-menu">
+          {options.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              className="secondary"
+              onClick={() => {
+                onPick(option.key);
+                setOpen(false);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

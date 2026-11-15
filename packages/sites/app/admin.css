@@ -555,3 +555,19 @@
 .design-atom-link {
   color: var(--chakra-colors-siteAccent);
 }
+
+.design-option-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.design-image-placeholder {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  background: var(--chakra-colors-siteCard);
+  border-radius: var(--chakra-radii-site);
+}

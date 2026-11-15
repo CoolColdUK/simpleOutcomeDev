@@ -16,6 +16,6 @@ isProject: true
 
 # Design library
 
-Atoms stay in code (button, icon button, image button, link, switch, text). Accordion is a molecule. Sections are organisms. Existing `site_template` rows stay the template layer and gain `colour_scheme_id`.
+Atoms stay in code (button, icon button, image button, link, switch, text). A molecule is either a flex tree or a combine of atoms and other molecules. Style (radius, border, colours) and flex (gap, alignment, wrap) are optional keys added from a menu. Content slots are names on the molecule and values on a template item. Sections are organisms. Existing `site_template` rows stay the template layer and gain `colour_scheme_id` and `items`.
 
 Colour schemes are stored as Chakra theme tokens (`{ value }`) plus heading case and hero background. Applying a scheme writes those tokens into the template's `theme`, which the public page already renders.

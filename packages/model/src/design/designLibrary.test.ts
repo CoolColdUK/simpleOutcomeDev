@@ -6,10 +6,11 @@ import {DESIGN_COLOUR_SCHEME_SEED, DESIGN_MOLECULE_SEED, DESIGN_ORGANISM_SEED} f
 import {designMoleculeDocumentSchema} from './designMolecule';
 import {designNodeSchema} from './designNode';
 import {designOrganismDocumentSchema} from './designOrganism';
-import {parseDesignColourTokens, parseDesignId} from './parseDesignValue';
+import {parseDesignColourTokens, parseDesignId, parseDesignMoleculeDocument} from './parseDesignValue';
 import {DESIGN_ATOM_GUIDE, designLibraryGuide} from './designLibraryGuide';
-import {DESIGN_ATOMS} from './designNode';
+import {DESIGN_ATOMS} from './designAtomOptions';
 import {designLibraryError} from './designReferences';
+import {listMoleculeContentFields} from './designTemplateItem';
 
 describe('design library', () => {
   it('turns a site theme into Chakra tokens and back', () => {
@@ -52,6 +53,7 @@ describe('design library', () => {
       name: 'Loop',
       document: v.parse(designMoleculeDocumentSchema, {
         pattern: 'tree',
+        layout: {},
         children: [{id: 'self', kind: 'molecule', moleculeId: 'loop'}],
       }),
     };
@@ -65,7 +67,28 @@ describe('design library', () => {
 
   it('describes every atom for the design tools', () => {
     expect(DESIGN_ATOM_GUIDE.map((entry) => entry.atom)).toEqual([...DESIGN_ATOMS]);
-    expect(designLibraryGuide().moleculePatterns).toEqual(['tree', 'accordion']);
+    expect(designLibraryGuide().moleculePatterns).toEqual(['tree', 'combine']);
+  });
+
+  it('lists content slots for a template item, including nested molecules', () => {
+    const grouped = DESIGN_MOLECULE_SEED.find((molecule) => molecule.id === 'grouped');
+    expect(grouped).toBeDefined();
+    if (grouped === undefined) {
+      return;
+    }
+    const fields = listMoleculeContentFields(grouped, DESIGN_MOLECULE_SEED);
+    expect(fields.some((field) => field.slot === 'text' && field.nodeId === 'intro')).toBe(true);
+    expect(fields.some((field) => field.slot === 'label' && field.nodeId.startsWith('actions.'))).toBe(true);
+  });
+
+  it('turns an old accordion into a combine without copying its text', () => {
+    const document = parseDesignMoleculeDocument({
+      pattern: 'accordion',
+      items: [{id: 'downtime', title: 'Is there any downtime?', body: 'It depends.'}],
+    });
+    expect(document.pattern).toBe('combine');
+    expect(JSON.stringify(document)).not.toContain('downtime');
+    expect(document.children.some((node) => node.kind === 'atom' && node.slots.includes('label'))).toBe(true);
   });
 
   it('parses a blank atom', () => {

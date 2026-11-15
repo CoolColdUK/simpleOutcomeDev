@@ -33,57 +33,27 @@ export const DESIGN_COLOUR_SCHEME_SEED: readonly DesignColourScheme[] = [
 
 export const DESIGN_MOLECULE_SEED: readonly DesignMolecule[] = [
   {
-    id: 'accordion',
-    name: 'Accordion',
-    document: {
-      pattern: 'accordion',
-      items: [
-        {
-          id: 'downtime',
-          title: 'Is there any downtime?',
-          body: 'It depends on the treatment. You leave with written aftercare either way.',
-        },
-        {
-          id: 'results',
-          title: 'How long do results last?',
-          body: 'Your consultation covers what to expect before anything is booked.',
-        },
-      ],
-    },
-  },
-  {
     id: 'action-row',
     name: 'Action row',
     document: {
       pattern: 'tree',
+      layout: {direction: 'row', gapPx: 12, align: 'center', valign: 'center', wrap: 'wrap'},
       children: [
-        {
-          id: 'row',
-          kind: 'stack',
-          direction: 'row',
-          gapPx: 12,
-          children: [
-            {
-              id: 'book',
-              kind: 'atom',
-              atom: 'button',
-              props: {label: 'Book now', href: 'https://www.fresha.com/', background: '#111111', color: '#ffffff'},
-            },
-            {
-              id: 'call',
-              kind: 'atom',
-              atom: 'iconButton',
-              props: {label: 'Call', href: 'https://www.fresha.com/', icon: 'phone', background: '#111111', color: '#ffffff'},
-            },
-            {
-              id: 'photo',
-              kind: 'atom',
-              atom: 'imageButton',
-              props: {label: 'See work', href: 'https://www.fresha.com/', src: 'https://simpleoutcome.dev/', alt: 'Work'},
-            },
-            {id: 'open', kind: 'atom', atom: 'switch', props: {label: 'Open today', checked: true}},
-          ],
-        },
+        {id: 'book', kind: 'atom', atom: 'button', style: {background: '#111111', color: '#ffffff', radiusPx: 8}, slots: ['label', 'href']},
+        {id: 'call', kind: 'atom', atom: 'iconButton', style: {background: '#111111', color: '#ffffff', radiusPx: 8}, slots: ['label', 'href', 'icon']},
+        {id: 'photo', kind: 'atom', atom: 'imageButton', style: {radiusPx: 8}, slots: ['label', 'href', 'src', 'alt']},
+      ],
+    },
+  },
+  {
+    id: 'grouped',
+    name: 'Grouped',
+    document: {
+      pattern: 'combine',
+      layout: {direction: 'column', gapPx: 8},
+      children: [
+        {id: 'intro', kind: 'atom', atom: 'text', style: {}, slots: ['text']},
+        {id: 'actions', kind: 'molecule', moleculeId: 'action-row'},
       ],
     },
   },
@@ -96,7 +66,7 @@ export const DESIGN_ORGANISM_SEED: readonly DesignOrganism[] = [
     category: 'header',
     document: {
       children: [
-        {id: 'name', kind: 'atom', atom: 'text', props: {text: 'Business name', role: 'heading'}},
+        {id: 'name', kind: 'atom', atom: 'text', style: {}, slots: ['text', 'role']},
         {id: 'actions', kind: 'molecule', moleculeId: 'action-row'},
       ],
     },
@@ -107,10 +77,10 @@ export const DESIGN_ORGANISM_SEED: readonly DesignOrganism[] = [
     category: 'page',
     document: {
       children: [
-        {id: 'title', kind: 'atom', atom: 'text', props: {text: 'Section title', role: 'heading'}},
-        {id: 'body', kind: 'atom', atom: 'text', props: {text: 'Supporting copy for this band.', role: 'body'}},
+        {id: 'title', kind: 'atom', atom: 'text', style: {}, slots: ['text']},
+        {id: 'body', kind: 'atom', atom: 'text', style: {}, slots: ['text']},
         {id: 'actions', kind: 'molecule', moleculeId: 'action-row'},
-        {id: 'questions', kind: 'molecule', moleculeId: 'accordion'},
+        {id: 'group', kind: 'molecule', moleculeId: 'grouped'},
       ],
     },
   },
@@ -120,8 +90,8 @@ export const DESIGN_ORGANISM_SEED: readonly DesignOrganism[] = [
     category: 'footer',
     document: {
       children: [
-        {id: 'line', kind: 'atom', atom: 'text', props: {text: 'Footer', role: 'body'}},
-        {id: 'home', kind: 'atom', atom: 'link', props: {label: 'Back to top', href: 'https://simpleoutcome.dev/', color: '#111111'}},
+        {id: 'line', kind: 'atom', atom: 'text', style: {}, slots: ['text']},
+        {id: 'home', kind: 'atom', atom: 'link', style: {color: '#111111'}, slots: ['label', 'href']},
       ],
     },
   },

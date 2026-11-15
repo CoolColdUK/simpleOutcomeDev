@@ -18,9 +18,6 @@ function walk(nodes: readonly DesignNode[], molecules: ReadonlyMap<string, Desig
   }
   return first(
     nodes.map((node) => {
-      if (node.kind === 'stack') {
-        return walk(node.children, molecules, seen, depth + 1);
-      }
       if (node.kind !== 'molecule') {
         return undefined;
       }
@@ -59,13 +56,7 @@ export function designLibraryError(library: DesignLibraryRefs): string | undefin
 export function designMoleculeUsedBy(id: string, library: DesignLibraryRefs): string | undefined {
   const mention = (nodes: readonly DesignNode[]): boolean =>
     nodes.some((node) => {
-      if (node.kind === 'molecule') {
-        return node.moleculeId === id;
-      }
-      if (node.kind === 'stack') {
-        return mention(node.children);
-      }
-      return false;
+      return node.kind === 'molecule' && node.moleculeId === id;
     });
   const molecule = library.molecules.find((item) => item.id !== id && mention(moleculeNodes(item.document)));
   if (molecule !== undefined) {

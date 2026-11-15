@@ -1,84 +1,37 @@
 import * as v from 'valibot';
-import {SITE_BLOCK_ICONS} from '../site/siteBlockSchema';
-import {siteBodySchema, siteHexColourSchema, siteHttpUrlSchema, siteShortTextSchema} from '../site/siteTextSchema';
+import {siteHexColourSchema} from '../site/siteTextSchema';
+import {DESIGN_ATOMS, isDesignContentKey, isDesignStyleKey, type DesignAtom, type DesignContentKey, type DesignStyleKey} from './designAtomOptions';
 import {designIdSchema, designNodeIdSchema} from './designId';
 
-export const DESIGN_ATOMS = ['button', 'iconButton', 'imageButton', 'link', 'switch', 'text'] as const;
+export {DESIGN_ATOMS};
+export type {DesignAtom};
 
-export type DesignAtom = (typeof DESIGN_ATOMS)[number];
+const px = (max: number) => v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(max));
 
-const idField = {id: designNodeIdSchema, kind: v.literal('atom')} as const;
-
-export const designButtonNodeSchema = v.strictObject({
-  ...idField,
-  atom: v.literal('button'),
-  props: v.strictObject({
-    label: siteShortTextSchema,
-    href: siteHttpUrlSchema,
-    background: siteHexColourSchema,
-    color: siteHexColourSchema,
-  }),
+export const designStyleSchema = v.strictObject({
+  background: v.optional(siteHexColourSchema),
+  color: v.optional(siteHexColourSchema),
+  radiusPx: v.optional(px(32)),
+  borderWidthPx: v.optional(px(8)),
+  borderColor: v.optional(siteHexColourSchema),
 });
 
-export const designIconButtonNodeSchema = v.strictObject({
-  ...idField,
-  atom: v.literal('iconButton'),
-  props: v.strictObject({
-    label: siteShortTextSchema,
-    href: siteHttpUrlSchema,
-    icon: v.picklist(SITE_BLOCK_ICONS),
-    background: siteHexColourSchema,
-    color: siteHexColourSchema,
-  }),
-});
+export type DesignStyle = v.InferOutput<typeof designStyleSchema>;
 
-export const designImageButtonNodeSchema = v.strictObject({
-  ...idField,
-  atom: v.literal('imageButton'),
-  props: v.strictObject({
-    label: siteShortTextSchema,
-    href: siteHttpUrlSchema,
-    src: siteHttpUrlSchema,
-    alt: siteShortTextSchema,
+export const designAtomNodeSchema = v.pipe(
+  v.strictObject({
+    id: designNodeIdSchema,
+    kind: v.literal('atom'),
+    atom: v.picklist(DESIGN_ATOMS),
+    style: designStyleSchema,
+    slots: v.pipe(v.array(v.string()), v.maxLength(8)),
   }),
-});
+  v.check((node) => node.slots.every((slot) => isDesignContentKey(node.atom, slot)), 'Content option is not available on this atom'),
+  v.check((node) => new Set(node.slots).size === node.slots.length, 'Content option is listed twice'),
+  v.check((node) => Object.keys(node.style).every((key) => isDesignStyleKey(node.atom, key)), 'Style option is not available on this atom'),
+);
 
-export const designLinkNodeSchema = v.strictObject({
-  ...idField,
-  atom: v.literal('link'),
-  props: v.strictObject({
-    label: siteShortTextSchema,
-    href: siteHttpUrlSchema,
-    color: siteHexColourSchema,
-  }),
-});
-
-export const designSwitchNodeSchema = v.strictObject({
-  ...idField,
-  atom: v.literal('switch'),
-  props: v.strictObject({
-    label: siteShortTextSchema,
-    checked: v.boolean(),
-  }),
-});
-
-export const designTextNodeSchema = v.strictObject({
-  ...idField,
-  atom: v.literal('text'),
-  props: v.strictObject({
-    text: siteBodySchema,
-    role: v.picklist(['heading', 'body']),
-  }),
-});
-
-export const designAtomNodeSchema = v.variant('atom', [
-  designButtonNodeSchema,
-  designIconButtonNodeSchema,
-  designImageButtonNodeSchema,
-  designLinkNodeSchema,
-  designSwitchNodeSchema,
-  designTextNodeSchema,
-]);
+export interface DesignAtomNode extends v.InferOutput<typeof designAtomNodeSchema> {}
 
 export const designMoleculeUseSchema = v.strictObject({
   id: designNodeIdSchema,
@@ -88,26 +41,8 @@ export const designMoleculeUseSchema = v.strictObject({
 
 export interface DesignMoleculeUseNode extends v.InferOutput<typeof designMoleculeUseSchema> {}
 
-export type DesignAtomNode = v.InferOutput<typeof designAtomNodeSchema>;
+export type DesignNode = DesignAtomNode | DesignMoleculeUseNode;
 
-export interface DesignStackNode {
-  id: string;
-  kind: 'stack';
-  direction: 'row' | 'column';
-  gapPx: number;
-  children: DesignNode[];
-}
+export const designNodeSchema: v.GenericSchema<DesignNode> = v.variant('kind', [designAtomNodeSchema, designMoleculeUseSchema]);
 
-export type DesignNode = DesignAtomNode | DesignMoleculeUseNode | DesignStackNode;
-
-export const designNodeSchema: v.GenericSchema<DesignNode> = v.lazy(() =>
-  v.variant('kind', [designAtomNodeSchema, designMoleculeUseSchema, designStackNodeSchema]),
-);
-
-export const designStackNodeSchema: v.GenericSchema<DesignStackNode> = v.strictObject({
-  id: designNodeIdSchema,
-  kind: v.literal('stack'),
-  direction: v.picklist(['row', 'column']),
-  gapPx: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(64)),
-  children: v.pipe(v.array(designNodeSchema), v.minLength(1), v.maxLength(8)),
-});
+export type {DesignContentKey, DesignStyleKey};

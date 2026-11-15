@@ -2,7 +2,9 @@ import * as v from 'valibot';
 import {designColourTokensSchema, type DesignColourTokens} from './designColourScheme';
 import {designCategorySchema, designIdSchema, type DesignCategory} from './designId';
 import {designMoleculeDocumentSchema, type DesignMoleculeDocument} from './designMolecule';
+import {normaliseMoleculeDocument, normaliseOrganismDocument} from './normaliseDesignDocument';
 import {designOrganismDocumentSchema, type DesignOrganismDocument} from './designOrganism';
+import {designTemplateItemsSchema, type DesignTemplateItem} from './designTemplateItem';
 
 function parse<T>(schema: v.GenericSchema<T>, value: unknown, label: string): T {
   const result = v.safeParse(schema, value);
@@ -28,9 +30,13 @@ export function parseDesignColourTokens(value: unknown): DesignColourTokens {
 }
 
 export function parseDesignMoleculeDocument(value: unknown): DesignMoleculeDocument {
-  return parse(designMoleculeDocumentSchema, value, 'document');
+  return parse(designMoleculeDocumentSchema, normaliseMoleculeDocument(value), 'document');
 }
 
 export function parseDesignOrganismDocument(value: unknown): DesignOrganismDocument {
-  return parse(designOrganismDocumentSchema, value, 'document');
+  return parse(designOrganismDocumentSchema, normaliseOrganismDocument(value), 'document');
+}
+
+export function parseDesignTemplateItems(value: unknown): DesignTemplateItem[] {
+  return parse(designTemplateItemsSchema, value ?? [], 'items');
 }
