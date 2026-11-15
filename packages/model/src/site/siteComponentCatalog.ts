@@ -1,3 +1,4 @@
+import type {SiteBlock} from './siteBlockSchema';
 import type {SiteSection} from './siteSectionSchema';
 
 export type SiteSectionType = SiteSection['type'];
@@ -38,6 +39,7 @@ export const SITE_SECTION_TYPES = [
   'faq',
   'team',
   'splitCta',
+  'blank',
   'footerSimple',
   'footerMenu',
 ] as const satisfies readonly SiteSectionType[];
@@ -47,15 +49,22 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
     type: 'headerSimple',
     category: 'header',
     label: 'Simple header',
-    description: 'Business name and booking button.',
-    fields: [],
+    description: 'Business name, booking button, and optional buttons.',
+    fields: [
+      {name: 'background', kind: 'string', required: false, description: 'Hex background colour'},
+      {name: 'items', kind: 'array', required: false, description: '0–8 button or iconButton blocks'},
+    ],
   },
   {
     type: 'headerMenu',
     category: 'header',
     label: 'Header with menu',
     description: 'Business name, booking button, and links to sections.',
-    fields: [{name: 'links', kind: 'array', required: true, description: '0–8 links with label and section id'}],
+    fields: [
+      {name: 'links', kind: 'array', required: true, description: '0–8 links with label and section id'},
+      {name: 'background', kind: 'string', required: false, description: 'Hex background colour'},
+      {name: 'items', kind: 'array', required: false, description: '0–8 button or iconButton blocks'},
+    ],
   },
   {
     type: 'hero',
@@ -200,6 +209,17 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
     fields: [{name: 'items', kind: 'array', required: true, description: 'Exactly two items'}],
   },
   {
+    type: 'blank',
+    category: 'page',
+    label: 'Blank section',
+    description: 'An empty band with a height and background. Add buttons inside it.',
+    fields: [
+      {name: 'heightPx', kind: 'number', required: true, description: '24–800'},
+      {name: 'background', kind: 'string', required: true, description: 'Hex background colour'},
+      {name: 'items', kind: 'array', required: true, description: '0–8 button or iconButton blocks'},
+    ],
+  },
+  {
     type: 'footerSimple',
     category: 'footer',
     label: 'Simple footer',
@@ -218,10 +238,31 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
 ];
 
+export interface SiteBlockEntry {
+  readonly type: SiteBlock['type'];
+  readonly label: string;
+  readonly description: string;
+}
+
+export const SITE_BLOCK_CATALOG: readonly SiteBlockEntry[] = [
+  {
+    type: 'button',
+    label: 'Button',
+    description: 'A labelled link. Set the label, URL, background, and text colour.',
+  },
+  {
+    type: 'iconButton',
+    label: 'Icon button',
+    description: 'A small icon link. Set the icon, label, URL, background, and icon colour.',
+  },
+];
+
 export interface SiteComponentsList {
   readonly schemaVersion: 1;
   readonly categories: readonly SiteComponentCategory[];
   readonly components: readonly SiteComponentEntry[];
+  readonly blocks: readonly SiteBlockEntry[];
+  readonly sectionName: string;
 }
 
 export function siteComponentsList(): SiteComponentsList {
@@ -229,6 +270,8 @@ export function siteComponentsList(): SiteComponentsList {
     schemaVersion: 1,
     categories: SITE_COMPONENT_CATEGORIES,
     components: SITE_COMPONENT_CATALOG,
+    blocks: SITE_BLOCK_CATALOG,
+    sectionName: 'Optional name on every section. Shown only in the editor, not on the public page.',
   };
 }
 

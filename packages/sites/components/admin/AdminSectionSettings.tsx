@@ -2,18 +2,19 @@
 
 import type {SiteSection} from '@so/model';
 import type {ReactNode} from 'react';
+import AdminSectionBlocks, {AdminColourField} from '@/components/admin/AdminSectionBlocks';
 import AdminSectionMenuFields from '@/components/admin/AdminSectionMenuFields';
-import {blankToUndefined, CtaFields, MediaFields, Rows, ServiceItems, sectionLabel} from '@/components/admin/AdminSectionSettingsShared';
+import {blankToUndefined, CtaFields, MediaFields, Rows, ServiceItems, sectionChoiceLabel} from '@/components/admin/AdminSectionSettingsShared';
 import AdminSectionSettingsRest from '@/components/admin/AdminSectionSettingsRest';
 
 export default function AdminSectionSettings({
   section,
-  sectionIds,
+  sections,
   onChange,
   onClose,
 }: {
   section: SiteSection;
-  sectionIds: readonly string[];
+  sections: readonly SiteSection[];
   onChange: (next: SiteSection) => void;
   onClose: () => void;
 }) {
@@ -25,25 +26,103 @@ export default function AdminSectionSettings({
           Close
         </button>
       </div>
-      <p className="admin-muted">
-        {sectionLabel(section.type)} · {section.id}
-      </p>
-      <div className="admin-form">{renderFields(section, sectionIds, onChange)}</div>
+      <p className="admin-muted">{sectionChoiceLabel(section)}</p>
+      <div className="admin-form">
+        <label>
+          Name
+          <input
+            value={section.name ?? ''}
+            maxLength={120}
+            placeholder="Internal name"
+            onChange={(event) => onChange(sectionWithName(section, event.target.value))}
+          />
+          <span className="admin-hint">Shown in the editor only. Use this when several sections share a type.</span>
+        </label>
+        {renderFields(section, sections, onChange)}
+      </div>
     </div>
   );
 }
 
-function renderFields(section: SiteSection, sectionIds: readonly string[], onChange: (next: SiteSection) => void): ReactNode {
+function sectionWithName(section: SiteSection, raw: string): SiteSection {
+  const trimmed = raw.trim();
+  if (trimmed === '') {
+    return {...section, name: undefined};
+  }
+  return {...section, name: trimmed};
+}
+
+function renderFields(section: SiteSection, sections: readonly SiteSection[], onChange: (next: SiteSection) => void): ReactNode {
   if (section.type === 'headerSimple') {
-    return <p className="admin-muted">Shows the business name and booking button.</p>;
+    return (
+      <>
+        <p className="admin-muted">Shows the business name and booking button. Add buttons to build the rest of the header.</p>
+        <AdminColourField
+          label="Background"
+          value={section.props.background ?? ''}
+          onChange={(background) =>
+            onChange({...section, props: {...section.props, background: background === '' ? undefined : background}})
+          }
+        />
+        <AdminSectionBlocks
+          items={section.props.items ?? []}
+          onChange={(items) => onChange({...section, props: {...section.props, items}})}
+        />
+      </>
+    );
   }
   if (section.type === 'headerMenu') {
     return (
-      <AdminSectionMenuFields
-        links={section.props.links}
-        sectionIds={sectionIds}
-        onChange={(links) => onChange({...section, props: {links}})}
-      />
+      <>
+        <p className="admin-muted">Shows the business name and booking button. Add buttons to build the rest of the header.</p>
+        <AdminColourField
+          label="Background"
+          value={section.props.background ?? ''}
+          onChange={(background) =>
+            onChange({...section, props: {...section.props, background: background === '' ? undefined : background}})
+          }
+        />
+        <AdminSectionMenuFields
+          links={section.props.links}
+            sections={sections}
+          onChange={(links) => onChange({...section, props: {...section.props, links}})}
+        />
+        <AdminSectionBlocks
+          items={section.props.items ?? []}
+          onChange={(items) => onChange({...section, props: {...section.props, items}})}
+        />
+      </>
+    );
+  }
+  if (section.type === 'blank') {
+    return (
+      <>
+        <label>
+          Height (px)
+          <input
+            type="number"
+            min={24}
+            max={800}
+            step={1}
+            value={section.props.heightPx}
+            onChange={(event) => onChange({...section, props: {...section.props, heightPx: Number(event.target.value)}})}
+          />
+        </label>
+        <AdminColourField
+          label="Background"
+          value={section.props.background}
+          onChange={(background) => {
+            if (!/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(background)) {
+              return;
+            }
+            onChange({...section, props: {...section.props, background}});
+          }}
+        />
+        <AdminSectionBlocks
+          items={section.props.items}
+          onChange={(items) => onChange({...section, props: {...section.props, items}})}
+        />
+      </>
     );
   }
   if (section.type === 'footerSimple') {
@@ -71,7 +150,7 @@ function renderFields(section: SiteSection, sectionIds: readonly string[], onCha
         </label>
         <AdminSectionMenuFields
           links={section.props.links}
-          sectionIds={sectionIds}
+            sections={sections}
           onChange={(links) => onChange({...section, props: {...section.props, links}})}
         />
       </>
@@ -155,13 +234,13 @@ function renderFields(section: SiteSection, sectionIds: readonly string[], onCha
         <CtaFields
           heading="Primary button"
           cta={section.props.primaryCta}
-          sectionIds={sectionIds}
+            sections={sections}
           onChange={(primaryCta) => onChange({...section, props: {...section.props, primaryCta}})}
         />
         <CtaFields
           heading="Secondary button"
           cta={section.props.secondaryCta}
-          sectionIds={sectionIds}
+            sections={sections}
           onChange={(secondaryCta) => onChange({...section, props: {...section.props, secondaryCta}})}
         />
         <MediaFields

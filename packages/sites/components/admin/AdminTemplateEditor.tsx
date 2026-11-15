@@ -111,7 +111,7 @@ export default function AdminTemplateEditor(props: AdminTemplateEditorProps) {
         {settingsSection === undefined ? null : (
           <AdminSectionSettings
             section={settingsSection}
-            sectionIds={document.sections.map((section) => section.id)}
+            sections={document.sections}
             onChange={replaceSection}
             onClose={() => setSettingsId(undefined)}
           />

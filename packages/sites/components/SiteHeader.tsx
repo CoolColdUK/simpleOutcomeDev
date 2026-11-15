@@ -1,22 +1,28 @@
 'use client';
 
-import type {SiteDocument} from '@so/model';
+import type {SiteBlock, SiteDocument} from '@so/model';
 import {useState} from 'react';
+import SiteBlockView from '@/components/SiteBlockView';
 
 export interface SiteHeaderProps {
   readonly businessName: string;
   readonly booking: SiteDocument['booking'];
   readonly links: readonly {readonly label: string; readonly sectionId: string}[];
+  readonly background: string | undefined;
+  readonly items: readonly SiteBlock[];
 }
 
-export default function SiteHeader({businessName, booking, links}: SiteHeaderProps) {
+export default function SiteHeader({businessName, booking, links, background, items}: SiteHeaderProps) {
   const [open, setOpen] = useState(false);
   return (
-    <header className="nav">
+    <header className="nav" style={background === undefined ? undefined : {background}}>
       <a className="logo" href="#hero">
         {businessName}
       </a>
       <div className="nav-actions">
+        {items.map((block) => (
+          <SiteBlockView key={block.id} block={block} />
+        ))}
         {links.length === 0 ? null : (
           <button type="button" className="menu-button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
             {open ? 'Close' : 'Menu'}

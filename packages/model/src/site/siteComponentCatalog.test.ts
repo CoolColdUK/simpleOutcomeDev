@@ -49,5 +49,6 @@ describe('siteComponentCatalog', () => {
     expect(list.categories).toEqual(['header', 'page', 'footer']);
     expect(list.components.length).toBe(SITE_SECTION_TYPES.length);
     expect(list.components.some((entry) => entry.category === 'header' && entry.type === 'headerMenu')).toBe(true);
+    expect(list.blocks.map((block) => block.type)).toEqual(['button', 'iconButton']);
   });
 });

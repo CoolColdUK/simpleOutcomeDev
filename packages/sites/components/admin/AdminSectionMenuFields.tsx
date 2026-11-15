@@ -1,19 +1,20 @@
 'use client';
 
 import type {SiteSection} from '@so/model';
+import {sectionChoiceLabel} from '@/components/admin/AdminSectionSettingsShared';
 
 type MenuSection = Extract<SiteSection, {type: 'headerMenu' | 'footerMenu'}>;
 
 export default function AdminSectionMenuFields({
   links,
-  sectionIds,
+  sections,
   onChange,
 }: {
   links: MenuSection['props']['links'];
-  sectionIds: readonly string[];
+  sections: readonly SiteSection[];
   onChange: (links: MenuSection['props']['links']) => void;
 }) {
-  const choices = sectionIds.length === 0 ? [] : sectionIds;
+  const choices = sections;
   return (
     <>
       {links.map((link, index) => (
@@ -36,9 +37,9 @@ export default function AdminSectionMenuFields({
                 onChange(links.map((item, itemIndex) => (itemIndex === index ? {...item, sectionId: event.target.value} : item)))
               }
             >
-              {choices.map((id) => (
-                <option key={id} value={id}>
-                  {id}
+              {choices.map((choice) => (
+                <option key={choice.id} value={choice.id}>
+                  {sectionChoiceLabel(choice)}
                 </option>
               ))}
             </select>
@@ -53,7 +54,7 @@ export default function AdminSectionMenuFields({
         className="secondary"
         disabled={links.length >= 8 || choices.length === 0}
         onClick={() => {
-          const sectionId = choices[0];
+          const sectionId = choices[0]?.id;
           if (sectionId === undefined) {
             return;
           }

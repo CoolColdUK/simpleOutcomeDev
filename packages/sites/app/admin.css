@@ -449,6 +449,10 @@
   background: #fff;
 }
 
+.admin-section-preview .site > div {
+  outline: 1px dashed #8a8175;
+}
+
 .admin-preview {
   margin-top: 1rem;
   border: 1px dashed var(--admin-border);

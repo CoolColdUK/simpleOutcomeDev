@@ -1,6 +1,7 @@
 import type {SiteDocument, SiteSection} from '@so/model';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import SiteSectionBlank from '@/components/SiteSectionBlank';
 import SiteSectionAbout from '@/components/SiteSectionAbout';
 import SiteSectionBookingCta from '@/components/SiteSectionBookingCta';
 import SiteSectionContact from '@/components/SiteSectionContact';
@@ -17,10 +18,29 @@ import SiteSectionTeam from '@/components/SiteSectionTeam';
 
 function renderSection(section: SiteSection, document: SiteDocument, status: 'demo' | 'draft' | 'live' | 'archived') {
   if (section.type === 'headerSimple') {
-    return <SiteHeader businessName={document.businessName} booking={document.booking} links={[]} />;
+    return (
+      <SiteHeader
+        businessName={document.businessName}
+        booking={document.booking}
+        links={[]}
+        background={section.props.background}
+        items={section.props.items ?? []}
+      />
+    );
   }
   if (section.type === 'headerMenu') {
-    return <SiteHeader businessName={document.businessName} booking={document.booking} links={section.props.links} />;
+    return (
+      <SiteHeader
+        businessName={document.businessName}
+        booking={document.booking}
+        links={section.props.links}
+        background={section.props.background}
+        items={section.props.items ?? []}
+      />
+    );
+  }
+  if (section.type === 'blank') {
+    return <SiteSectionBlank section={section} />;
   }
   if (section.type === 'footerSimple') {
     return <SiteFooter text={section.props.text} links={[]} />;

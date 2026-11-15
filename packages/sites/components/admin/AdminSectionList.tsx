@@ -1,8 +1,9 @@
 'use client';
 
-import {SITE_COMPONENT_CATALOG, type SiteSection} from '@so/model';
-import {useState, type DragEvent} from 'react';
+import type {SiteSection} from '@so/model';
+import {useRef, useState, type DragEvent} from 'react';
 import {AdminDeleteIcon, AdminDragHandleIcon, AdminSettingsIcon} from '@/components/admin/AdminEditorIcons';
+import {sectionChoiceLabel, sectionLabel} from '@/components/admin/AdminSectionSettingsShared';
 
 function moveItem<T>(items: readonly T[], from: number, to: number): T[] {
   const next = [...items];
@@ -12,10 +13,6 @@ function moveItem<T>(items: readonly T[], from: number, to: number): T[] {
   }
   next.splice(to, 0, item);
   return next;
-}
-
-function sectionLabel(type: SiteSection['type']): string {
-  return SITE_COMPONENT_CATALOG.find((entry) => entry.type === type)?.label ?? type;
 }
 
 export default function AdminSectionList({
@@ -32,10 +29,31 @@ export default function AdminSectionList({
   onDelete: (id: string) => void;
 }) {
   const [dragIndex, setDragIndex] = useState<number | undefined>(undefined);
+  const ghostRef = useRef<HTMLElement | undefined>(undefined);
 
-  const startDrag = (event: DragEvent, index: number): void => {
+  const clearGhost = (): void => {
+    ghostRef.current?.remove();
+    ghostRef.current = undefined;
+  };
+
+  const startDrag = (event: DragEvent<HTMLButtonElement>, index: number): void => {
+    const item = event.currentTarget.closest('.admin-section-item');
     event.dataTransfer.setData('text/plain', String(index));
     event.dataTransfer.effectAllowed = 'move';
+    if (item instanceof HTMLElement) {
+      const ghost = item.cloneNode(true);
+      if (ghost instanceof HTMLElement) {
+        ghost.style.position = 'fixed';
+        ghost.style.top = '-1000px';
+        ghost.style.left = '0';
+        ghost.style.width = `${item.offsetWidth}px`;
+        ghost.style.pointerEvents = 'none';
+        document.body.appendChild(ghost);
+        const rect = item.getBoundingClientRect();
+        event.dataTransfer.setDragImage(ghost, event.clientX - rect.left, event.clientY - rect.top);
+        ghostRef.current = ghost;
+      }
+    }
     setDragIndex(index);
   };
 
@@ -47,10 +65,9 @@ export default function AdminSectionList({
         <div
           key={section.id}
           className={`admin-section-item${section.id === settingsId ? ' settings-open' : ''}`}
-          draggable
-          onDragStart={(event) => startDrag(event, index)}
           onDragOver={(event) => event.preventDefault()}
           onDrop={() => {
+            clearGhost();
             if (dragIndex === undefined || dragIndex === index) {
               setDragIndex(undefined);
               return;
@@ -58,7 +75,10 @@ export default function AdminSectionList({
             onReorder(moveItem(sections, dragIndex, index));
             setDragIndex(undefined);
           }}
-          onDragEnd={() => setDragIndex(undefined)}
+          onDragEnd={() => {
+            clearGhost();
+            setDragIndex(undefined);
+          }}
         >
           <div className="admin-section-row">
             <button
@@ -66,21 +86,24 @@ export default function AdminSectionList({
               className="admin-icon-button admin-drag-handle"
               aria-label="Drag to reorder"
               draggable
-              onDragStart={(event) => {
-                event.stopPropagation();
-                startDrag(event, index);
+              onDragStart={(event) => startDrag(event, index)}
+              onDragEnd={() => {
+                clearGhost();
+                setDragIndex(undefined);
               }}
             >
               <AdminDragHandleIcon />
             </button>
             <div className="admin-section-copy">
-              <strong>{sectionLabel(section.type)}</strong>
-              <div className="admin-muted">{section.id}</div>
+              <strong>{section.name ?? sectionLabel(section.type)}</strong>
+              <div className="admin-muted">
+                {section.name === undefined ? section.id : `${sectionLabel(section.type)} · ${section.id}`}
+              </div>
             </div>
             <button
               type="button"
               className="admin-icon-button"
-              aria-label={`Settings for ${sectionLabel(section.type)}`}
+              aria-label={`Settings for ${sectionChoiceLabel(section)}`}
               onClick={() => onOpenSettings(section.id)}
             >
               <AdminSettingsIcon />
@@ -88,7 +111,7 @@ export default function AdminSectionList({
             <button
               type="button"
               className="admin-icon-button danger"
-              aria-label={`Delete ${sectionLabel(section.type)}`}
+              aria-label={`Delete ${sectionChoiceLabel(section)}`}
               onClick={() => onDelete(section.id)}
             >
               <AdminDeleteIcon />

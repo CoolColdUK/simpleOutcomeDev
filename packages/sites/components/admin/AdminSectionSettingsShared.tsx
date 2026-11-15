@@ -12,6 +12,13 @@ export function sectionLabel(type: SiteSection['type']): string {
   return SITE_COMPONENT_CATALOG.find((entry) => entry.type === type)?.label ?? type;
 }
 
+export function sectionChoiceLabel(section: SiteSection): string {
+  if (section.name === undefined) {
+    return `${sectionLabel(section.type)} · ${section.id}`;
+  }
+  return `${section.name} (${sectionLabel(section.type)})`;
+}
+
 
 export function Rows<T>({
   items,
@@ -95,12 +102,12 @@ export function MediaFields({
 export function CtaFields({
   heading,
   cta,
-  sectionIds,
+  sections,
   onChange,
 }: {
   heading: string;
   cta: {label: string; target: string} | undefined;
-  sectionIds: readonly string[];
+  sections: readonly SiteSection[];
   onChange: (next: {label: string; target: string} | undefined) => void;
 }) {
   return (
@@ -124,9 +131,9 @@ export function CtaFields({
             Goes to
             <select value={cta.target} onChange={(event) => onChange({...cta, target: event.target.value})}>
               <option value="booking">Booking link</option>
-              {sectionIds.map((id) => (
-                <option key={id} value={id}>
-                  {id}
+              {sections.map((section) => (
+                <option key={section.id} value={section.id}>
+                  {sectionChoiceLabel(section)}
                 </option>
               ))}
             </select>

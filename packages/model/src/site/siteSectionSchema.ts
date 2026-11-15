@@ -1,8 +1,10 @@
 import * as v from 'valibot';
+import {siteBlocksSchema} from './siteBlockSchema';
 import {siteMediaSchema} from './siteMediaSchema';
 import {
   siteBodySchema,
   siteDetailSchema,
+  siteHexColourSchema,
   siteHttpUrlSchema,
   sitePriceSchema,
   siteSectionIdSchema,
@@ -51,18 +53,36 @@ const siteChannelSchema = v.strictObject({
 export const siteSectionSchema = v.variant('type', [
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('headerSimple'),
-    props: v.strictObject({}),
-  }),
-  v.strictObject({
-    id: siteSectionIdSchema,
-    type: v.literal('headerMenu'),
     props: v.strictObject({
-      links: siteMenuLinksSchema,
+      background: v.optional(siteHexColourSchema),
+      items: v.optional(siteBlocksSchema),
     }),
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
+    type: v.literal('headerMenu'),
+    props: v.strictObject({
+      links: siteMenuLinksSchema,
+      background: v.optional(siteHexColourSchema),
+      items: v.optional(siteBlocksSchema),
+    }),
+  }),
+  v.strictObject({
+    id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
+    type: v.literal('blank'),
+    props: v.strictObject({
+      heightPx: v.pipe(v.number(), v.integer(), v.minValue(24), v.maxValue(800)),
+      background: siteHexColourSchema,
+      items: siteBlocksSchema,
+    }),
+  }),
+  v.strictObject({
+    id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('footerSimple'),
     props: v.strictObject({
       text: siteBodySchema,
@@ -70,6 +90,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('footerMenu'),
     props: v.strictObject({
       text: siteBodySchema,
@@ -78,6 +99,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('hero'),
     props: v.strictObject({
       layout: v.picklist(['split', 'center', 'statement', 'band', 'quote']),
@@ -94,6 +116,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('highlights'),
     props: v.strictObject({
       items: v.pipe(
@@ -105,6 +128,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('services'),
     props: v.variant('presentation', [
       v.strictObject({title: siteShortTextSchema, presentation: v.literal('rows'), items: siteServiceListSchema}),
@@ -122,6 +146,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('about'),
     props: v.strictObject({
       eyebrow: siteShortTextSchema,
@@ -132,6 +157,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('gallery'),
     props: v.strictObject({
       title: v.optional(siteShortTextSchema),
@@ -140,6 +166,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('reviews'),
     props: v.strictObject({
       title: v.optional(siteShortTextSchema),
@@ -158,6 +185,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('bookingCta'),
     props: v.strictObject({
       title: siteShortTextSchema,
@@ -166,6 +194,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('hoursLocation'),
     props: v.strictObject({
       title: siteShortTextSchema,
@@ -182,6 +211,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('contact'),
     props: v.strictObject({
       title: siteShortTextSchema,
@@ -191,6 +221,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('contactForm'),
     props: v.strictObject({
       title: siteShortTextSchema,
@@ -200,6 +231,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('faq'),
     props: v.strictObject({
       title: siteShortTextSchema,
@@ -212,6 +244,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('team'),
     props: v.strictObject({
       title: siteShortTextSchema,
@@ -224,6 +257,7 @@ export const siteSectionSchema = v.variant('type', [
   }),
   v.strictObject({
     id: siteSectionIdSchema,
+    name: v.optional(siteShortTextSchema),
     type: v.literal('splitCta'),
     props: v.strictObject({
       items: v.pipe(

@@ -3,6 +3,7 @@ export {siteDocumentSchema, type SiteDocument} from './siteDocumentSchema';
 export {siteSeoSchema, type SiteSeo} from './siteSeoSchema';
 export {siteSeoDescription, siteSeoLocale, siteSeoTitle} from './siteSeoDescription';
 export {siteBeautySalonJsonLd, type SiteBeautySalonJsonLd} from './siteBeautySalonJsonLd';
+export {SITE_BLOCK_ICONS, siteBlockSchema, type SiteBlock, type SiteBlockIcon} from './siteBlockSchema';
 export {siteSectionSchema, type SiteSection} from './siteSectionSchema';
 export {siteThemeSchema, type SiteTheme} from './siteThemeSchema';
 export {type SiteMedia} from './siteMediaSchema';
@@ -26,12 +27,14 @@ export type {SiteMessageRecipientInput} from './siteMessageRecipient';
 export {safeParseSiteMessage, siteMessageRequestSchema} from './siteMessageSchema';
 export type {SiteMessageParseFailure, SiteMessageParseSuccess, SiteMessageRequest} from './siteMessageSchema';
 export {
+  SITE_BLOCK_CATALOG,
   SITE_COMPONENT_CATALOG,
   SITE_COMPONENT_CATEGORIES,
   SITE_SECTION_TYPES,
   isSiteAdminHost,
   nextSiteRevisionNumber,
   siteComponentsList,
+  type SiteBlockEntry,
   type SiteComponentCategory,
   type SiteComponentEntry,
   type SiteComponentField,
