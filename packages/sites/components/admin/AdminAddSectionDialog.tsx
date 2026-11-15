@@ -1,6 +1,6 @@
 'use client';
 
-import {SITE_COMPONENT_CATALOG, type SiteDocument, type SiteSectionType} from '@so/model';
+import {SITE_COMPONENT_CATEGORIES, SITE_COMPONENT_CATALOG, type SiteDocument, type SiteSectionType} from '@so/model';
 import type {CSSProperties} from 'react';
 import {useEffect, useMemo, useState} from 'react';
 import SiteSections from '@/components/SiteSections';
@@ -72,18 +72,23 @@ export default function AdminAddSectionDialog({
         </div>
         <div className="admin-dialog-body">
           <div className="admin-dialog-list" role="listbox" aria-label="Section types">
-            {SITE_COMPONENT_CATALOG.map((item) => (
-              <button
-                key={item.type}
-                type="button"
-                role="option"
-                aria-selected={item.type === type}
-                className={item.type === type ? 'admin-type-option selected' : 'admin-type-option'}
-                onClick={() => setType(item.type)}
-              >
-                <strong>{item.label}</strong>
-                <span>{item.description}</span>
-              </button>
+            {SITE_COMPONENT_CATEGORIES.map((category) => (
+              <div key={category}>
+                <p className="admin-type-group">{category}</p>
+                {SITE_COMPONENT_CATALOG.filter((item) => item.category === category).map((item) => (
+                  <button
+                    key={item.type}
+                    type="button"
+                    role="option"
+                    aria-selected={item.type === type}
+                    className={item.type === type ? 'admin-type-option selected' : 'admin-type-option'}
+                    onClick={() => setType(item.type)}
+                  >
+                    <strong>{item.label}</strong>
+                    <span>{item.description}</span>
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
           <div className="admin-section-preview">

@@ -6,7 +6,6 @@ import {
   SITE_PRESETS,
   SITE_PRESET_IDS,
   type SiteDocument,
-  type SitePresetId,
 } from '@so/model';
 import {createClient} from '@supabase/supabase-js';
 import {cache} from 'react';
@@ -20,7 +19,7 @@ export interface LoadedSite {
   readonly slug: string;
   readonly customDomain: string | undefined;
   readonly status: LoadedSiteStatus;
-  readonly preset: SitePresetId;
+  readonly preset: string;
   readonly document: SiteDocument;
   readonly demoHost: boolean;
   readonly messagesEnabled: boolean;
@@ -34,10 +33,6 @@ interface SiteRow {
   preset: string;
   document: unknown;
   messages_enabled: boolean;
-}
-
-function isPresetId(value: string): value is SitePresetId {
-  return SITE_PRESET_IDS.some((id) => id === value);
 }
 
 function isLoadedStatus(value: string): value is LoadedSiteStatus {
@@ -61,8 +56,8 @@ function fromDemo(slug: string): LoadedSite | undefined {
   if (!slug.startsWith('preview-')) {
     return undefined;
   }
-  const presetId = slug.slice('preview-'.length);
-  if (!isPresetId(presetId)) {
+  const presetId = SITE_PRESET_IDS.find((id) => id === slug.slice('preview-'.length));
+  if (presetId === undefined) {
     return undefined;
   }
   return {
@@ -78,7 +73,7 @@ function fromDemo(slug: string): LoadedSite | undefined {
 }
 
 function toLoaded(row: SiteRow, document: SiteDocument, demoHost: boolean): LoadedSite | undefined {
-  if (!isLoadedStatus(row.status) || !isPresetId(row.preset)) {
+  if (!isLoadedStatus(row.status) || row.preset.trim().length === 0) {
     return undefined;
   }
   return {
@@ -176,6 +171,33 @@ async function fromCustomDomain(host: string): Promise<LoadedSite | undefined> {
   }
 }
 
+async function fromTemplatePreview(slug: string): Promise<LoadedSite | undefined> {
+  if (!slug.startsWith('preview-') || !sitesServiceEnvReady()) {
+    return undefined;
+  }
+  const templateId = slug.slice('preview-'.length);
+  const supabase = createSitesServiceClient();
+  const {data, error} = await supabase.from('site_template').select('id, document').eq('id', templateId).maybeSingle();
+  if (error || data === null) {
+    return undefined;
+  }
+  const row = data as {id: string; document: unknown};
+  try {
+    return {
+      slug,
+      customDomain: undefined,
+      status: 'demo',
+      preset: row.id,
+      document: parseSiteDocument(row.document),
+      demoHost: true,
+      id: undefined,
+      messagesEnabled: true,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 export async function loadSiteForHost(host: string): Promise<LoadedSite | undefined> {
   const env = readSitesPublicEnv();
   if (isSiteAdminHost(host, env.rootDomain)) {
@@ -199,7 +221,11 @@ export async function loadSiteForHost(host: string): Promise<LoadedSite | undefi
   if (fromDraft !== undefined) {
     return fromDraft;
   }
-  return fromDemoRow(env.supabase, resolved.slug);
+  const fromRow = await fromDemoRow(env.supabase, resolved.slug);
+  if (fromRow !== undefined) {
+    return fromRow;
+  }
+  return fromTemplatePreview(resolved.slug);
 }
 
 export const loadSiteForHostCached = cache(loadSiteForHost);

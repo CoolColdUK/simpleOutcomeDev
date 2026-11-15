@@ -407,6 +407,14 @@
   }
 }
 
+.admin-type-group {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .admin-dialog-list {
   overflow: auto;
   padding: 0.65rem;

@@ -26,18 +26,31 @@ function assertHero(section: Extract<SiteSection, {type: 'hero'}>, ids: Readonly
   }
 }
 
+function assertMenuLinks(
+  links: readonly {readonly sectionId: string}[],
+  idSet: ReadonlySet<string>,
+  label: string,
+): void {
+  links.forEach((link) => {
+    if (!idSet.has(link.sectionId)) {
+      throw new Error(`${label} link does not match a section: ${link.sectionId}`);
+    }
+  });
+}
+
 export function assertSiteDocument(document: SiteDocument): void {
   const ids = document.sections.map((section) => section.id);
   if (new Set(ids).size !== ids.length) {
     throw new Error('Section ids must be unique');
   }
   const idSet = new Set(ids);
-  document.nav.links.forEach((link) => {
-    if (!idSet.has(link.sectionId)) {
-      throw new Error(`Nav link does not match a section: ${link.sectionId}`);
-    }
-  });
   document.sections.forEach((section) => {
+    if (section.type === 'headerMenu') {
+      assertMenuLinks(section.props.links, idSet, 'Header');
+    }
+    if (section.type === 'footerMenu') {
+      assertMenuLinks(section.props.links, idSet, 'Footer');
+    }
     if (section.type === 'hero') {
       assertHero(section, idSet);
     }

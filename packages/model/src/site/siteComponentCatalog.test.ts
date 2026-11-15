@@ -46,7 +46,8 @@ describe('siteComponentCatalog', () => {
   it('lists components for MCP', () => {
     const list = siteComponentsList();
     expect(list.schemaVersion).toBe(1);
-    expect(list.presets.length).toBeGreaterThan(0);
+    expect(list.categories).toEqual(['header', 'page', 'footer']);
     expect(list.components.length).toBe(SITE_SECTION_TYPES.length);
+    expect(list.components.some((entry) => entry.category === 'header' && entry.type === 'headerMenu')).toBe(true);
   });
 });

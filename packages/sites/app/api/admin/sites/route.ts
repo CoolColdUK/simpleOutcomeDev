@@ -1,15 +1,12 @@
-import {parseSiteDocument, SITE_PRESET_IDS, SITE_PRESETS, type SitePresetId} from '@so/model';
+import {parseSiteDocument} from '@so/model';
 import {NextResponse} from 'next/server';
 import {requireAdminHostApi} from '@/lib/admin/requireAdminHost';
 import {actingIsAdmin} from '@/lib/admin/requireSiteSession';
 import {createSiteForOwner, listSitesForUser} from '@/lib/admin/siteAccess';
+import {getSiteTemplate, SITE_TEMPLATE_ID_RE} from '@/lib/admin/siteTemplateAccess';
 import {loadSiteSession} from '@/lib/admin/siteSession';
 import {readSiteSessionCookie} from '@/lib/admin/siteSessionCookie';
 import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
-
-function isPresetId(value: string): value is SitePresetId {
-  return SITE_PRESET_IDS.some((id) => id === value);
-}
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const OWNER_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -55,7 +52,7 @@ export async function POST(request: Request): Promise<Response> {
     ownerId?: unknown;
   } | undefined;
   const slug = typeof body?.slug === 'string' ? body.slug.trim().toLowerCase() : '';
-  const presetRaw = typeof body?.preset === 'string' ? body.preset : '';
+  const presetRaw = typeof body?.preset === 'string' ? body.preset.trim().toLowerCase() : '';
   const customDomain =
     typeof body?.customDomain === 'string' && body.customDomain.trim().length > 0
       ? body.customDomain.trim().toLowerCase()
@@ -64,8 +61,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!SLUG_RE.test(slug) || slug.length > 63) {
     return NextResponse.json({error: 'Invalid slug'}, {status: 400});
   }
-  if (!isPresetId(presetRaw)) {
-    return NextResponse.json({error: 'Invalid preset'}, {status: 400});
+  if (!SITE_TEMPLATE_ID_RE.test(presetRaw)) {
+    return NextResponse.json({error: 'Invalid template'}, {status: 400});
   }
   if (!OWNER_ID_RE.test(ownerId)) {
     return NextResponse.json({error: 'Choose an owner'}, {status: 400});
@@ -83,10 +80,13 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({error: 'Admins manage users and do not own sites'}, {status: 400});
   }
 
+  const template = await getSiteTemplate(presetRaw);
+  if (template === undefined) {
+    return NextResponse.json({error: 'Template not found'}, {status: 400});
+  }
   let document;
   try {
-    document =
-      body?.document === undefined ? parseSiteDocument(SITE_PRESETS[presetRaw]) : parseSiteDocument(body.document);
+    document = body?.document === undefined ? template.document : parseSiteDocument(body.document);
   } catch (err) {
     return NextResponse.json({error: err instanceof Error ? err.message : 'Invalid document'}, {status: 400});
   }

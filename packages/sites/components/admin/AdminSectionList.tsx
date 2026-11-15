@@ -42,6 +42,7 @@ export default function AdminSectionList({
   return (
     <div className="admin-section-list">
       <h2>Sections</h2>
+      {sections.length === 0 ? <p className="admin-muted">This page is blank. Add a section to start.</p> : null}
       {sections.map((section, index) => (
         <div
           key={section.id}
@@ -88,7 +89,6 @@ export default function AdminSectionList({
               type="button"
               className="admin-icon-button danger"
               aria-label={`Delete ${sectionLabel(section.type)}`}
-              disabled={sections.length <= 1}
               onClick={() => onDelete(section.id)}
             >
               <AdminDeleteIcon />

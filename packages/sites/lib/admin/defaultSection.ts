@@ -1,6 +1,18 @@
 import type {SiteSection, SiteSectionType} from '@so/model';
 
 export function createDefaultSection(type: SiteSectionType, id: string): SiteSection {
+  if (type === 'headerSimple') {
+    return {id, type: 'headerSimple', props: {}};
+  }
+  if (type === 'headerMenu') {
+    return {id, type: 'headerMenu', props: {links: []}};
+  }
+  if (type === 'footerSimple') {
+    return {id, type: 'footerSimple', props: {text: 'Footer'}};
+  }
+  if (type === 'footerMenu') {
+    return {id, type: 'footerMenu', props: {text: 'Footer', links: []}};
+  }
   if (type === 'hero') {
     return {
       id,

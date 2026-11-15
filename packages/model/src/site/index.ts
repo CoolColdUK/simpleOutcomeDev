@@ -18,6 +18,7 @@ export {
   type SiteHostCustomDomain,
   type SiteHostUnknown,
 } from './resolveSiteHost';
+export {blankSiteDocument} from './blankSiteDocument';
 export {SITE_PRESETS} from './sitePresets';
 export {SITE_DEMOS, findSiteDemo, type SiteDemo} from './siteDemos';
 export {SITE_MESSAGE_DEMO_RECIPIENT, SITE_MESSAGE_FROM, siteMessageFormOffered, siteMessageRecipient, siteMessageSubject} from './siteMessageRecipient';
@@ -26,10 +27,12 @@ export {safeParseSiteMessage, siteMessageRequestSchema} from './siteMessageSchem
 export type {SiteMessageParseFailure, SiteMessageParseSuccess, SiteMessageRequest} from './siteMessageSchema';
 export {
   SITE_COMPONENT_CATALOG,
+  SITE_COMPONENT_CATEGORIES,
   SITE_SECTION_TYPES,
   isSiteAdminHost,
   nextSiteRevisionNumber,
   siteComponentsList,
+  type SiteComponentCategory,
   type SiteComponentEntry,
   type SiteComponentField,
   type SiteComponentsList,

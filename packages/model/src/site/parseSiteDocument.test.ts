@@ -6,7 +6,7 @@ import {safeParseSiteDocument} from './safeParseSiteDocument';
 import {SITE_PRESETS} from './sitePresets';
 import {SITE_PRESET_IDS} from './sitePresetId';
 
-const DEMO_SECTION_TYPES = ['hero', 'about', 'services', 'gallery', 'reviews', 'bookingCta', 'hoursLocation', 'contact', 'contactForm'];
+const DEMO_SECTION_TYPES = ['headerMenu', 'hero', 'about', 'services', 'gallery', 'reviews', 'bookingCta', 'hoursLocation', 'contact', 'contactForm', 'footerSimple'];
 
 describe('parseSiteDocument', () => {
   it('accepts every preset', () => {
@@ -16,7 +16,13 @@ describe('parseSiteDocument', () => {
   });
 
   it('keeps the home studio preset to the short mock', () => {
-    expect(SITE_PRESETS['home-studio'].sections.map((section) => section.type)).toEqual(['hero', 'highlights', 'services']);
+    expect(SITE_PRESETS['home-studio'].sections.map((section) => section.type)).toEqual([
+      'headerMenu',
+      'hero',
+      'highlights',
+      'services',
+      'footerSimple',
+    ]);
   });
 
   it('accepts the three prospect demos in the full section order', () => {
@@ -69,8 +75,9 @@ describe('parseSiteDocument', () => {
     second.id = first.id;
     expect(safeParseSiteDocument(duplicate)).toBeUndefined();
     const brokenNav = structuredClone(SITE_PRESETS['clean-studio']);
-    const link = brokenNav.nav.links[0];
-    if (!link) {
+    const header = brokenNav.sections.find((section) => section.type === 'headerMenu');
+    const link = header?.type === 'headerMenu' ? header.props.links[0] : undefined;
+    if (link === undefined) {
       throw new Error('missing nav link');
     }
     link.sectionId = 'missing';
@@ -79,7 +86,7 @@ describe('parseSiteDocument', () => {
 
   it('rejects a quote hero without a quote and a contact link of the wrong kind', () => {
     const quote = structuredClone(SITE_PRESETS['review-led']);
-    const hero = quote.sections[0];
+    const hero = quote.sections.find((section) => section.type === 'hero');
     if (hero?.type !== 'hero') {
       throw new Error('expected a hero');
     }

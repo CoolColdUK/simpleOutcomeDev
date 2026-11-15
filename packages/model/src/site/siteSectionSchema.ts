@@ -14,6 +14,13 @@ const siteCtaSchema = v.strictObject({
   target: v.union([v.literal('booking'), siteSectionIdSchema]),
 });
 
+const siteMenuLinkSchema = v.strictObject({
+  label: siteShortTextSchema,
+  sectionId: siteSectionIdSchema,
+});
+
+const siteMenuLinksSchema = v.pipe(v.array(siteMenuLinkSchema), v.maxLength(8));
+
 const siteServiceItemSchema = v.strictObject({
   name: siteShortTextSchema,
   detail: siteDetailSchema,
@@ -42,6 +49,33 @@ const siteChannelSchema = v.strictObject({
 });
 
 export const siteSectionSchema = v.variant('type', [
+  v.strictObject({
+    id: siteSectionIdSchema,
+    type: v.literal('headerSimple'),
+    props: v.strictObject({}),
+  }),
+  v.strictObject({
+    id: siteSectionIdSchema,
+    type: v.literal('headerMenu'),
+    props: v.strictObject({
+      links: siteMenuLinksSchema,
+    }),
+  }),
+  v.strictObject({
+    id: siteSectionIdSchema,
+    type: v.literal('footerSimple'),
+    props: v.strictObject({
+      text: siteBodySchema,
+    }),
+  }),
+  v.strictObject({
+    id: siteSectionIdSchema,
+    type: v.literal('footerMenu'),
+    props: v.strictObject({
+      text: siteBodySchema,
+      links: siteMenuLinksSchema,
+    }),
+  }),
   v.strictObject({
     id: siteSectionIdSchema,
     type: v.literal('hero'),

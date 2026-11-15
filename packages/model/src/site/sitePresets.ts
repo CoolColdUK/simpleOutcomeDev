@@ -1,3 +1,4 @@
+import {siteDocumentWithChrome} from './siteDocumentChrome';
 import type {SiteDocument} from './siteDocumentSchema';
 import type {SitePresetId} from './sitePresetId';
 import {sampleBooking, sampleFooter, sampleReviews, sampleServices} from './siteSampleCopy';
@@ -16,7 +17,7 @@ import {
 
 const photo = (label: string, background: string) => ({label, background});
 
-const cleanStudio: SiteDocument = {
+const cleanStudio = {
   schemaVersion: 1,
   businessName: 'Lumen Nail Studio',
   theme: cleanStudioTheme,
@@ -46,7 +47,7 @@ const cleanStudio: SiteDocument = {
   footer: {text: sampleFooter('Lumen Nail Studio')},
 };
 
-const softLuxury: SiteDocument = {
+const softLuxury = {
   schemaVersion: 1,
   businessName: 'Maison Rose Beauty',
   theme: softLuxuryTheme,
@@ -89,7 +90,7 @@ const softLuxury: SiteDocument = {
   footer: {text: sampleFooter('Maison Rose Beauty')},
 };
 
-const portfolioFirst: SiteDocument = {
+const portfolioFirst = {
   schemaVersion: 1,
   businessName: 'Polished by Ava',
   theme: portfolioFirstTheme,
@@ -132,7 +133,7 @@ const portfolioFirst: SiteDocument = {
   footer: {text: sampleFooter('Polished by Ava')},
 };
 
-const homeStudio: SiteDocument = {
+const homeStudio = {
   schemaVersion: 1,
   businessName: 'The Garden Room Beauty',
   theme: homeStudioTheme,
@@ -178,7 +179,7 @@ const homeStudio: SiteDocument = {
   footer: {text: sampleFooter('The Garden Room Beauty')},
 };
 
-const boldNailBar: SiteDocument = {
+const boldNailBar = {
   schemaVersion: 1,
   businessName: 'CANDY CLAW',
   theme: boldNailBarTheme,
@@ -217,7 +218,7 @@ const boldNailBar: SiteDocument = {
   footer: {text: sampleFooter('CANDY CLAW')},
 };
 
-const clinic: SiteDocument = {
+const clinic = {
   schemaVersion: 1,
   businessName: 'Clearline Aesthetics',
   theme: clinicTheme,
@@ -271,7 +272,7 @@ const clinic: SiteDocument = {
   footer: {text: sampleFooter('Clearline Aesthetics')},
 };
 
-const hairBeauty: SiteDocument = {
+const hairBeauty = {
   schemaVersion: 1,
   businessName: 'Halo Hair & Beauty',
   theme: hairBeautyTheme,
@@ -333,7 +334,7 @@ const hairBeauty: SiteDocument = {
   footer: {text: sampleFooter('Halo Hair & Beauty')},
 };
 
-const reviewLed: SiteDocument = {
+const reviewLed = {
   schemaVersion: 1,
   businessName: 'Glow & Go Beauty',
   theme: reviewLedTheme,
@@ -367,7 +368,7 @@ const reviewLed: SiteDocument = {
   footer: {text: sampleFooter('Glow & Go Beauty')},
 };
 
-const courses: SiteDocument = {
+const courses = {
   schemaVersion: 1,
   businessName: 'Atelier Nails Academy',
   theme: coursesTheme,
@@ -428,7 +429,7 @@ const courses: SiteDocument = {
   footer: {text: sampleFooter('Atelier Nails Academy')},
 };
 
-const neighbourhood: SiteDocument = {
+const neighbourhood = {
   schemaVersion: 1,
   businessName: 'Portswood Nails & Beauty',
   theme: neighbourhoodTheme,
@@ -479,14 +480,14 @@ const neighbourhood: SiteDocument = {
 };
 
 export const SITE_PRESETS: Record<SitePresetId, SiteDocument> = {
-  'clean-studio': cleanStudio,
-  'soft-luxury': softLuxury,
-  'portfolio-first': portfolioFirst,
-  'home-studio': homeStudio,
-  'bold-nail-bar': boldNailBar,
-  'clinic-professional': clinic,
-  'hair-beauty-menu': hairBeauty,
-  'review-led': reviewLed,
-  'courses-treatments': courses,
-  'neighbourhood-salon': neighbourhood,
+  'clean-studio': siteDocumentWithChrome(cleanStudio),
+  'soft-luxury': siteDocumentWithChrome(softLuxury),
+  'portfolio-first': siteDocumentWithChrome(portfolioFirst),
+  'home-studio': siteDocumentWithChrome(homeStudio),
+  'bold-nail-bar': siteDocumentWithChrome(boldNailBar),
+  'clinic-professional': siteDocumentWithChrome(clinic),
+  'hair-beauty-menu': siteDocumentWithChrome(hairBeauty),
+  'review-led': siteDocumentWithChrome(reviewLed),
+  'courses-treatments': siteDocumentWithChrome(courses),
+  'neighbourhood-salon': siteDocumentWithChrome(neighbourhood),
 };

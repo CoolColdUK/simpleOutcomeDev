@@ -1,7 +1,10 @@
-import {SITE_PRESET_IDS} from './sitePresetId';
 import type {SiteSection} from './siteSectionSchema';
 
 export type SiteSectionType = SiteSection['type'];
+
+export const SITE_COMPONENT_CATEGORIES = ['header', 'page', 'footer'] as const;
+
+export type SiteComponentCategory = (typeof SITE_COMPONENT_CATEGORIES)[number];
 
 export interface SiteComponentField {
   readonly name: string;
@@ -13,12 +16,15 @@ export interface SiteComponentField {
 
 export interface SiteComponentEntry {
   readonly type: SiteSectionType;
+  readonly category: SiteComponentCategory;
   readonly label: string;
   readonly description: string;
   readonly fields: readonly SiteComponentField[];
 }
 
 export const SITE_SECTION_TYPES = [
+  'headerSimple',
+  'headerMenu',
   'hero',
   'highlights',
   'services',
@@ -32,11 +38,28 @@ export const SITE_SECTION_TYPES = [
   'faq',
   'team',
   'splitCta',
+  'footerSimple',
+  'footerMenu',
 ] as const satisfies readonly SiteSectionType[];
 
 export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   {
+    type: 'headerSimple',
+    category: 'header',
+    label: 'Simple header',
+    description: 'Business name and booking button.',
+    fields: [],
+  },
+  {
+    type: 'headerMenu',
+    category: 'header',
+    label: 'Header with menu',
+    description: 'Business name, booking button, and links to sections.',
+    fields: [{name: 'links', kind: 'array', required: true, description: '0–8 links with label and section id'}],
+  },
+  {
     type: 'hero',
+    category: 'page',
     label: 'Hero',
     description: 'Opening band with title, optional body, CTAs, and media.',
     fields: [
@@ -54,12 +77,14 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'highlights',
+    category: 'page',
     label: 'Highlights',
     description: 'Short title and body cards.',
     fields: [{name: 'items', kind: 'array', required: true, description: '1–12 items with title and body'}],
   },
   {
     type: 'services',
+    category: 'page',
     label: 'Services',
     description: 'Treatment list as rows, cards, or grouped menus.',
     fields: [
@@ -71,6 +96,7 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'about',
+    category: 'page',
     label: 'About',
     description: 'Studio story with optional media.',
     fields: [
@@ -82,6 +108,7 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'gallery',
+    category: 'page',
     label: 'Gallery',
     description: 'Work photos or placeholders.',
     fields: [
@@ -91,6 +118,7 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'reviews',
+    category: 'page',
     label: 'Reviews',
     description: 'Quotes with stars.',
     fields: [
@@ -100,6 +128,7 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'bookingCta',
+    category: 'page',
     label: 'Booking CTA',
     description: 'Call to book using the site booking link.',
     fields: [
@@ -109,6 +138,7 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'hoursLocation',
+    category: 'page',
     label: 'Hours and location',
     description: 'Address, opening hours, and optional map link.',
     fields: [
@@ -122,6 +152,7 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'contact',
+    category: 'page',
     label: 'Contact',
     description: 'Phone, WhatsApp, or Instagram channels.',
     fields: [
@@ -132,6 +163,7 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'contactForm',
+    category: 'page',
     label: 'Contact form',
     description: 'Enquiry form when messages_enabled is true.',
     fields: [
@@ -142,6 +174,7 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'faq',
+    category: 'page',
     label: 'FAQ',
     description: 'Questions and answers.',
     fields: [
@@ -151,6 +184,7 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'team',
+    category: 'page',
     label: 'Team',
     description: 'People with roles and media.',
     fields: [
@@ -160,22 +194,40 @@ export const SITE_COMPONENT_CATALOG: readonly SiteComponentEntry[] = [
   },
   {
     type: 'splitCta',
+    category: 'page',
     label: 'Split CTA',
     description: 'Exactly two linked cards.',
     fields: [{name: 'items', kind: 'array', required: true, description: 'Exactly two items'}],
+  },
+  {
+    type: 'footerSimple',
+    category: 'footer',
+    label: 'Simple footer',
+    description: 'A line of footer text.',
+    fields: [{name: 'text', kind: 'string', required: true}],
+  },
+  {
+    type: 'footerMenu',
+    category: 'footer',
+    label: 'Footer with menu',
+    description: 'Footer text plus links to sections.',
+    fields: [
+      {name: 'text', kind: 'string', required: true},
+      {name: 'links', kind: 'array', required: true, description: '0–8 links with label and section id'},
+    ],
   },
 ];
 
 export interface SiteComponentsList {
   readonly schemaVersion: 1;
-  readonly presets: readonly string[];
+  readonly categories: readonly SiteComponentCategory[];
   readonly components: readonly SiteComponentEntry[];
 }
 
 export function siteComponentsList(): SiteComponentsList {
   return {
     schemaVersion: 1,
-    presets: SITE_PRESET_IDS,
+    categories: SITE_COMPONENT_CATEGORIES,
     components: SITE_COMPONENT_CATALOG,
   };
 }

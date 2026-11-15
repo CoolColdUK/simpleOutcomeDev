@@ -1,6 +1,5 @@
 'use client';
 
-import {SITE_PRESET_IDS} from '@so/model';
 import {useRouter} from 'next/navigation';
 import {useEffect, useState} from 'react';
 
@@ -11,10 +10,16 @@ interface OwnerOption {
   readonly email: string;
 }
 
+interface TemplateOption {
+  readonly id: string;
+  readonly name: string;
+}
+
 export default function AdminCreateSiteForm() {
   const router = useRouter();
   const [slug, setSlug] = useState('');
-  const [preset, setPreset] = useState<string>(SITE_PRESET_IDS[0]);
+  const [templates, setTemplates] = useState<readonly TemplateOption[]>([]);
+  const [preset, setPreset] = useState('');
   const [customDomain, setCustomDomain] = useState('');
   const [ownerFilter, setOwnerFilter] = useState('');
   const [ownerId, setOwnerId] = useState('');
@@ -22,6 +27,16 @@ export default function AdminCreateSiteForm() {
   const [ownersLoading, setOwnersLoading] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const response = await fetch('/api/admin/templates');
+      const payload = (await response.json().catch(() => ({}))) as {templates?: TemplateOption[]};
+      const next = payload.templates ?? [];
+      setTemplates(next);
+      setPreset((current) => (current.length > 0 && next.some((item) => item.id === current) ? current : (next[0]?.id ?? '')));
+    })();
+  }, []);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -70,6 +85,11 @@ export default function AdminCreateSiteForm() {
         if (ownerId.length === 0) {
           setBusy(false);
           setError('Choose an owner');
+          return;
+        }
+        if (preset.length === 0) {
+          setBusy(false);
+          setError('Choose a template');
           return;
         }
         const response = await fetch('/api/admin/sites', {
@@ -132,13 +152,17 @@ export default function AdminCreateSiteForm() {
         />
       </label>
       <label>
-        Preset
-        <select value={preset} onChange={(e) => setPreset(e.target.value)}>
-          {SITE_PRESET_IDS.map((id) => (
-            <option key={id} value={id}>
-              {id}
-            </option>
-          ))}
+        Template
+        <select value={preset} onChange={(e) => setPreset(e.target.value)} disabled={templates.length === 0}>
+          {templates.length === 0 ? (
+            <option value="">No templates</option>
+          ) : (
+            templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name}
+              </option>
+            ))
+          )}
         </select>
       </label>
       <label>
@@ -146,7 +170,7 @@ export default function AdminCreateSiteForm() {
         <input value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} placeholder="salon.example.com" />
       </label>
       {error ? <p className="admin-error">{error}</p> : null}
-      <button type="submit" disabled={busy || ownerId.length === 0}>
+      <button type="submit" disabled={busy || ownerId.length === 0 || preset.length === 0}>
         Create site
       </button>
     </form>

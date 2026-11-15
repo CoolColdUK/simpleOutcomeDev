@@ -1,21 +1,15 @@
 import type {CSSProperties} from 'react';
-import {siteMessageFormOffered, type SiteDocument} from '@so/model';
+import {siteMessageFormOffered} from '@so/model';
 import type {LoadedSite} from '@/lib/site/loadSiteForHost';
-import SiteFooter from '@/components/SiteFooter';
-import SiteNav from '@/components/SiteNav';
+import {documentWithoutContactForm} from '@/lib/site/mapSiteSection';
 import SiteSalesBanner from '@/components/SiteSalesBanner';
 import SiteSections from '@/components/SiteSections';
 
-function presentedDocument(document: SiteDocument, messagesEnabled: boolean): SiteDocument {
+function presentedDocument(document: LoadedSite['document'], messagesEnabled: boolean): LoadedSite['document'] {
   if (siteMessageFormOffered(messagesEnabled)) {
     return document;
   }
-  const hidden = new Set(document.sections.filter((section) => section.type === 'contactForm').map((section) => section.id));
-  return {
-    ...document,
-    nav: {links: document.nav.links.filter((link) => !hidden.has(link.sectionId))},
-    sections: document.sections.filter((section) => section.type !== 'contactForm'),
-  };
+  return documentWithoutContactForm(document);
 }
 
 export default function SitePageView({site}: {site: LoadedSite}) {
@@ -35,11 +29,7 @@ export default function SitePageView({site}: {site: LoadedSite}) {
   return (
     <div className="site" data-uppercase={theme.uppercaseHeadings ? 'true' : 'false'} style={style}>
       {site.status === 'demo' ? <SiteSalesBanner businessName={document.businessName} messagesEnabled={site.messagesEnabled} /> : null}
-      <SiteNav document={document} />
-      <main>
-        <SiteSections document={document} status={site.status} />
-      </main>
-      <SiteFooter text={document.footer.text} />
+      <SiteSections document={document} status={site.status} />
     </div>
   );
 }

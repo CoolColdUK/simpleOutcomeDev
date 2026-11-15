@@ -1,4 +1,6 @@
 import type {SiteDocument, SiteSection} from '@so/model';
+import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
 import SiteSectionAbout from '@/components/SiteSectionAbout';
 import SiteSectionBookingCta from '@/components/SiteSectionBookingCta';
 import SiteSectionContact from '@/components/SiteSectionContact';
@@ -14,6 +16,18 @@ import SiteSectionSplitCta from '@/components/SiteSectionSplitCta';
 import SiteSectionTeam from '@/components/SiteSectionTeam';
 
 function renderSection(section: SiteSection, document: SiteDocument, status: 'demo' | 'draft' | 'live' | 'archived') {
+  if (section.type === 'headerSimple') {
+    return <SiteHeader businessName={document.businessName} booking={document.booking} links={[]} />;
+  }
+  if (section.type === 'headerMenu') {
+    return <SiteHeader businessName={document.businessName} booking={document.booking} links={section.props.links} />;
+  }
+  if (section.type === 'footerSimple') {
+    return <SiteFooter text={section.props.text} links={[]} />;
+  }
+  if (section.type === 'footerMenu') {
+    return <SiteFooter text={section.props.text} links={section.props.links} />;
+  }
   if (section.type === 'hero') {
     return <SiteSectionHero section={section} booking={document.booking} />;
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import {SITE_COMPONENT_CATALOG, type SiteDocument, type SiteSection, type SiteSectionType} from '@so/model';
+import {type SiteDocument, type SiteSection, type SiteSectionType} from '@so/model';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useMemo, useState} from 'react';
@@ -10,6 +10,7 @@ import AdminSectionSettings from '@/components/admin/AdminSectionSettings';
 import AdminSiteConfig from '@/components/admin/AdminSiteConfig';
 import SitePageView from '@/components/SitePageView';
 import {createDefaultSection, newSectionId} from '@/lib/admin/defaultSection';
+import {omitMenuLink} from '@/lib/site/mapSiteSection';
 
 export interface AdminSiteEditorProps {
   readonly slug: string;
@@ -18,8 +19,6 @@ export interface AdminSiteEditorProps {
   readonly document: SiteDocument;
   readonly customDomain: string | undefined;
 }
-
-const NAV_SKIP: readonly SiteSectionType[] = ['hero', 'bookingCta', 'splitCta'];
 
 export default function AdminSiteEditor(props: AdminSiteEditorProps) {
   const router = useRouter();
@@ -40,7 +39,7 @@ export default function AdminSiteEditor(props: AdminSiteEditorProps) {
     slug: props.slug,
     customDomain: props.customDomain,
     status: props.status === 'demo' ? ('demo' as const) : ('draft' as const),
-    preset: 'home-studio' as const,
+    preset: 'draft',
     document,
     demoHost: true,
     messagesEnabled: props.messagesEnabled,
@@ -68,25 +67,14 @@ export default function AdminSiteEditor(props: AdminSiteEditorProps) {
   const addSection = (type: SiteSectionType): void => {
     const id = newSectionId(type);
     const section = createDefaultSection(type, id);
-    const entry = SITE_COMPONENT_CATALOG.find((item) => item.type === type);
-    const links = NAV_SKIP.includes(type) || document.nav.links.length >= 8
-      ? document.nav.links
-      : [...document.nav.links, {label: entry?.label ?? type, sectionId: id}];
-    setDocument({...document, sections: [...document.sections, section], nav: {links}});
+    setDocument({...document, sections: [...document.sections, section]});
   };
 
   const deleteSection = (id: string): void => {
-    const sections = document.sections.filter((item) => item.id !== id);
-    const remaining = document.nav.links.filter((link) => link.sectionId !== id);
-    const fallbackId = sections[0]?.id;
-    const links =
-      remaining.length > 0 || fallbackId === undefined
-        ? remaining
-        : [{label: 'Section', sectionId: fallbackId}];
+    const sections = document.sections.filter((item) => item.id !== id).map((section) => omitMenuLink(section, id));
     setDocument({
       ...document,
       sections,
-      nav: {links},
     });
     if (settingsId === id) {
       setSettingsId(undefined);

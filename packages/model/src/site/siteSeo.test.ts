@@ -17,7 +17,8 @@ describe('site seo', () => {
     const description = siteSeoDescription(document);
     expect(description).toBe('The Garden Room Beauty. Gel manicure, BIAB overlay, Lash lift & tint.');
     expect(description.toLowerCase().includes('sample')).toBe(false);
-    expect(description).not.toBe(document.footer.text);
+    const footer = document.sections.find((section) => section.type === 'footerSimple');
+    expect(footer?.type === 'footerSimple' ? description !== footer.props.text : false).toBe(true);
     expect(siteSeoTitle(document)).toBe('The Garden Room Beauty');
   });
 

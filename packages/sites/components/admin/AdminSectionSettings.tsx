@@ -2,6 +2,7 @@
 
 import type {SiteSection} from '@so/model';
 import type {ReactNode} from 'react';
+import AdminSectionMenuFields from '@/components/admin/AdminSectionMenuFields';
 import {blankToUndefined, CtaFields, MediaFields, Rows, ServiceItems, sectionLabel} from '@/components/admin/AdminSectionSettingsShared';
 import AdminSectionSettingsRest from '@/components/admin/AdminSectionSettingsRest';
 
@@ -33,6 +34,49 @@ export default function AdminSectionSettings({
 }
 
 function renderFields(section: SiteSection, sectionIds: readonly string[], onChange: (next: SiteSection) => void): ReactNode {
+  if (section.type === 'headerSimple') {
+    return <p className="admin-muted">Shows the business name and booking button.</p>;
+  }
+  if (section.type === 'headerMenu') {
+    return (
+      <AdminSectionMenuFields
+        links={section.props.links}
+        sectionIds={sectionIds}
+        onChange={(links) => onChange({...section, props: {links}})}
+      />
+    );
+  }
+  if (section.type === 'footerSimple') {
+    return (
+      <label>
+        Footer text
+        <textarea
+          value={section.props.text}
+          maxLength={2000}
+          onChange={(event) => onChange({...section, props: {text: event.target.value}})}
+        />
+      </label>
+    );
+  }
+  if (section.type === 'footerMenu') {
+    return (
+      <>
+        <label>
+          Footer text
+          <textarea
+            value={section.props.text}
+            maxLength={2000}
+            onChange={(event) => onChange({...section, props: {...section.props, text: event.target.value}})}
+          />
+        </label>
+        <AdminSectionMenuFields
+          links={section.props.links}
+          sectionIds={sectionIds}
+          onChange={(links) => onChange({...section, props: {...section.props, links}})}
+        />
+      </>
+    );
+  }
   if (section.type === 'hero') {
     return (
       <>

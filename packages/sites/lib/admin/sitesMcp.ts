@@ -1,10 +1,4 @@
-import {
-  parseSiteDocument,
-  SITE_PRESET_IDS,
-  SITE_PRESETS,
-  siteComponentsList,
-  type SitePresetId,
-} from '@so/model';
+import {parseSiteDocument, siteComponentsList} from '@so/model';
 import {
   createSiteForOwner,
   loadDraftDocument,
@@ -12,6 +6,15 @@ import {
   resolveOwnerIdByEmail,
   saveDraftDocument,
 } from '@/lib/admin/siteAccess';
+import {
+  createSiteTemplate,
+  deleteSiteTemplate,
+  getSiteTemplate,
+  listSiteTemplates,
+  SITE_TEMPLATE_ID_RE,
+  templateNameOk,
+  updateSiteTemplate,
+} from '@/lib/admin/siteTemplateAccess';
 import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
 
 export interface McpTool {
@@ -23,7 +26,7 @@ export interface McpTool {
 export const SITES_MCP_TOOLS: readonly McpTool[] = [
   {
     name: 'sites_list_components',
-    description: 'List site section types, their fields, and preset ids for building a SiteDocument.',
+    description: 'List site section types, grouped by category (header, page, footer), and their fields.',
     inputSchema: {type: 'object', properties: {}, additionalProperties: false},
   },
   {
@@ -49,10 +52,10 @@ export const SITES_MCP_TOOLS: readonly McpTool[] = [
       properties: {
         slug: {type: 'string'},
         ownerEmail: {type: 'string'},
-        preset: {type: 'string'},
+        templateId: {type: 'string', description: 'Id of a site template. The new site starts from that template unless document is set.'},
         document: {type: 'object'},
       },
-      required: ['slug', 'ownerEmail', 'preset'],
+      required: ['slug', 'ownerEmail', 'templateId'],
       additionalProperties: false,
     },
   },
@@ -69,10 +72,67 @@ export const SITES_MCP_TOOLS: readonly McpTool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'sites_list_templates',
+    description: 'List admin site templates. A template is a starting SiteDocument, including any header or footer sections.',
+    inputSchema: {type: 'object', properties: {}, additionalProperties: false},
+  },
+  {
+    name: 'sites_get_template',
+    description: 'Read one site template, including its document.',
+    inputSchema: {
+      type: 'object',
+      properties: {id: {type: 'string'}},
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'sites_create_template',
+    description: 'Create a site template. Omit document for a blank page with no header or footer.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {type: 'string'},
+        name: {type: 'string'},
+        document: {type: 'object'},
+      },
+      required: ['id', 'name'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'sites_update_template',
+    description: 'Update a site template name and/or document.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {type: 'string'},
+        name: {type: 'string'},
+        document: {type: 'object'},
+      },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'sites_delete_template',
+    description: 'Delete a site template. Existing sites that were created from it are left unchanged.',
+    inputSchema: {
+      type: 'object',
+      properties: {id: {type: 'string'}},
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
 ];
 
-function isPresetId(value: string): value is SitePresetId {
-  return SITE_PRESET_IDS.some((id) => id === value);
+function templateId(value: unknown): string {
+  const id = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!SITE_TEMPLATE_ID_RE.test(id)) {
+    throw new Error('Invalid template id');
+  }
+  return id;
 }
 
 export async function callSitesMcpTool(name: string, args: Record<string, unknown>): Promise<unknown> {
@@ -129,9 +189,9 @@ export async function callSitesMcpTool(name: string, args: Record<string, unknow
   if (name === 'sites_create_site') {
     const slug = typeof args.slug === 'string' ? args.slug.trim().toLowerCase() : '';
     const ownerEmail = typeof args.ownerEmail === 'string' ? args.ownerEmail.trim().toLowerCase() : '';
-    const presetRaw = typeof args.preset === 'string' ? args.preset : '';
-    if (!isPresetId(presetRaw)) {
-      throw new Error('Invalid preset');
+    const template = await getSiteTemplate(templateId(args.templateId));
+    if (template === undefined) {
+      throw new Error('Template not found');
     }
     if (ownerEmail.length === 0) {
       throw new Error('ownerEmail is required');
@@ -140,9 +200,8 @@ export async function callSitesMcpTool(name: string, args: Record<string, unknow
     if (ownerId === undefined) {
       throw new Error('Owner email not found');
     }
-    const document =
-      args.document === undefined ? parseSiteDocument(SITE_PRESETS[presetRaw]) : parseSiteDocument(args.document);
-    const site = await createSiteForOwner({slug, ownerId, preset: presetRaw, document});
+    const document = args.document === undefined ? template.document : parseSiteDocument(args.document);
+    const site = await createSiteForOwner({slug, ownerId, preset: template.id, document});
     return {site: {slug: site.slug, status: site.status, ownerId: site.owner_id}};
   }
   if (name === 'sites_update_draft') {
@@ -154,6 +213,43 @@ export async function callSitesMcpTool(name: string, args: Record<string, unknow
     const document = parseSiteDocument(args.document);
     await saveDraftDocument(site.id, document);
     return {ok: true, slug: site.slug};
+  }
+  if (name === 'sites_list_templates') {
+    return {templates: await listSiteTemplates()};
+  }
+  if (name === 'sites_get_template') {
+    const template = await getSiteTemplate(templateId(args.id));
+    if (template === undefined) {
+      throw new Error('Template not found');
+    }
+    return {template};
+  }
+  if (name === 'sites_create_template') {
+    const id = templateId(args.id);
+    const templateName = typeof args.name === 'string' ? args.name.trim() : '';
+    if (!templateNameOk(templateName)) {
+      throw new Error('Name is required');
+    }
+    const document = args.document === undefined ? undefined : parseSiteDocument(args.document);
+    const template = await createSiteTemplate({id, name: templateName, document});
+    return {template};
+  }
+  if (name === 'sites_update_template') {
+    const id = templateId(args.id);
+    const templateName = typeof args.name === 'string' ? args.name.trim() : undefined;
+    if (templateName !== undefined && !templateNameOk(templateName)) {
+      throw new Error('Name is required');
+    }
+    const document = args.document === undefined ? undefined : parseSiteDocument(args.document);
+    if (templateName === undefined && document === undefined) {
+      throw new Error('Nothing to update');
+    }
+    const template = await updateSiteTemplate(id, {name: templateName, document});
+    return {template};
+  }
+  if (name === 'sites_delete_template') {
+    await deleteSiteTemplate(templateId(args.id));
+    return {ok: true};
   }
   throw new Error(`Unknown tool: ${name}`);
 }

@@ -1,3 +1,4 @@
+import {siteDocumentWithChrome} from './siteDocumentChrome';
 import type {SiteDocument} from './siteDocumentSchema';
 import type {SiteSection} from './siteSectionSchema';
 import type {SiteSampleService} from './siteSampleCopy';
@@ -42,8 +43,7 @@ function homeDemo(input: {
   readonly contactIntro?: string;
   readonly channels: ContactProps['channels'];
 }): SiteDocument {
-  return {
-    schemaVersion: 1,
+  return siteDocumentWithChrome({
     businessName: input.businessName,
     theme: homeStudioTheme,
     booking: {label: 'Book on Fresha', href: input.freshaHref, provider: 'fresha'},
@@ -127,7 +127,7 @@ function homeDemo(input: {
       },
     ],
     footer: {text: `${input.businessName} · Sample design by Simple Outcome · Photographs are placeholders`},
-  };
+  });
 }
 
 export const SITE_DEMOS: readonly SiteDemo[] = [

@@ -1,4 +1,4 @@
-import {parseSiteDocument, type SiteDocument, type SitePresetId} from '@so/model';
+import {parseSiteDocument, type SiteDocument} from '@so/model';
 import type {SiteSessionContext} from '@/lib/admin/siteSession';
 import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
 
@@ -61,7 +61,7 @@ export async function listSitesForUser(userId: string, isAdmin: boolean) {
 export interface CreateSiteInput {
   readonly slug: string;
   readonly ownerId: string;
-  readonly preset: SitePresetId;
+  readonly preset: string;
   readonly document: SiteDocument;
   readonly customDomain?: string;
 }
