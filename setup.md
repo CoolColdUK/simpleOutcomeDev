@@ -22,6 +22,9 @@ Local dev uses the **staging** Supabase project. Put that project's URL, anon ke
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Required. Staging anon key, not the secret. | GitHub variable `NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD`. |
 | `NEXT_PUBLIC_SITES_ROOT_DOMAIN` | Staging web host `dev.simpleoutcome.dev`. The site URL is `https://` plus this domain. | GitHub variable `NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD`. |
 | `SUPABASE_SECRET_KEY` | Staging secret key. Required for `/api/mcp` and the agent REST routes. Server only. Do not prefix with `NEXT_PUBLIC_`. | GitHub secret `SUPABASE_SECRET_KEY_PROD`. Passed to that deployment as `SUPABASE_SECRET_KEY`. |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Same Cloudflare site key as client sites. The contact form needs it. | GitHub variable `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Shared with sites. |
+| `RESEND_API_KEY` | Same Resend key as client sites. The contact form emails `info@simpleoutcome.dev`. Server only. | GitHub secret `RESEND_API_KEY`. Shared with sites. |
+| `TURNSTILE_SECRET_KEY` | Same Turnstile secret as client sites. Server only. | GitHub secret `TURNSTILE_SECRET_KEY`. Shared with sites. |
 | `NEXT_PUBLIC_APP_VERSION` | Optional. | Set by the Production workflow. |
 | `NEXT_PUBLIC_GIT_COMMIT` | Optional. | Set by the Production workflow. |
 
@@ -150,10 +153,10 @@ Staging is **Actions → Staging** (migrations + main app) and **Actions → Sit
 | Variable | `NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD` | Both apps. Mapped to `NEXT_PUBLIC_SUPABASE_ANON_KEY`. |
 | Secret | `SUPABASE_SECRET_KEY_PROD` | Main app and sites. Mapped to `SUPABASE_SECRET_KEY`. |
 | Variable | `NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD` | Sites. Mapped to `NEXT_PUBLIC_SITES_ROOT_DOMAIN`. |
-| Variable | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Sites. Shared by production and staging. |
+| Variable | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Sites and the main app contact form. Shared by production and staging. |
 | Variable | `NEXT_PUBLIC_SITES_SALES_EMAIL` | Sites. Optional. Shared by production and staging. |
-| Secret | `RESEND_API_KEY` | Sites. Shared by production and staging. |
-| Secret | `TURNSTILE_SECRET_KEY` | Sites. Shared by production and staging. |
+| Secret | `RESEND_API_KEY` | Sites and the main app contact form. Shared by production and staging. |
+| Secret | `TURNSTILE_SECRET_KEY` | Sites and the main app contact form. Shared by production and staging. |
 | Variable | `UPSTASH_REDIS_REST_URL` | Sites. Shared by production and staging. |
 | Secret | `UPSTASH_REDIS_REST_TOKEN` | Sites. Shared by production and staging. |
 | Secret | `SITES_IP_HASH_PEPPER` | Sites. Shared by production and staging. |

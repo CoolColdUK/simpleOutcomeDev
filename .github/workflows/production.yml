@@ -190,6 +190,9 @@ jobs:
           NEXT_PUBLIC_SITES_ROOT_DOMAIN: ${{ vars.NEXT_PUBLIC_SITES_ROOT_DOMAIN_PROD }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY_PROD }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           set -euo pipefail
@@ -210,6 +213,18 @@ jobs:
             echo '::error::Repository secret SUPABASE_SECRET_KEY_PROD is empty.'
             exit 1
           fi
+          if [ -z "${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}" ]; then
+            echo '::error::Repository variable NEXT_PUBLIC_TURNSTILE_SITE_KEY is empty.'
+            exit 1
+          fi
+          if [ -z "${RESEND_API_KEY:-}" ]; then
+            echo '::error::Repository secret RESEND_API_KEY is empty.'
+            exit 1
+          fi
+          if [ -z "${TURNSTILE_SECRET_KEY:-}" ]; then
+            echo '::error::Repository secret TURNSTILE_SECRET_KEY is empty.'
+            exit 1
+          fi
           npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
           node <<'NODE'
           const {mkdirSync, readFileSync, writeFileSync} = require('node:fs');
@@ -220,6 +235,9 @@ jobs:
             'NEXT_PUBLIC_SUPABASE_ANON_KEY',
             'NEXT_PUBLIC_SITES_ROOT_DOMAIN',
             'SUPABASE_SECRET_KEY',
+            'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+            'RESEND_API_KEY',
+            'TURNSTILE_SECRET_KEY',
             'NEXT_PUBLIC_APP_VERSION',
             'NEXT_PUBLIC_GIT_COMMIT',
           ];
@@ -273,6 +291,9 @@ jobs:
             NEXT_PUBLIC_SUPABASE_ANON_KEY \
             NEXT_PUBLIC_SITES_ROOT_DOMAIN \
             SUPABASE_SECRET_KEY \
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY \
+            RESEND_API_KEY \
+            TURNSTILE_SECRET_KEY \
             NEXT_PUBLIC_APP_VERSION \
             NEXT_PUBLIC_GIT_COMMIT
           do
