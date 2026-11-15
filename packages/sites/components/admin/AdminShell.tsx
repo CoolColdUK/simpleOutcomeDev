@@ -24,6 +24,7 @@ export default function AdminShell({
             <AdminBrand />
             <Link href="/">Sites</Link>
             <Link href="/change-password">Password</Link>
+            {admin ? <Link href="/design">Design</Link> : null}
             {admin ? <Link href="/templates">Templates</Link> : null}
             {admin ? <Link href="/users">Users</Link> : null}
             {admin ? <Link href="/api-keys">API keys</Link> : null}

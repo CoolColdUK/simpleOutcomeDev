@@ -11,6 +11,7 @@ export interface SiteTemplateSummary {
 
 export interface SiteTemplateRecord extends SiteTemplateSummary {
   readonly document: SiteDocument;
+  readonly colourSchemeId: string | undefined;
 }
 
 interface TemplateRow {
@@ -18,6 +19,14 @@ interface TemplateRow {
   name: string;
   document: unknown;
   updated_at: string;
+  colour_scheme_id?: string | null;
+}
+
+function colourSchemeIdOf(row: TemplateRow): string | undefined {
+  if (row.colour_scheme_id === undefined || row.colour_scheme_id === null || row.colour_scheme_id.length === 0) {
+    return undefined;
+  }
+  return row.colour_scheme_id;
 }
 
 function summary(row: {id: string; name: string; updated_at: string}): SiteTemplateSummary {
@@ -40,25 +49,31 @@ export async function listSiteTemplates(): Promise<readonly SiteTemplateSummary[
 
 export async function getSiteTemplate(id: string): Promise<SiteTemplateRecord | undefined> {
   const supabase = createSitesServiceClient();
-  const {data, error} = await supabase.from('site_template').select('id, name, document, updated_at').eq('id', id).maybeSingle();
+  const {data, error} = await supabase.from('site_template').select('id, name, document, updated_at, colour_scheme_id').eq('id', id).maybeSingle();
   if (error || data === null) {
     return undefined;
   }
   const row = data as TemplateRow;
-  return {...summary(row), document: parseSiteDocument(row.document)};
+  return {...summary(row), document: parseSiteDocument(row.document), colourSchemeId: colourSchemeIdOf(row)};
 }
 
 export async function createSiteTemplate(input: {
   readonly id: string;
   readonly name: string;
   readonly document?: SiteDocument;
+  readonly colourSchemeId?: string;
 }): Promise<SiteTemplateRecord> {
   const document = input.document ?? blankSiteDocument(input.name.trim());
   const supabase = createSitesServiceClient();
   const {data, error} = await supabase
     .from('site_template')
-    .insert({id: input.id, name: input.name.trim(), document})
-    .select('id, name, document, updated_at')
+    .insert({
+      id: input.id,
+      name: input.name.trim(),
+      document,
+      ...(input.colourSchemeId === undefined ? {} : {colour_scheme_id: input.colourSchemeId.length === 0 ? null : input.colourSchemeId}),
+    })
+    .select('id, name, document, updated_at, colour_scheme_id')
     .single();
   if (error || data === null) {
     if (error?.code === '23505') {
@@ -67,29 +82,32 @@ export async function createSiteTemplate(input: {
     throw new Error(error?.message || 'Could not create template');
   }
   const row = data as TemplateRow;
-  return {...summary(row), document: parseSiteDocument(row.document)};
+  return {...summary(row), document: parseSiteDocument(row.document), colourSchemeId: colourSchemeIdOf(row)};
 }
 
 export async function updateSiteTemplate(
   id: string,
-  input: {readonly name?: string; readonly document?: SiteDocument},
+  input: {readonly name?: string; readonly document?: SiteDocument; readonly colourSchemeId?: string},
 ): Promise<SiteTemplateRecord> {
   const patch = {
     ...(input.name === undefined ? {} : {name: input.name.trim()}),
     ...(input.document === undefined ? {} : {document: input.document}),
+    ...(input.colourSchemeId === undefined
+      ? {}
+      : {colour_scheme_id: input.colourSchemeId.length === 0 ? null : input.colourSchemeId}),
   };
   const supabase = createSitesServiceClient();
   const {data, error} = await supabase
     .from('site_template')
     .update(patch)
     .eq('id', id)
-    .select('id, name, document, updated_at')
+    .select('id, name, document, updated_at, colour_scheme_id')
     .maybeSingle();
   if (error || data === null) {
     throw new Error(error?.message || 'Template not found');
   }
   const row = data as TemplateRow;
-  return {...summary(row), document: parseSiteDocument(row.document)};
+  return {...summary(row), document: parseSiteDocument(row.document), colourSchemeId: colourSchemeIdOf(row)};
 }
 
 export async function deleteSiteTemplate(id: string): Promise<void> {

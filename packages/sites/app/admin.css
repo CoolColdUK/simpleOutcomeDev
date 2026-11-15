@@ -465,3 +465,93 @@
   color: #6a6f63;
   font-size: 0.9rem;
 }
+
+.design-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.design-tabs button.selected {
+  outline: 2px solid var(--admin-accent);
+}
+
+.design-node {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  padding: 0.7rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+}
+
+.design-preview {
+  background: var(--chakra-colors-siteBackground);
+  color: var(--chakra-colors-siteForeground);
+  font-family: var(--chakra-fonts-siteBody);
+  padding: 1.25rem;
+  border-radius: var(--chakra-radii-site);
+}
+
+.design-preview[data-uppercase='true'] .design-atom-heading {
+  text-transform: uppercase;
+}
+
+.design-atom-heading {
+  font-family: var(--chakra-fonts-siteHeading);
+  margin: 0 0 0.4rem;
+}
+
+.design-atom-text {
+  margin: 0 0 0.6rem;
+}
+
+.design-row,
+.design-stack-column,
+.design-accordion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.design-stack-column,
+.design-accordion {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.admin .design-preview button,
+.admin .design-preview a.design-atom-button,
+.admin .design-preview a.design-icon-button {
+  background: var(--chakra-colors-siteAccent);
+  color: var(--chakra-colors-siteButtonForeground);
+  border-radius: var(--chakra-radii-site);
+  text-decoration: none;
+}
+
+.design-image-button {
+  display: inline-grid;
+  gap: 0.25rem;
+  justify-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.design-image-button img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  background: var(--chakra-colors-siteCard);
+  border-radius: var(--chakra-radii-site);
+}
+
+.design-switch {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.design-atom-link {
+  color: var(--chakra-colors-siteAccent);
+}

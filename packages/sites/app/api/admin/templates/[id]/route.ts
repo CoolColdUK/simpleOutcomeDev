@@ -26,8 +26,9 @@ export async function PUT(request: Request, context: {params: Promise<{id: strin
     return session;
   }
   const {id} = await context.params;
-  const body = (await request.json().catch(() => undefined)) as {name?: unknown; document?: unknown} | undefined;
+  const body = (await request.json().catch(() => undefined)) as {name?: unknown; document?: unknown; colourSchemeId?: unknown} | undefined;
   const name = typeof body?.name === 'string' ? body.name.trim() : undefined;
+  const colourSchemeId = typeof body?.colourSchemeId === 'string' ? body.colourSchemeId.trim().toLowerCase() : undefined;
   if (name !== undefined && !templateNameOk(name)) {
     return NextResponse.json({error: 'Name is required'}, {status: 400});
   }
@@ -39,11 +40,11 @@ export async function PUT(request: Request, context: {params: Promise<{id: strin
       return NextResponse.json({error: err instanceof Error ? err.message : 'Invalid document'}, {status: 400});
     }
   }
-  if (name === undefined && document === undefined) {
+  if (name === undefined && document === undefined && colourSchemeId === undefined) {
     return NextResponse.json({error: 'Nothing to update'}, {status: 400});
   }
   try {
-    const template = await updateSiteTemplate(id, {name, document});
+    const template = await updateSiteTemplate(id, {name, document, colourSchemeId});
     return NextResponse.json({template});
   } catch (err) {
     return NextResponse.json({error: err instanceof Error ? err.message : 'Could not update template'}, {status: 400});

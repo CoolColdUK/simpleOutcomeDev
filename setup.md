@@ -63,7 +63,7 @@ That user signs in with Forgot password, sets a password from the emailed link, 
 
 ### Sites MCP
 
-Admins create a key under **API keys**. Call `https://admin.simpleoutcome.dev/api/mcp/sites` with `Authorization: Bearer <secret>` (same feature split as main-app `/api/mcp/book`). Tools: `sites_list_components`, `sites_list_sites`, `sites_get_draft`, `sites_create_site`, `sites_update_draft`, `sites_list_templates`, `sites_get_template`, `sites_create_template`, `sites_update_template`, `sites_delete_template`. Site tools do not publish. Template tools are admin-only and create the starting page, including header and footer sections.
+Admins create a key under **API keys**. Call `https://admin.simpleoutcome.dev/api/mcp/sites` with `Authorization: Bearer <secret>` (same feature split as main-app `/api/mcp/book`). Tools: `sites_list_components`, `sites_list_sites`, `sites_get_draft`, `sites_create_site`, `sites_update_draft`, `sites_list_templates`, `sites_get_template`, `sites_create_template`, `sites_update_template`, `sites_delete_template`, `sites_list_design`, `sites_save_colour_scheme`, `sites_delete_colour_scheme`, `sites_save_molecule`, `sites_delete_molecule`, `sites_save_organism`, `sites_delete_organism`. Site tools do not publish. Template tools are admin-only and create the starting page, including header and footer sections. Design tools create Chakra colour schemes, molecules, and sections. Call `sites_list_design` first. `sites_update_template` accepts `colourSchemeId` to attach a scheme.
 
 | Name | Local | Sites production |
 | --- | --- | --- |

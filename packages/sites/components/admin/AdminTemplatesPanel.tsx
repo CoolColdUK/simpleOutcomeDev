@@ -37,7 +37,9 @@ export default function AdminTemplatesPanel() {
     <>
       <div className="admin-card">
         <h1>Templates</h1>
-        <p className="admin-muted">Starting pages for new sites. A new template is a blank page until you add sections.</p>
+        <p className="admin-muted">
+          Starting pages for new sites. Colour schemes, molecules, and sections live under Design. A new template is a blank page until you add sections.
+        </p>
         {error ? <p className="admin-error">{error}</p> : null}
         <table className="admin-table">
           <thead>

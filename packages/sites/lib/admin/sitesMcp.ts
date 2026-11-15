@@ -1,4 +1,5 @@
-import {parseSiteDocument, siteComponentsList} from '@so/model';
+import {parseDesignId, parseSiteDocument, siteComponentsList} from '@so/model';
+import {callDesignMcpTool, DESIGN_MCP_TOOLS} from '@/lib/admin/designMcp';
 import {
   createSiteForOwner,
   loadDraftDocument,
@@ -23,7 +24,7 @@ export interface McpTool {
   readonly inputSchema: Record<string, unknown>;
 }
 
-export const SITES_MCP_TOOLS: readonly McpTool[] = [
+const SITE_MCP_TOOLS: readonly McpTool[] = [
   {
     name: 'sites_list_components',
     description: 'List site section types, grouped by category (header, page, footer), and their fields.',
@@ -89,13 +90,14 @@ export const SITES_MCP_TOOLS: readonly McpTool[] = [
   },
   {
     name: 'sites_create_template',
-    description: 'Create a site template. Omit document for a blank page with no header or footer.',
+    description: 'Create a site template. Omit document for a blank page with no header or footer. colourSchemeId links a Chakra colour scheme.',
     inputSchema: {
       type: 'object',
       properties: {
         id: {type: 'string'},
         name: {type: 'string'},
         document: {type: 'object'},
+        colourSchemeId: {type: 'string'},
       },
       required: ['id', 'name'],
       additionalProperties: false,
@@ -103,13 +105,14 @@ export const SITES_MCP_TOOLS: readonly McpTool[] = [
   },
   {
     name: 'sites_update_template',
-    description: 'Update a site template name and/or document.',
+    description: 'Update a site template name, document, and/or colourSchemeId. An empty colourSchemeId clears the link.',
     inputSchema: {
       type: 'object',
       properties: {
         id: {type: 'string'},
         name: {type: 'string'},
         document: {type: 'object'},
+        colourSchemeId: {type: 'string'},
       },
       required: ['id'],
       additionalProperties: false,
@@ -127,6 +130,22 @@ export const SITES_MCP_TOOLS: readonly McpTool[] = [
   },
 ];
 
+export const SITES_MCP_TOOLS: readonly McpTool[] = [...SITE_MCP_TOOLS, ...DESIGN_MCP_TOOLS];
+
+function colourSchemeId(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'string') {
+    throw new Error('Invalid colour scheme id');
+  }
+  const id = value.trim().toLowerCase();
+  if (id.length === 0) {
+    return '';
+  }
+  return parseDesignId(id);
+}
+
 function templateId(value: unknown): string {
   const id = typeof value === 'string' ? value.trim().toLowerCase() : '';
   if (!SITE_TEMPLATE_ID_RE.test(id)) {
@@ -136,6 +155,10 @@ function templateId(value: unknown): string {
 }
 
 export async function callSitesMcpTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+  const design = await callDesignMcpTool(name, args);
+  if (design !== undefined) {
+    return design;
+  }
   if (name === 'sites_list_components') {
     return siteComponentsList();
   }
@@ -231,7 +254,7 @@ export async function callSitesMcpTool(name: string, args: Record<string, unknow
       throw new Error('Name is required');
     }
     const document = args.document === undefined ? undefined : parseSiteDocument(args.document);
-    const template = await createSiteTemplate({id, name: templateName, document});
+    const template = await createSiteTemplate({id, name: templateName, document, colourSchemeId: colourSchemeId(args.colourSchemeId)});
     return {template};
   }
   if (name === 'sites_update_template') {
@@ -241,10 +264,11 @@ export async function callSitesMcpTool(name: string, args: Record<string, unknow
       throw new Error('Name is required');
     }
     const document = args.document === undefined ? undefined : parseSiteDocument(args.document);
-    if (templateName === undefined && document === undefined) {
+    const schemeId = colourSchemeId(args.colourSchemeId);
+    if (templateName === undefined && document === undefined && schemeId === undefined) {
       throw new Error('Nothing to update');
     }
-    const template = await updateSiteTemplate(id, {name: templateName, document});
+    const template = await updateSiteTemplate(id, {name: templateName, document, colourSchemeId: schemeId});
     return {template};
   }
   if (name === 'sites_delete_template') {

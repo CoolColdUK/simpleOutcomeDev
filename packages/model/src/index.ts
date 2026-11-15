@@ -7,3 +7,4 @@ export * from './fp';
 export * from './tp';
 export * from './book';
 export * from './site';
+export * from './design';

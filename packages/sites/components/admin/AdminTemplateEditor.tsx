@@ -1,13 +1,14 @@
 'use client';
 
-import type {SiteDocument, SiteSection, SiteSectionType} from '@so/model';
+import {colourSchemeToSiteTheme, type DesignColourScheme, type SiteDocument, type SiteSection, type SiteSectionType} from '@so/model';
 import Link from 'next/link';
-import {useMemo, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import AdminAddSectionDialog from '@/components/admin/AdminAddSectionDialog';
 import AdminSectionList from '@/components/admin/AdminSectionList';
 import AdminSectionSettings from '@/components/admin/AdminSectionSettings';
 import AdminSiteConfig from '@/components/admin/AdminSiteConfig';
 import SitePageView from '@/components/SitePageView';
+import useDesignLibraryLive from '@/components/admin/useDesignLibraryLive';
 import {createDefaultSection, newSectionId} from '@/lib/admin/defaultSection';
 import {omitMenuLink} from '@/lib/site/mapSiteSection';
 
@@ -15,11 +16,30 @@ export interface AdminTemplateEditorProps {
   readonly id: string;
   readonly name: string;
   readonly document: SiteDocument;
+  readonly colourSchemeId: string | undefined;
+  readonly colourSchemes: readonly DesignColourScheme[];
 }
 
 export default function AdminTemplateEditor(props: AdminTemplateEditorProps) {
   const [name, setName] = useState(props.name);
   const [document, setDocument] = useState(props.document);
+  const [schemes, setSchemes] = useState(props.colourSchemes);
+  const [colourSchemeId, setColourSchemeId] = useState(props.colourSchemeId ?? '');
+  const refreshSchemes = useCallback(() => {
+    void fetch('/api/admin/design').then(async (response) => {
+      if (!response.ok) {
+        return;
+      }
+      const payload = (await response.json()) as {colourSchemes?: DesignColourScheme[]};
+      const next = payload.colourSchemes ?? [];
+      setSchemes(next);
+      const scheme = next.find((item) => item.id === colourSchemeId);
+      if (scheme !== undefined) {
+        setDocument((current) => ({...current, theme: colourSchemeToSiteTheme(scheme.tokens)}));
+      }
+    });
+  }, [colourSchemeId]);
+  useDesignLibraryLive(refreshSchemes);
   const [settingsId, setSettingsId] = useState<string | undefined>(undefined);
   const [addOpen, setAddOpen] = useState(false);
   const [error, setError] = useState('');
@@ -64,6 +84,30 @@ export default function AdminTemplateEditor(props: AdminTemplateEditorProps) {
             Name
             <input value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
           </label>
+          <label>
+            Colour scheme
+            <select
+              value={colourSchemeId}
+              onChange={(event) => {
+                const nextId = event.target.value;
+                setColourSchemeId(nextId);
+                const scheme = schemes.find((item) => item.id === nextId);
+                if (scheme !== undefined) {
+                  setDocument({...document, theme: colourSchemeToSiteTheme(scheme.tokens)});
+                }
+              }}
+            >
+              <option value="">None</option>
+              {schemes.map((scheme) => (
+                <option key={scheme.id} value={scheme.id}>
+                  {scheme.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="admin-muted">
+            A colour scheme is a Chakra token set. Choosing one copies those colours into this template. Later edits to the scheme update this preview live.
+          </p>
         </div>
         <div className="admin-actions">
           <button
@@ -76,7 +120,7 @@ export default function AdminTemplateEditor(props: AdminTemplateEditorProps) {
               const response = await fetch(`/api/admin/templates/${props.id}`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, document}),
+                body: JSON.stringify({name, document, colourSchemeId}),
               });
               const payload = (await response.json().catch(() => ({}))) as {error?: string};
               setBusy(false);
