@@ -109,7 +109,7 @@ describe('design library', () => {
     expect(accent?.parentId).toBe('button');
     if (accent !== undefined) {
       const pink = {id: 'pink-button', name: 'Pink button', base: 'button', parentId: 'accent-button', fields: [], style: {}};
-      expect(mergedDesignAtom(pink, [button, accent, pink]).style.background).toBe('siteAccent');
+      expect(mergedDesignAtom(pink, [button, accent, pink]).style['background']).toBe('siteAccent');
       expect(designAtomParentError(pink, [button, accent])).toBeUndefined();
       expect(designAtomParentError({id: 'pink-text', base: 'text', parentId: 'accent-button'}, [accent])).toBe('Atom accent-button is a button');
     }

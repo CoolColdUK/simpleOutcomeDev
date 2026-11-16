@@ -43,7 +43,7 @@ export function mergedDesignAtom(preset: DesignAtomPreset, atoms: readonly Desig
   while (current !== undefined && !seen.has(current.id) && chain.length < 8) {
     seen.add(current.id);
     chain.unshift(current);
-    const parentId = current.parentId;
+    const parentId: string | undefined = current.parentId;
     current = parentId === undefined ? undefined : atoms.find((atom) => atom.id === parentId);
   }
   const fields: DesignAtomField[] = [];
