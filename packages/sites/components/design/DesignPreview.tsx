@@ -1,6 +1,6 @@
 'use client';
 
-import type {DesignAtomNode, DesignColourTokens, DesignFlex, DesignMolecule, DesignNode} from '@so/model';
+import type {DesignAtomNode, DesignColourTokens, DesignContainer, DesignFlex, DesignMolecule, DesignNode} from '@so/model';
 import type {CSSProperties} from 'react';
 
 export function designPreviewStyle(tokens: DesignColourTokens): CSSProperties {
@@ -39,17 +39,19 @@ export default function DesignPreview({
   molecules,
   tokens,
   layout,
+  container,
 }: {
   nodes: readonly DesignNode[];
   molecules: readonly DesignMolecule[];
   tokens: DesignColourTokens;
   layout?: DesignFlex;
+  container?: DesignContainer;
 }) {
   return (
     <div
       className="design-preview"
       data-uppercase={tokens.uppercaseHeadings ? 'true' : 'false'}
-      style={{...designPreviewStyle(tokens), ...designFlexStyle(layout)}}
+      style={{...designPreviewStyle(tokens), ...designContainerStyle(container), ...designFlexStyle(layout)}}
     >
       <DesignNodes nodes={nodes} molecules={molecules} depth={1} />
     </div>
@@ -71,7 +73,7 @@ function DesignNodes({nodes, molecules, depth}: {nodes: readonly DesignNode[]; m
           return <p key={node.id}>Missing molecule {node.moleculeId}</p>;
         }
         return (
-          <div key={node.id} style={designFlexStyle(molecule.document.layout)}>
+          <div key={node.id} style={{...designContainerStyle(molecule.document.container), ...designFlexStyle(molecule.document.layout)}}>
             <DesignNodes nodes={molecule.document.children} molecules={molecules} depth={depth + 1} />
           </div>
         );
@@ -98,7 +100,15 @@ function DesignAtomView({node}: {node: DesignAtomNode}) {
   }
   if (node.atom === 'switch') {
     return (
-      <label className="design-switch" style={style}>
+      <span className="design-switch" style={style}>
+        <span className="design-switch-track" style={node.style.color === undefined ? undefined : {background: node.style.color}} />
+        {caption}
+      </span>
+    );
+  }
+  if (node.atom === 'checkbox') {
+    return (
+      <label className="design-check" style={style}>
         <input type="checkbox" readOnly checked={false} />
         {caption}
       </label>
@@ -145,6 +155,31 @@ function atomStyle(node: DesignAtomNode): CSSProperties {
     borderWidth: node.style.borderWidthPx,
     borderColor: node.style.borderColor,
   };
+}
+
+export function designContainerStyle(container: DesignContainer | undefined): CSSProperties {
+  if (container === undefined) {
+    return {};
+  }
+  return {
+    width: px(container.widthPx),
+    height: px(container.heightPx),
+    minWidth: px(container.minWidthPx),
+    minHeight: px(container.minHeightPx),
+    maxWidth: px(container.maxWidthPx),
+    maxHeight: px(container.maxHeightPx),
+    padding: px(container.paddingPx),
+    background: container.background,
+    borderRadius: px(container.radiusPx),
+    borderStyle: container.borderWidthPx === undefined ? undefined : 'solid',
+    borderWidth: px(container.borderWidthPx),
+    borderColor: container.borderColor,
+    boxSizing: 'border-box',
+  };
+}
+
+function px(value: number | undefined): string | undefined {
+  return value === undefined ? undefined : `${value}px`;
 }
 
 function flexAlign(value: 'start' | 'center' | 'end' | 'stretch'): CSSProperties['justifyContent'] {

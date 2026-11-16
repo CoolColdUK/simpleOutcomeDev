@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  DESIGN_ATOM_GUIDE,
   DESIGN_ATOMS,
   blankDesignAtom,
   blankDesignMoleculeUse,
@@ -20,6 +21,10 @@ function nextNodeId(): string {
   const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   return `n${Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('')}`;
+}
+
+function atomLabel(atom: DesignAtom): string {
+  return DESIGN_ATOM_GUIDE.find((entry) => entry.atom === atom)?.label ?? atom;
 }
 
 function isDesignAtom(value: string): value is DesignAtom {
@@ -53,11 +58,23 @@ export default function AdminDesignNodeEditor({
   const choices = molecules.filter((molecule) => molecule.id !== excludeMoleculeId);
   return (
     <div>
+      <div className="design-node-head">
+        <strong>Contents</strong>
+        <AdminDesignOptionMenu
+          label="Add atom or molecule"
+          icon
+          options={[
+            ...DESIGN_ATOM_GUIDE.map((atom) => ({key: atom.atom, label: atom.label})),
+            ...(choices.length > 0 ? [{key: 'molecule', label: 'Molecule'}] : []),
+          ]}
+          onPick={(key) => addNode(key, choices, nodes, onChange)}
+        />
+      </div>
       {nodes.map((node, index) => (
         <div key={node.id} className="design-node">
           <div className="design-node-head">
-            <strong>{node.kind === 'atom' ? node.atom : 'molecule'}</strong>
-            <AdminIconButton label="Remove piece" icon="bin" disabled={nodes.length < 2} onClick={() => onChange(nodes.filter((_, nodeIndex) => nodeIndex !== index))} />
+            <strong>{node.kind === 'atom' ? atomLabel(node.atom) : 'Molecule'}</strong>
+            <AdminIconButton label="Remove" icon="bin" disabled={nodes.length < 2} onClick={() => onChange(nodes.filter((_, nodeIndex) => nodeIndex !== index))} />
           </div>
           <NodeFields
             node={node}
@@ -66,27 +83,21 @@ export default function AdminDesignNodeEditor({
           />
         </div>
       ))}
-      <AdminDesignOptionMenu
-        label="Add piece"
-        options={[
-          ...DESIGN_ATOMS.map((atom) => ({key: atom, label: atom})),
-          ...(choices.length > 0 ? [{key: 'molecule', label: 'molecule'}] : []),
-        ]}
-        onPick={(key) => {
-          if (key === 'molecule') {
-            const moleculeId = choices[0]?.id;
-            if (moleculeId !== undefined) {
-              onChange([...nodes, blankDesignMoleculeUse(nextNodeId(), moleculeId)]);
-            }
-            return;
-          }
-          if (isDesignAtom(key)) {
-            onChange([...nodes, blankDesignAtom(key, nextNodeId())]);
-          }
-        }}
-      />
     </div>
   );
+}
+
+function addNode(key: string, choices: readonly DesignMolecule[], nodes: readonly DesignNode[], onChange: (nodes: DesignNode[]) => void): void {
+  if (key === 'molecule') {
+    const moleculeId = choices[0]?.id;
+    if (moleculeId !== undefined) {
+      onChange([...nodes, blankDesignMoleculeUse(nextNodeId(), moleculeId)]);
+    }
+    return;
+  }
+  if (isDesignAtom(key)) {
+    onChange([...nodes, blankDesignAtom(key, nextNodeId())]);
+  }
 }
 
 function NodeFields({node, molecules, onChange}: {node: DesignNode; molecules: readonly DesignMolecule[]; onChange: (node: DesignNode) => void}) {

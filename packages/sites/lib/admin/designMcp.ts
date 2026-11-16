@@ -48,7 +48,7 @@ export const DESIGN_MCP_TOOLS: readonly DesignMcpTool[] = [
   {
     name: 'sites_save_molecule',
     description:
-      'Create or replace a molecule. document is {pattern:"tree"|"combine", layout:{direction,gapPx,align,valign,wrap}, children}. Children are atoms {atom, style, slots} or {kind:"molecule", moleculeId}. slots are content names filled on a template item, not values. style is colours, radiusPx, and border.',
+      'Create or replace a molecule. document is {pattern:"tree"|"combine", layout:{direction,gapPx,align,valign,wrap}, container:{widthPx,heightPx,minWidthPx,minHeightPx,maxWidthPx,maxHeightPx,paddingPx,background,radiusPx,borderWidthPx,borderColor}, children}. layout is flex. container is the box. Children are atoms {atom, style, slots} or {kind:"molecule", moleculeId}. Atoms include switch and checkbox. slots are content names filled on a template item, not values.',
     inputSchema: {
       type: 'object',
       properties: {id: idSchema, name: nameSchema, document: {type: 'object'}},

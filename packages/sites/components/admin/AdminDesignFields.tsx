@@ -1,11 +1,14 @@
 'use client';
 
 import {
+  DESIGN_CONTAINER_OPTIONS,
   DESIGN_FLEX_OPTIONS,
   blankCombineDocument,
   blankMoleculeDocument,
   type DesignColourScheme,
   type DesignColourTokens,
+  type DesignContainer,
+  type DesignContainerKey,
   type DesignFlex,
   type DesignFlexKey,
   type DesignMolecule,
@@ -130,7 +133,11 @@ export function DesignMoleculeFields({
 }) {
   const document = molecule.document;
   const layout = document.layout;
-  const unusedLayout = DESIGN_FLEX_OPTIONS.filter((option) => layout[option.key] === undefined);
+  const container = document.container ?? {};
+  const unused = [
+    ...DESIGN_FLEX_OPTIONS.filter((option) => layout[option.key] === undefined),
+    ...DESIGN_CONTAINER_OPTIONS.filter((option) => container[option.key] === undefined),
+  ];
   return (
     <>
       <div className="design-field-row">
@@ -141,7 +148,7 @@ export function DesignMoleculeFields({
             onChange={(event) => {
               const pattern = event.target.value === 'combine' ? 'combine' : 'tree';
               const next = pattern === 'combine' ? blankCombineDocument() : blankMoleculeDocument();
-              onChange({...molecule, document: {...next, children: document.children, layout}});
+              onChange({...molecule, document: {...next, children: document.children, layout, ...(document.container === undefined ? {} : {container: document.container})}});
             }}
           >
             <option value="tree">Tree of atoms</option>
@@ -149,23 +156,29 @@ export function DesignMoleculeFields({
           </select>
         </label>
         <AdminDesignOptionMenu
-          label="Add layout option"
+          label="Add layout or container option"
           icon
-          options={unusedLayout.map((option) => ({key: option.key, label: option.label}))}
+          options={unused.map((option) => ({key: option.key, label: option.label}))}
           onPick={(key) => {
             const flex = flexKey(key);
             if (flex !== undefined) {
               onChange({...molecule, document: {...document, layout: {...layout, [flex]: flexDefault(flex, document.pattern)}}});
+              return;
+            }
+            const box = containerKey(key);
+            if (box !== undefined) {
+              onChange({...molecule, document: {...document, container: {...container, [box]: containerDefault(box)}}});
             }
           }}
         />
       </div>
       <p className="admin-muted">
         {document.pattern === 'tree'
-          ? 'Lay atoms and molecules out as a flex row or column. Add only the layout options you want.'
-          : 'Combine atoms and other molecules into one larger molecule. Words and links are filled in on the template.'}
+          ? 'The molecule is a flex container. Add alignment, size, and box options only when you need them.'
+          : 'Combine atoms and other molecules inside a flex container. Words and links are filled in on the template.'}
       </p>
       <FlexFields layout={layout} onChange={(next) => onChange({...molecule, document: {...document, layout: next}})} />
+      <ContainerFields container={container} onChange={(next) => onChange({...molecule, document: {...document, container: next}})} />
       <AdminDesignNodeEditor
         nodes={document.children}
         molecules={molecules}
@@ -254,6 +267,38 @@ function AlignField({
   );
 }
 
+function ContainerFields({container, onChange}: {container: DesignContainer; onChange: (container: DesignContainer) => void}) {
+  return (
+    <>
+      {DESIGN_CONTAINER_OPTIONS.filter((option) => container[option.key] !== undefined).map((option) =>
+        option.max === undefined ? (
+          <div key={option.key} className="design-field-row">
+            <label>
+              {option.label}
+              <input value={String(container[option.key] ?? '')} onChange={(event) => onChange({...container, [option.key]: event.target.value})} />
+            </label>
+            <AdminIconButton label={`Remove ${option.label}`} icon="bin" onClick={() => onChange(containerWithout(container, option.key))} />
+          </div>
+        ) : (
+          <div key={option.key} className="design-field-row">
+            <label>
+              {option.label}
+              <input
+                type="number"
+                min={0}
+                max={option.max}
+                value={Number(container[option.key])}
+                onChange={(event) => onChange({...container, [option.key]: Number(event.target.value)})}
+              />
+            </label>
+            <AdminIconButton label={`Remove ${option.label}`} icon="bin" onClick={() => onChange(containerWithout(container, option.key))} />
+          </div>
+        ),
+      )}
+    </>
+  );
+}
+
 function alignValue(value: string): 'start' | 'center' | 'end' | 'stretch' {
   if (value === 'center' || value === 'end' || value === 'stretch') {
     return value;
@@ -280,6 +325,44 @@ function flexDefault(key: DesignFlexKey, pattern: 'tree' | 'combine'): DesignFle
 
 function flexWithout(layout: DesignFlex, key: DesignFlexKey): DesignFlex {
   const next = {...layout};
+  delete next[key];
+  return next;
+}
+
+function containerKey(value: string): DesignContainerKey | undefined {
+  return DESIGN_CONTAINER_OPTIONS.find((option) => option.key === value)?.key;
+}
+
+function containerDefault(key: DesignContainerKey): DesignContainer[DesignContainerKey] {
+  if (key === 'widthPx' || key === 'maxWidthPx') {
+    return key === 'widthPx' ? 240 : 480;
+  }
+  if (key === 'heightPx' || key === 'maxHeightPx') {
+    return key === 'heightPx' ? 120 : 240;
+  }
+  if (key === 'minWidthPx') {
+    return 120;
+  }
+  if (key === 'minHeightPx') {
+    return 48;
+  }
+  if (key === 'paddingPx') {
+    return 12;
+  }
+  if (key === 'radiusPx') {
+    return 8;
+  }
+  if (key === 'borderWidthPx') {
+    return 1;
+  }
+  if (key === 'background') {
+    return '#ffffff';
+  }
+  return '#111111';
+}
+
+function containerWithout(container: DesignContainer, key: DesignContainerKey): DesignContainer {
+  const next = {...container};
   delete next[key];
   return next;
 }

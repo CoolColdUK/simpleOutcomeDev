@@ -91,6 +91,17 @@ describe('design library', () => {
     expect(document.children.some((node) => node.kind === 'atom' && node.slots.includes('label'))).toBe(true);
   });
 
+  it('keeps an optional container on the molecule', () => {
+    const document = parseDesignMoleculeDocument({
+      pattern: 'tree',
+      layout: {direction: 'row', align: 'center'},
+      container: {minHeightPx: 48, minWidthPx: 120, paddingPx: 12},
+      children: [{id: 'agree', kind: 'atom', atom: 'checkbox', style: {}, slots: ['label', 'checked']}],
+    });
+    expect(document.container?.minHeightPx).toBe(48);
+    expect(document.children[0]).toMatchObject({atom: 'checkbox'});
+  });
+
   it('parses a blank atom', () => {
     expect(v.parse(designNodeSchema, blankDesignAtom('link', 'home')).kind).toBe('atom');
     expect(blankMoleculeDocument().pattern).toBe('tree');

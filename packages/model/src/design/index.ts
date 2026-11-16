@@ -10,6 +10,8 @@ export {
 } from './designColourScheme';
 export {
   DESIGN_ATOM_OPTIONS,
+  DESIGN_CONTAINER_KEYS,
+  DESIGN_CONTAINER_OPTIONS,
   DESIGN_CONTENT_KEYS,
   DESIGN_FLEX_KEYS,
   DESIGN_FLEX_OPTIONS,
@@ -18,6 +20,7 @@ export {
   isDesignContentKey,
   isDesignStyleKey,
   type DesignAtomOption,
+  type DesignContainerKey,
   type DesignContentKey,
   type DesignFlexKey,
   type DesignStyleKey,
@@ -25,7 +28,16 @@ export {
 export {DESIGN_CATEGORIES, designCategorySchema, designIdSchema, designNodeIdSchema, type DesignCategory} from './designId';
 export {DESIGN_ATOM_GUIDE, designLibraryGuide, type DesignAtomField, type DesignAtomGuide, type DesignLibraryGuide} from './designLibraryGuide';
 export {DESIGN_COLOUR_SCHEME_SEED, DESIGN_MOLECULE_SEED, DESIGN_ORGANISM_SEED} from './designLibrarySeed';
-export {designFlexSchema, designMoleculeDocumentSchema, moleculeNodes, type DesignFlex, type DesignMolecule, type DesignMoleculeDocument} from './designMolecule';
+export {
+  designContainerSchema,
+  designFlexSchema,
+  designMoleculeDocumentSchema,
+  moleculeNodes,
+  type DesignContainer,
+  type DesignFlex,
+  type DesignMolecule,
+  type DesignMoleculeDocument,
+} from './designMolecule';
 export {
   DESIGN_ATOMS,
   designAtomNodeSchema,

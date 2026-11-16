@@ -92,7 +92,7 @@ export default function AdminDesignLibrary() {
       <div className="admin-card">
         <h1>Design</h1>
         <p className="admin-muted">
-          Atoms (button, icon button, image button, link, switch, text) are built in. Molecules and sections are saved here and update live.
+          Atoms (button, icon button, image button, link, switch, checkbox, text) are built in. Molecules and sections are saved here and update live.
           Colour schemes are Chakra theme tokens. Templates pick a scheme on the template page.
         </p>
         {error ? <p className="admin-error">{error}</p> : null}
@@ -268,6 +268,7 @@ function DraftEditor({
           <DesignPreview
             nodes={draft.molecule.document.children}
             layout={draft.molecule.document.layout}
+            container={draft.molecule.document.container}
             molecules={[draft.molecule, ...library.molecules.filter((item) => item.id !== draft.molecule.id)]}
             tokens={previewTokens}
           />

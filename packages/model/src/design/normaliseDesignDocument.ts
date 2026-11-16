@@ -5,7 +5,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isAtomName(value: unknown): value is DesignAtom {
-  return value === 'button' || value === 'iconButton' || value === 'imageButton' || value === 'link' || value === 'switch' || value === 'text';
+  return value === 'button' || value === 'iconButton' || value === 'imageButton' || value === 'link' || value === 'switch' || value === 'checkbox' || value === 'text';
 }
 
 function normaliseAtom(node: Record<string, unknown>): Record<string, unknown> {
@@ -77,6 +77,7 @@ export function normaliseMoleculeDocument(value: unknown): unknown {
   return {
     pattern: value.pattern === 'combine' ? 'combine' : 'tree',
     layout: layoutFromLegacyStack(value),
+    ...(isRecord(value.container) ? {container: value.container} : {}),
     children: normaliseDesignNodes(value.children),
   };
 }

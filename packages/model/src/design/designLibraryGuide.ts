@@ -19,6 +19,7 @@ const ATOM_LABELS: Record<DesignAtom, string> = {
   imageButton: 'Image button',
   link: 'Link',
   switch: 'Switch',
+  checkbox: 'Checkbox',
   text: 'Text',
 };
 
@@ -46,7 +47,7 @@ export function designLibraryGuide(): DesignLibraryGuide {
     atoms: DESIGN_ATOM_GUIDE,
     moleculePatterns: ['tree', 'combine'],
     organismCategories: DESIGN_CATEGORIES,
-    node: 'A molecule is {pattern:"tree"|"combine", layout:{direction,gapPx,align,valign,wrap}, children}. Children are atoms {id, kind:"atom", atom, style, slots} or molecules {id, kind:"molecule", moleculeId}. style holds colours, radius, and border. slots name the content filled later on a template item. Do not put label, href, or text values on the molecule.',
+    node: 'A molecule is {pattern:"tree"|"combine", layout:{direction,gapPx,align,valign,wrap}, container:{widthPx,heightPx,minWidthPx,minHeightPx,maxWidthPx,maxHeightPx,paddingPx,background,radiusPx,borderWidthPx,borderColor}, children}. layout is the flex. container is the box around it. Children are atoms {id, kind:"atom", atom, style, slots} or molecules {id, kind:"molecule", moleculeId}. Atoms include switch and checkbox. style holds colours, radius, and border. slots name the content filled later on a template item. Do not put label, href, or text values on the molecule.',
     colourTokens:
       'tokens: {uppercaseHeadings, heroBackground, chakra:{theme:{tokens:{colors:{siteBackground,siteForeground,siteAccent,siteButtonForeground,siteCard}, fonts:{siteHeading,siteBody}, radii:{site}}}}}. Each colour, font, and radius is {value}. Colours are hex. Radius is 0px–32px. heroBackground is "none" or linear-gradient(135deg,#hex,#hex).',
   };
