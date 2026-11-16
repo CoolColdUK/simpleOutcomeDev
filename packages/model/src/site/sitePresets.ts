@@ -1,4 +1,4 @@
-import {siteDocumentWithChrome} from './siteDocumentChrome';
+import {siteDocumentWithChrome, type SiteDocumentChromeSource} from './siteDocumentChrome';
 import type {SiteDocument} from './siteDocumentSchema';
 import type {SitePresetId} from './sitePresetId';
 import {sampleBooking, sampleFooter, sampleReviews, sampleServices} from './siteSampleCopy';
@@ -17,8 +17,7 @@ import {
 
 const photo = (label: string, background: string) => ({label, background});
 
-const cleanStudio = {
-  schemaVersion: 1,
+const cleanStudio: SiteDocumentChromeSource = {
   businessName: 'Lumen Nail Studio',
   theme: cleanStudioTheme,
   booking: {...sampleBooking, label: 'Book now'},
@@ -47,8 +46,7 @@ const cleanStudio = {
   footer: {text: sampleFooter('Lumen Nail Studio')},
 };
 
-const softLuxury = {
-  schemaVersion: 1,
+const softLuxury: SiteDocumentChromeSource = {
   businessName: 'Maison Rose Beauty',
   theme: softLuxuryTheme,
   booking: {...sampleBooking, label: 'Book your treatment'},
@@ -90,8 +88,7 @@ const softLuxury = {
   footer: {text: sampleFooter('Maison Rose Beauty')},
 };
 
-const portfolioFirst = {
-  schemaVersion: 1,
+const portfolioFirst: SiteDocumentChromeSource = {
   businessName: 'Polished by Ava',
   theme: portfolioFirstTheme,
   booking: {...sampleBooking, label: 'Book on Fresha'},
@@ -133,8 +130,7 @@ const portfolioFirst = {
   footer: {text: sampleFooter('Polished by Ava')},
 };
 
-const homeStudio = {
-  schemaVersion: 1,
+const homeStudio: SiteDocumentChromeSource = {
   businessName: 'The Garden Room Beauty',
   theme: homeStudioTheme,
   booking: sampleBooking,
@@ -179,8 +175,7 @@ const homeStudio = {
   footer: {text: sampleFooter('The Garden Room Beauty')},
 };
 
-const boldNailBar = {
-  schemaVersion: 1,
+const boldNailBar: SiteDocumentChromeSource = {
   businessName: 'CANDY CLAW',
   theme: boldNailBarTheme,
   booking: {...sampleBooking, label: 'Book your set'},
@@ -218,8 +213,7 @@ const boldNailBar = {
   footer: {text: sampleFooter('CANDY CLAW')},
 };
 
-const clinic = {
-  schemaVersion: 1,
+const clinic: SiteDocumentChromeSource = {
   businessName: 'Clearline Aesthetics',
   theme: clinicTheme,
   booking: {...sampleBooking, label: 'Book a consultation'},
@@ -272,8 +266,7 @@ const clinic = {
   footer: {text: sampleFooter('Clearline Aesthetics')},
 };
 
-const hairBeauty = {
-  schemaVersion: 1,
+const hairBeauty: SiteDocumentChromeSource = {
   businessName: 'Halo Hair & Beauty',
   theme: hairBeautyTheme,
   booking: {...sampleBooking, label: 'Book an appointment'},
@@ -334,8 +327,7 @@ const hairBeauty = {
   footer: {text: sampleFooter('Halo Hair & Beauty')},
 };
 
-const reviewLed = {
-  schemaVersion: 1,
+const reviewLed: SiteDocumentChromeSource = {
   businessName: 'Glow & Go Beauty',
   theme: reviewLedTheme,
   booking: {...sampleBooking, label: 'Book like they did'},
@@ -368,8 +360,7 @@ const reviewLed = {
   footer: {text: sampleFooter('Glow & Go Beauty')},
 };
 
-const courses = {
-  schemaVersion: 1,
+const courses: SiteDocumentChromeSource = {
   businessName: 'Atelier Nails Academy',
   theme: coursesTheme,
   booking: {...sampleBooking, label: 'Book a treatment'},
@@ -429,8 +420,7 @@ const courses = {
   footer: {text: sampleFooter('Atelier Nails Academy')},
 };
 
-const neighbourhood = {
-  schemaVersion: 1,
+const neighbourhood: SiteDocumentChromeSource = {
   businessName: 'Portswood Nails & Beauty',
   theme: neighbourhoodTheme,
   booking: {...sampleBooking, label: 'Book online'},
