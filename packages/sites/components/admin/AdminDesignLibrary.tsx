@@ -1,5 +1,6 @@
 'use client';
 
+import {DESIGN_ATOM_GUIDE} from '@so/component';
 import {
   blankMoleculeDocument,
   blankOrganismDocument,
@@ -17,7 +18,7 @@ import DesignPreview, {designPreviewStyle} from '@/components/design/DesignPrevi
 
 const ID_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
-type Layer = 'colour-schemes' | 'molecules' | 'organisms';
+type Layer = 'atoms' | 'colour-schemes' | 'molecules' | 'organisms';
 
 interface Library {
   colourSchemes: readonly DesignColourScheme[];
@@ -92,12 +93,12 @@ export default function AdminDesignLibrary() {
       <div className="admin-card">
         <h1>Design</h1>
         <p className="admin-muted">
-          Atoms (button, icon button, image button, link, switch, checkbox, text) are built in. Molecules and sections are saved here and update live.
-          Colour schemes are Chakra theme tokens. Templates pick a scheme on the template page.
+          Atoms are built into the app. Colour schemes, molecules, and sections are saved in the database and marked Editable. Templates pick a scheme on the template page.
         </p>
         {error ? <p className="admin-error">{error}</p> : null}
         {notice ? <p className="admin-ok">{notice}</p> : null}
         <div className="design-tabs">
+          <Tab current={layer} id="atoms" label="Atoms" onPick={setLayer} />
           <Tab current={layer} id="colour-schemes" label="Colour schemes" onPick={setLayer} />
           <Tab current={layer} id="molecules" label="Molecules" onPick={setLayer} />
           <Tab current={layer} id="organisms" label="Sections" onPick={setLayer} />
@@ -111,7 +112,12 @@ export default function AdminDesignLibrary() {
             setDraft(next);
           }}
           onDelete={(id) => void remove(layer, id, setBusy, setError, setLibrary)}
-          onCreate={() => setDraft(blankDraft(layer, tokens))}
+          onCreate={() => {
+            if (layer === 'atoms') {
+              return;
+            }
+            setDraft(blankDraft(layer, tokens));
+          }}
         />
       </div>
       {draft === undefined ? null : (
@@ -165,55 +171,67 @@ function LibraryTable({
           {rows.map((row) => (
             <tr key={row.id}>
               <td>
-                {row.name}
+                <span className="design-node-title">
+                  {row.name}
+                  {row.editable ? <span className="design-tag">Editable</span> : null}
+                </span>
                 <div className="admin-muted">{row.detail}</div>
               </td>
               <td>{row.id}</td>
               <td>
-                <AdminIconButton
-                  label={`Edit ${row.name}`}
-                  icon="settings"
-                  onClick={() => {
-                    if (layer === 'colour-schemes') {
-                      const scheme = library.colourSchemes.find((item) => item.id === row.id);
-                      if (scheme !== undefined) {
-                        onEdit({layer, creating: false, scheme});
-                      }
-                      return;
-                    }
-                    if (layer === 'molecules') {
-                      const molecule = library.molecules.find((item) => item.id === row.id);
-                      if (molecule !== undefined) {
-                        onEdit({layer, creating: false, molecule});
-                      }
-                      return;
-                    }
-                    const organism = library.organisms.find((item) => item.id === row.id);
-                    if (organism !== undefined) {
-                      onEdit({layer, creating: false, organism});
-                    }
-                  }}
-                />{' '}
-                <AdminIconButton
-                  label={`Delete ${row.name}`}
-                  icon="bin"
-                  disabled={busy}
-                  onClick={() => {
-                    if (window.confirm(`Delete ${row.name}?`)) {
-                      onDelete(row.id);
-                    }
-                  }}
-                />
+                {row.editable ? (
+                  <>
+                    <AdminIconButton
+                      label={`Edit ${row.name}`}
+                      icon="settings"
+                      onClick={() => {
+                        if (layer === 'colour-schemes') {
+                          const scheme = library.colourSchemes.find((item) => item.id === row.id);
+                          if (scheme !== undefined) {
+                            onEdit({layer, creating: false, scheme});
+                          }
+                          return;
+                        }
+                        if (layer === 'molecules') {
+                          const molecule = library.molecules.find((item) => item.id === row.id);
+                          if (molecule !== undefined) {
+                            onEdit({layer, creating: false, molecule});
+                          }
+                          return;
+                        }
+                        if (layer !== 'organisms') {
+                          return;
+                        }
+                        const organism = library.organisms.find((item) => item.id === row.id);
+                        if (organism !== undefined) {
+                          onEdit({layer, creating: false, organism});
+                        }
+                      }}
+                    />{' '}
+                    <AdminIconButton
+                      label={`Delete ${row.name}`}
+                      icon="bin"
+                      disabled={busy}
+                      onClick={() => {
+                        if (window.confirm(`Delete ${row.name}?`)) {
+                          onDelete(row.id);
+                        }
+                      }}
+                    />
+                  </>
+                ) : null}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div className="admin-actions">
-        <button type="button" onClick={onCreate}>
-          New
-        </button>
-      </div>
+      {layer === 'atoms' ? null : (
+        <div className="admin-actions">
+          <button type="button" onClick={onCreate}>
+            New
+          </button>
+        </div>
+      )}
     </>
   );
 }
@@ -281,14 +299,22 @@ function DraftEditor({
   );
 }
 
-function rowsForLayer(layer: Layer, library: Library): readonly {id: string; name: string; detail: string}[] {
+function rowsForLayer(layer: Layer, library: Library): readonly {id: string; name: string; detail: string; editable: boolean}[] {
+  if (layer === 'atoms') {
+    return DESIGN_ATOM_GUIDE.map((atom) => ({id: atom.atom, name: atom.label, detail: 'Built in', editable: false}));
+  }
   if (layer === 'colour-schemes') {
-    return library.colourSchemes.map((scheme) => ({id: scheme.id, name: scheme.name, detail: colourSchemeToSiteTheme(scheme.tokens).accent}));
+    return library.colourSchemes.map((scheme) => ({
+      id: scheme.id,
+      name: scheme.name,
+      detail: colourSchemeToSiteTheme(scheme.tokens).accent,
+      editable: true,
+    }));
   }
   if (layer === 'molecules') {
-    return library.molecules.map((molecule) => ({id: molecule.id, name: molecule.name, detail: molecule.document.pattern}));
+    return library.molecules.map((molecule) => ({id: molecule.id, name: molecule.name, detail: molecule.document.pattern, editable: true}));
   }
-  return library.organisms.map((organism) => ({id: organism.id, name: organism.name, detail: organism.category}));
+  return library.organisms.map((organism) => ({id: organism.id, name: organism.name, detail: organism.category, editable: true}));
 }
 
 function draftId(draft: Draft): string {
@@ -321,7 +347,7 @@ function withIdentity(draft: Draft, id: string, name: string): Draft {
   return {...draft, organism: {...draft.organism, id, name}};
 }
 
-function blankDraft(layer: Layer, tokens: DesignColourTokens): Draft {
+function blankDraft(layer: Exclude<Layer, 'atoms'>, tokens: DesignColourTokens): Draft {
   if (layer === 'colour-schemes') {
     return {layer, creating: true, scheme: {id: '', name: '', tokens}};
   }

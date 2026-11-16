@@ -509,6 +509,22 @@
   justify-content: space-between;
 }
 
+.design-node-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.design-tag {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: #e7f0e4;
+  color: #3d5c3a;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
 .design-field-row > label,
 .design-slot-row .admin-muted {
   flex: 1;

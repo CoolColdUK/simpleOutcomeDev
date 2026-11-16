@@ -64,7 +64,10 @@ export default function AdminDesignNodeEditor({
       {nodes.map((node, index) => (
         <div key={node.id} className="design-node">
           <div className="design-node-head">
-            <strong>{node.kind === 'atom' ? atomLabel(node.atom) : 'Molecule'}</strong>
+            <span className="design-node-title">
+              <strong>{node.kind === 'atom' ? atomLabel(node.atom) : 'Molecule'}</strong>
+              {node.kind === 'molecule' ? <span className="design-tag">Editable</span> : null}
+            </span>
             <AdminIconButton label="Remove" icon="bin" disabled={nodes.length < 2} onClick={() => onChange(nodes.filter((_, nodeIndex) => nodeIndex !== index))} />
           </div>
           <NodeFields
