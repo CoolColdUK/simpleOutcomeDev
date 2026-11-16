@@ -1,6 +1,7 @@
-# Staging: Supabase migrations + Vercel (packages/web). No version bump and no GitHub release.
+# Staging: Supabase migrations + Vercel (packages/web and packages/sites). No version bump and no GitHub release.
 # Env comes from GitHub (*_STAGE). The Vercel project settings stay empty.
-# Deploys a preview, then aliases dev.simpleoutcome.dev onto that deployment.
+# Web deploys a preview, then aliases dev.simpleoutcome.dev onto that deployment.
+# Sites deploys a preview, then aliases admindev.simpleoutcome.dev. Root domain stays simpleoutcome.dev.
 name: Staging
 run-name: 'Staging: ${{ inputs.description }}'
 'on':
@@ -17,6 +18,11 @@ run-name: 'Staging: ${{ inputs.description }}'
         default: true
       deploy_vercel:
         description: 'Deploy web to the staging Vercel project'
+        required: false
+        type: boolean
+        default: true
+      deploy_sites:
+        description: 'Deploy sites to the staging Vercel project'
         required: false
         type: boolean
         default: true
@@ -55,11 +61,11 @@ jobs:
         run: npm ci
 
       - name: Build model
-        if: ${{ inputs.deploy_vercel }}
+        if: ${{ inputs.deploy_vercel || inputs.deploy_sites }}
         run: npm run build:model
 
       - name: Build component
-        if: ${{ inputs.deploy_vercel }}
+        if: ${{ inputs.deploy_vercel || inputs.deploy_sites }}
         run: npm run build:component
 
       - name: Setup Supabase CLI
@@ -267,6 +273,176 @@ jobs:
           echo "::notice title=Vercel staging::${STAGING_ALIAS_HOST} → ${PREVIEW_URL}"
           {
             echo "## Vercel preview (staging)"
+            echo
+            echo "**Alias:** https://${STAGING_ALIAS_HOST}"
+            echo
+            echo "**Deployment:** https://${PREVIEW_URL#https://}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy sites to Vercel (staging / preview, prebuilt)
+        if: ${{ inputs.deploy_sites }}
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_SITES }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF_STAGE }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE }}
+          NEXT_PUBLIC_SITES_ROOT_DOMAIN: simpleoutcome.dev
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          SITES_SALES_EMAIL: ${{ vars.NEXT_PUBLIC_SITES_SALES_EMAIL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY_STAGE }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          UPSTASH_REDIS_REST_URL: ${{ vars.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          SITES_IP_HASH_PEPPER: ${{ secrets.SITES_IP_HASH_PEPPER }}
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo '::error::Add repository secret VERCEL_TOKEN.'
+            exit 1
+          fi
+          if [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo '::error::Set GitHub variables VERCEL_ORG_ID and VERCEL_PROJECT_ID_SITES.'
+            exit 1
+          fi
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
+            echo '::error::Repository variable SUPABASE_PROJECT_REF_STAGE is empty.'
+            exit 1
+          fi
+          export NEXT_PUBLIC_SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
+          if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
+            echo '::error::Repository variable NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGE is empty.'
+            exit 1
+          fi
+          if [ -z "${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}" ]; then
+            echo '::error::Repository variable NEXT_PUBLIC_TURNSTILE_SITE_KEY is empty.'
+            exit 1
+          fi
+          if [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo '::error::Repository secret SUPABASE_SECRET_KEY_STAGE is empty.'
+            exit 1
+          fi
+          if [ -z "${RESEND_API_KEY:-}" ]; then
+            echo '::error::Repository secret RESEND_API_KEY is empty.'
+            exit 1
+          fi
+          if [ -z "${TURNSTILE_SECRET_KEY:-}" ]; then
+            echo '::error::Repository secret TURNSTILE_SECRET_KEY is empty.'
+            exit 1
+          fi
+          if [ -z "${UPSTASH_REDIS_REST_URL:-}" ]; then
+            echo '::error::Repository variable UPSTASH_REDIS_REST_URL is empty.'
+            exit 1
+          fi
+          if [ -z "${UPSTASH_REDIS_REST_TOKEN:-}" ]; then
+            echo '::error::Repository secret UPSTASH_REDIS_REST_TOKEN is empty.'
+            exit 1
+          fi
+          if [ -z "${SITES_IP_HASH_PEPPER:-}" ]; then
+            echo '::error::Repository secret SITES_IP_HASH_PEPPER is empty.'
+            exit 1
+          fi
+          if [ -n "${SITES_SALES_EMAIL:-}" ]; then
+            export NEXT_PUBLIC_SITES_SALES_EMAIL="$SITES_SALES_EMAIL"
+          else
+            export NEXT_PUBLIC_SITES_SALES_EMAIL="info@simpleoutcome.dev"
+          fi
+          if ! printf '%s' "$NEXT_PUBLIC_SITES_SALES_EMAIL" | grep -Eq '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'; then
+            echo '::error::Variable NEXT_PUBLIC_SITES_SALES_EMAIL is not an email address.'
+            exit 1
+          fi
+          # Own pull so this step does not reuse the web project's .vercel link.
+          npx vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+          node <<'NODE'
+          const {mkdirSync, readFileSync, writeFileSync} = require('node:fs');
+          const path = '.vercel/.env.preview.local';
+          const keys = [
+            'SUPABASE_PROJECT_REF',
+            'NEXT_PUBLIC_SUPABASE_URL',
+            'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+            'NEXT_PUBLIC_SITES_ROOT_DOMAIN',
+            'NEXT_PUBLIC_SITES_SALES_EMAIL',
+            'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+            'SUPABASE_SECRET_KEY',
+            'RESEND_API_KEY',
+            'TURNSTILE_SECRET_KEY',
+            'UPSTASH_REDIS_REST_URL',
+            'UPSTASH_REDIS_REST_TOKEN',
+            'SITES_IP_HASH_PEPPER',
+          ];
+          const values = {};
+          for (const key of keys) {
+            const value = process.env[key];
+            if (value === undefined || value.length === 0) {
+              console.error(`::error::${key} is empty. Refusing to build.`);
+              process.exit(1);
+            }
+            values[key] = value;
+          }
+          mkdirSync('.vercel', {recursive: true});
+          let existing = '';
+          try {
+            existing = readFileSync(path, 'utf8');
+          } catch (error) {
+            if (error.code !== 'ENOENT') {
+              throw error;
+            }
+          }
+          const quote = (value) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
+          const kept = existing.split(/\r?\n/).filter((line) => {
+            if (line.length === 0) {
+              return false;
+            }
+            const eq = line.indexOf('=');
+            if (eq === -1) {
+              return true;
+            }
+            const name = line.slice(0, eq).replace(/^export\s+/, '').trim();
+            return !Object.hasOwn(values, name);
+          });
+          const lines = [...kept, ...keys.map((key) => `${key}=${quote(values[key])}`)];
+          writeFileSync(path, `${lines.join('\n')}\n`);
+          const written = readFileSync(path, 'utf8').split(/\r?\n/);
+          for (const key of keys) {
+            const expected = `${key}=${quote(values[key])}`;
+            if (!written.includes(expected)) {
+              console.error(`::error::${key} in .vercel/.env.preview.local does not match GitHub. Refusing to build.`);
+              process.exit(1);
+            }
+          }
+          console.log('Wrote build env from GitHub into .vercel/.env.preview.local. Values are not printed. Nothing is saved on the Vercel project.');
+          NODE
+          npx vercel build --environment=preview --yes --token="$VERCEL_TOKEN"
+          deploy_args=(npx vercel deploy --prebuilt --target=preview --yes --token="$VERCEL_TOKEN" --format json)
+          for key in \
+            NEXT_PUBLIC_SUPABASE_URL \
+            NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            NEXT_PUBLIC_SITES_ROOT_DOMAIN \
+            NEXT_PUBLIC_SITES_SALES_EMAIL \
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY \
+            SUPABASE_SECRET_KEY \
+            RESEND_API_KEY \
+            TURNSTILE_SECRET_KEY \
+            UPSTASH_REDIS_REST_URL \
+            UPSTASH_REDIS_REST_TOKEN \
+            SITES_IP_HASH_PEPPER
+          do
+            deploy_args+=(--env "${key}=${!key}")
+          done
+          DEPLOY_JSON="$("${deploy_args[@]}")"
+          PREVIEW_URL="$(printf '%s\n' "$DEPLOY_JSON" | jq -r '.url // empty')"
+          if [ -z "${PREVIEW_URL:-}" ]; then
+            echo '::error::Vercel deploy JSON had no url; raw output follows'
+            printf '%s\n' "$DEPLOY_JSON"
+            exit 1
+          fi
+          STAGING_ALIAS_HOST=admindev.simpleoutcome.dev
+          npx vercel alias set "$PREVIEW_URL" "$STAGING_ALIAS_HOST" --token="$VERCEL_TOKEN"
+          echo "::notice title=Vercel sites staging::${STAGING_ALIAS_HOST} → ${PREVIEW_URL}"
+          {
+            echo "## Vercel preview (sites staging)"
             echo
             echo "**Alias:** https://${STAGING_ALIAS_HOST}"
             echo

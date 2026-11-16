@@ -33,7 +33,7 @@ Required: `SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. The Supabase 
 
 ## 5. Deploy
 
-GitHub Actions **Staging** pushes `supabase/migrations` to the staging Supabase project and deploys `packages/web` as a Vercel preview on `VERCEL_PROJECT_ID`, then aliases `dev.simpleoutcome.dev`. **Sites staging** deploys `packages/sites` as a preview on `VERCEL_PROJECT_ID_SITES` and aliases `admindev.simpleoutcome.dev`. **Production** uses `VERCEL_PROJECT_ID_PROD`. **Sites production** uses `VERCEL_PROJECT_ID_SITES_PROD`. Do not import the GitHub repo into Vercel, and do not apply migrations from a local CLI for staging or production. Local `.env.local` uses the staging Supabase URL, anon key, and secret key.
+GitHub Actions **Staging** and **Production** each take checkboxes: `deploy_supabase` (default on), `deploy_vercel` for `packages/web` (default on), and `deploy_sites` for `packages/sites` (default on). Staging pushes `supabase/migrations` to the staging Supabase project, deploys web as a Vercel preview on `VERCEL_PROJECT_ID` and aliases `dev.simpleoutcome.dev`, and deploys sites as a preview on `VERCEL_PROJECT_ID_SITES` and aliases `admindev.simpleoutcome.dev`. Production uses `VERCEL_PROJECT_ID_PROD` and `VERCEL_PROJECT_ID_SITES_PROD`. The sites build keeps root domain `simpleoutcome.dev`, so `admindev.simpleoutcome.dev` is the editor. Do not import the GitHub repo into Vercel, and do not apply migrations from a local CLI for staging or production. Local `.env.local` uses the staging Supabase URL, anon key, and secret key.
 
 **Supabase (required when `deploy_supabase` is on, the default):**
 

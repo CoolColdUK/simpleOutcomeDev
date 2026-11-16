@@ -1,7 +1,8 @@
 # One-shot: create (or update) the sites Vercel project without connecting GitHub.
 # Does not deploy. Writes VERCEL_PROJECT_ID_SITES_PROD or VERCEL_PROJECT_ID_SITES_STAGE.
-# After this succeeds, run Sites production. That workflow reads build env from GitHub
-# and overwrites .vercel/.env.production.local, so these values do not need to be set on the Vercel project.
+# After this succeeds, run Production or Staging with Deploy sites checked.
+# Those workflows read build env from GitHub
+# and overwrite .vercel/.env.production.local, so these values do not need to be set on the Vercel project.
 name: Create Vercel sites project
 run-name: 'Create Vercel sites project: ${{ inputs.project_name }}'
 'on':
