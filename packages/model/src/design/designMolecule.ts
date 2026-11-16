@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import {siteHexColourSchema} from '../site/siteTextSchema';
+import {designColourValueSchema} from './designColourValue';
 import {designNodeSchema, type DesignNode} from './designNode';
 
 export const designFlexSchema = v.strictObject({
@@ -22,10 +22,11 @@ export const designContainerSchema = v.strictObject({
   maxWidthPx: v.optional(px(960)),
   maxHeightPx: v.optional(px(960)),
   paddingPx: v.optional(px(64)),
-  background: v.optional(siteHexColourSchema),
+  marginPx: v.optional(px(64)),
+  background: v.optional(designColourValueSchema),
   radiusPx: v.optional(px(32)),
   borderWidthPx: v.optional(px(8)),
-  borderColor: v.optional(siteHexColourSchema),
+  borderColor: v.optional(designColourValueSchema),
 });
 
 export type DesignContainer = v.InferOutput<typeof designContainerSchema>;

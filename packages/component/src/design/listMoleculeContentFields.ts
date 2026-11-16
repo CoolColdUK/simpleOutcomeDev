@@ -1,4 +1,4 @@
-import type {DesignMolecule} from '@so/model';
+import {designAtomContentKeys, mergedDesignAtom, type DesignAtomPreset, type DesignMolecule} from '@so/model';
 import {designAtomOptions} from './designAtomCatalog';
 import type {DesignOptionKind} from './designOption';
 
@@ -13,6 +13,7 @@ export interface DesignContentField {
 export function listMoleculeContentFields(
   molecule: DesignMolecule,
   molecules: readonly DesignMolecule[],
+  atoms: readonly DesignAtomPreset[] = [],
   seen: ReadonlySet<string> = new Set(),
 ): DesignContentField[] {
   if (seen.has(molecule.id)) {
@@ -22,13 +23,17 @@ export function listMoleculeContentFields(
   next.add(molecule.id);
   return molecule.document.children.flatMap((node) => {
     if (node.kind === 'atom') {
-      return node.slots.map((slot) => {
+      const preset = atoms.find((atom) => atom.id === node.presetId);
+      const slots = node.slots.length > 0 ? node.slots : preset === undefined ? [] : designAtomContentKeys(preset, atoms);
+      const fields = preset === undefined ? [] : mergedDesignAtom(preset, atoms).fields;
+      return slots.map((slot) => {
         const option = designAtomOptions(node.atom).find((item) => item.key === slot);
+        const field = fields.find((item) => item.key === slot);
         return {
           nodeId: node.id,
           slot,
-          label: option?.label ?? slot,
-          kind: contentKind(option?.kind),
+          label: field?.label ?? option?.label ?? slot,
+          kind: contentKind(option?.kind ?? field?.kind),
           ...(option?.values === undefined ? {} : {values: [...option.values]}),
         };
       });
@@ -37,7 +42,7 @@ export function listMoleculeContentFields(
     if (child === undefined) {
       return [];
     }
-    return listMoleculeContentFields(child, molecules, next).map((field) => ({
+    return listMoleculeContentFields(child, molecules, atoms, next).map((field) => ({
       ...field,
       nodeId: `${node.id}.${field.nodeId}`,
     }));

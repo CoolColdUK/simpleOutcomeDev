@@ -12,6 +12,7 @@ export const designAtomNodeSchema = v.pipe(
     id: designNodeIdSchema,
     kind: v.literal('atom'),
     atom: designAtomNameSchema,
+    presetId: v.optional(designIdSchema),
     style: designStyleSchema,
     slots: v.pipe(v.array(v.string()), v.maxLength(8)),
   }),

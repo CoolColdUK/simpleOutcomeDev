@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import {designAtomPresetSchema, type DesignAtomPreset} from './designAtomPreset';
 import {designColourTokensSchema, type DesignColourTokens} from './designColourScheme';
 import {designCategorySchema, designIdSchema, type DesignCategory} from './designId';
 import {designMoleculeDocumentSchema, type DesignMoleculeDocument} from './designMolecule';
@@ -35,6 +36,10 @@ export function parseDesignMoleculeDocument(value: unknown): DesignMoleculeDocum
 
 export function parseDesignOrganismDocument(value: unknown): DesignOrganismDocument {
   return parse(designOrganismDocumentSchema, normaliseOrganismDocument(value), 'document');
+}
+
+export function parseDesignAtomPreset(value: unknown): DesignAtomPreset {
+  return parse(designAtomPresetSchema, value, 'atom');
 }
 
 export function parseDesignTemplateItems(value: unknown): DesignTemplateItem[] {

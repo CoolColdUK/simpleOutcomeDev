@@ -1,14 +1,17 @@
 import {designLibraryGuide} from '@so/component';
 import {parseDesignCategory, parseDesignId, type DesignCategory} from '@so/model';
 import {
+  createDesignAtom,
   createDesignColourScheme,
   createDesignMolecule,
   createDesignOrganism,
+  deleteDesignAtom,
   deleteDesignColourScheme,
   deleteDesignMolecule,
   deleteDesignOrganism,
   designNameOk,
   listDesignLibrary,
+  updateDesignAtom,
   updateDesignColourScheme,
   updateDesignMolecule,
   updateDesignOrganism,
@@ -27,7 +30,7 @@ export const DESIGN_MCP_TOOLS: readonly DesignMcpTool[] = [
   {
     name: 'sites_list_design',
     description:
-      'List design atoms, Chakra colour schemes, molecules, and sections (organisms). Read this before creating a component. Atoms are fixed. Molecules and sections are saved compositions. Colour schemes are Chakra token maps.',
+      'List built-in atom fields, saved atom presets, Chakra colour schemes, molecules, and sections. Read this before creating a component. guide.atoms are the components. atoms are presets an admin can edit. Colour names on style may be siteBackground, siteForeground, siteAccent, siteButtonForeground, siteCard, or hero.',
     inputSchema: {type: 'object', properties: {}, additionalProperties: false},
   },
   {
@@ -47,9 +50,32 @@ export const DESIGN_MCP_TOOLS: readonly DesignMcpTool[] = [
     inputSchema: {type: 'object', properties: {id: idSchema}, required: ['id'], additionalProperties: false},
   },
   {
+    name: 'sites_save_atom',
+    description:
+      'Create or replace an atom. base is a built-in component from guide.atoms, such as button or text. parentId extends another saved atom with the same base, so a button variant inherits that atom and can add fields later. fields may be empty. style stores this atom’s own setting values. Colours may be a theme name.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: idSchema,
+        name: nameSchema,
+        base: {type: 'string'},
+        parentId: idSchema,
+        fields: {type: 'array'},
+        style: {type: 'object'},
+      },
+      required: ['id', 'name', 'base', 'fields'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'sites_delete_atom',
+    description: 'Delete an atom preset. Fails when a molecule or section still uses it.',
+    inputSchema: {type: 'object', properties: {id: idSchema}, required: ['id'], additionalProperties: false},
+  },
+  {
     name: 'sites_save_molecule',
     description:
-      'Create or replace a molecule. document is {pattern:"tree"|"combine", layout:{direction,gapPx,align,valign,wrap}, container:{widthPx,heightPx,minWidthPx,minHeightPx,maxWidthPx,maxHeightPx,paddingPx,background,radiusPx,borderWidthPx,borderColor}, children}. layout is flex. container is the box. Children are atoms {atom, style, slots} or {kind:"molecule", moleculeId}. Atoms include switch and checkbox. slots are content names filled on a template item, not values.',
+      'Create or replace a molecule. document is {pattern:"tree"|"combine", layout:{direction,gapPx,align,valign,wrap}, container:{widthPx,heightPx,minWidthPx,minHeightPx,maxWidthPx,maxHeightPx,paddingPx,marginPx,background,radiusPx,borderWidthPx,borderColor}, children}. layout is flex. container is the box. background and borderColor may be a theme colour name. Children are atoms {atom, presetId, style, slots} or {kind:"molecule", moleculeId}. presetId points at a saved atom. slots are content names filled on a template item. Every atom accepts spacing and border settings: paddingPx, marginPx, gapPx, radiusPx, borderWidthPx, borderColor, fontSizePx, align.',
     inputSchema: {
       type: 'object',
       properties: {id: idSchema, name: nameSchema, document: {type: 'object'}},
@@ -109,6 +135,22 @@ export async function callDesignMcpTool(name: string, args: Record<string, unkno
   if (name === 'sites_list_design') {
     const library = await listDesignLibrary();
     return {guide: designLibraryGuide(), ...library};
+  }
+  if (name === 'sites_save_atom') {
+    const id = designId(args.id);
+    const atomName = designName(args.name);
+    const base = typeof args.base === 'string' ? args.base : '';
+    const parentId = 'parentId' in args ? (typeof args.parentId === 'string' && args.parentId !== '' ? args.parentId : null) : undefined;
+    const library = await listDesignLibrary();
+    const exists = library.atoms.some((atom) => atom.id === id);
+    const atom = exists
+      ? await updateDesignAtom(id, {name: atomName, base, ...(parentId === undefined ? {} : {parentId}), fields: args.fields, style: args.style})
+      : await createDesignAtom({id, name: atomName, base, ...(typeof parentId === 'string' ? {parentId} : {}), fields: args.fields, style: args.style});
+    return {atom};
+  }
+  if (name === 'sites_delete_atom') {
+    await deleteDesignAtom(designId(args.id));
+    return {ok: true};
   }
   if (name === 'sites_save_colour_scheme') {
     const id = designId(args.id);

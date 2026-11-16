@@ -47,6 +47,6 @@ export function designLibraryGuide(): DesignLibraryGuide {
     organismCategories: DESIGN_CATEGORIES,
     node: 'JSON stores the atom name, settings, and content slot names. DesignNodes looks up that name and renders the Component exported beside the atom definition. content options are filled on a template item. setting options are passed into the component and are not limited to layout. Molecules and organisms are the same: the file exports the component and the stored document.',
     colourTokens:
-      'tokens: {uppercaseHeadings, heroBackground, chakra:{theme:{tokens:{colors:{siteBackground,siteForeground,siteAccent,siteButtonForeground,siteCard}, fonts:{siteHeading,siteBody}, radii:{site}}}}}. Each colour, font, and radius is {value}. Colours are hex. Radius is 0px–32px. heroBackground is "none" or linear-gradient(135deg,#hex,#hex).',
+      'tokens: {uppercaseHeadings, heroBackground, chakra:{theme:{tokens:{colors:{siteBackground,siteForeground,siteAccent,siteButtonForeground,siteCard}, fonts:{siteHeading,siteBody}, radii:{site}}}}}. Each colour, font, and radius is {value}. Colours are hex. Radius is 0px–32px. heroBackground is "none" or linear-gradient(135deg,#hex,#hex). Atom and molecule colours may be a hex or a theme name: siteBackground, siteForeground, siteAccent, siteButtonForeground, siteCard, hero.',
   };
 }

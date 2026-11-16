@@ -1,7 +1,7 @@
 'use client';
 
 import {listMoleculeContentFields} from '@so/component';
-import type {DesignMolecule, DesignTemplateItem} from '@so/model';
+import type {DesignAtomPreset, DesignMolecule, DesignTemplateItem} from '@so/model';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
 function nextItemId(): string {
@@ -13,10 +13,12 @@ function nextItemId(): string {
 export default function AdminTemplateMoleculeItems({
   items,
   molecules,
+  atoms = [],
   onChange,
 }: {
   items: readonly DesignTemplateItem[];
   molecules: readonly DesignMolecule[];
+  atoms?: readonly DesignAtomPreset[];
   onChange: (items: DesignTemplateItem[]) => void;
 }) {
   return (
@@ -25,7 +27,7 @@ export default function AdminTemplateMoleculeItems({
       <p className="admin-muted">Add a molecule here and fill the options it exposes. The molecule itself only stores layout and style.</p>
       {items.map((item, index) => {
         const molecule = molecules.find((entry) => entry.id === item.moleculeId);
-        const fields = molecule === undefined ? [] : listMoleculeContentFields(molecule, molecules);
+        const fields = molecule === undefined ? [] : listMoleculeContentFields(molecule, molecules, atoms);
         return (
           <div key={item.id} className="design-node">
             <div className="design-node-head">

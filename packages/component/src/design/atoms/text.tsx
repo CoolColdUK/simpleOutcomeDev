@@ -1,3 +1,4 @@
+import {withBoxOptions} from '../designBoxOptions';
 import type {DesignAtomPart} from '../designOption';
 import {designAtomCss, designSlotText, type DesignAtomProps} from '../designAtomProps';
 
@@ -21,10 +22,10 @@ export function TextAtom({node, values}: DesignAtomProps) {
 export const text = {
   atom: 'text' as const,
   label: 'Text',
-  options: [
+  options: withBoxOptions([
     {key: 'text', label: 'Text', group: 'content', kind: 'text'},
     {key: 'role', label: 'Role', group: 'content', kind: 'choice', values: ['heading', 'body']},
-    {key: 'color', label: 'Text colour', group: 'setting', kind: 'colour', initial: '#111111'},
-  ],
+    {key: 'color', label: 'Text colour', group: 'setting', kind: 'colour', initial: 'siteForeground'},
+  ]),
   Component: TextAtom,
 } satisfies DesignAtomPart;

@@ -1,8 +1,10 @@
 'use client';
 
 import {DESIGN_ATOM_GUIDE, DESIGN_ATOMS, designAtomOptions, type DesignAtom, type DesignOptionDefinition} from '@so/component';
-import {blankDesignAtom, blankDesignMoleculeUse, type DesignAtomNode, type DesignMolecule, type DesignNode, type DesignStyle} from '@so/model';
+import {blankDesignAtom, blankDesignMoleculeUse, mergedDesignAtom, type DesignAtomNode, type DesignAtomPreset, type DesignMolecule, type DesignNode, type DesignStyle} from '@so/model';
 import AdminDesignOptionMenu from '@/components/admin/AdminDesignOptionMenu';
+import DesignColourControl from '@/components/admin/DesignColourControl';
+import {designSettingInitial} from '@/components/admin/designSettingInitial';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
 function nextNodeId(): string {
@@ -19,30 +21,16 @@ function isDesignAtom(value: string): value is DesignAtom {
   return DESIGN_ATOMS.some((atom) => atom === value);
 }
 
-function settingInitial(option: DesignOptionDefinition): DesignStyle[string] {
-  if (option.initial !== undefined) {
-    return option.initial;
-  }
-  if (option.kind === 'number') {
-    return option.min ?? 0;
-  }
-  if (option.kind === 'boolean') {
-    return false;
-  }
-  if (option.kind === 'choice') {
-    return option.values?.[0] ?? '';
-  }
-  return '#111111';
-}
-
 export default function AdminDesignNodeEditor({
   nodes,
   molecules,
+  atoms = [],
   excludeMoleculeId,
   onChange,
 }: {
   nodes: readonly DesignNode[];
   molecules: readonly DesignMolecule[];
+  atoms?: readonly DesignAtomPreset[];
   excludeMoleculeId?: string;
   onChange: (nodes: DesignNode[]) => void;
 }) {
@@ -56,23 +44,25 @@ export default function AdminDesignNodeEditor({
           icon
           options={[
             ...DESIGN_ATOM_GUIDE.map((atom) => ({key: atom.atom, label: atom.label})),
+            ...atoms.map((atom) => ({key: `preset:${atom.id}`, label: atom.name})),
             ...(choices.length > 0 ? [{key: 'molecule', label: 'Molecule'}] : []),
           ]}
-          onPick={(key) => addNode(key, choices, nodes, onChange)}
+          onPick={(key) => addNode(key, choices, atoms, nodes, onChange)}
         />
       </div>
       {nodes.map((node, index) => (
         <div key={node.id} className="design-node">
           <div className="design-node-head">
             <span className="design-node-title">
-              <strong>{node.kind === 'atom' ? atomLabel(node.atom) : 'Molecule'}</strong>
+              <strong>{node.kind === 'atom' ? (atoms.find((atom) => atom.id === node.presetId)?.name ?? atomLabel(node.atom)) : 'Molecule'}</strong>
               {node.kind === 'molecule' ? <span className="design-tag">Editable</span> : null}
             </span>
             <AdminIconButton label="Remove" icon="bin" disabled={nodes.length < 2} onClick={() => onChange(nodes.filter((_, nodeIndex) => nodeIndex !== index))} />
           </div>
-          <NodeFields
+            <NodeFields
             node={node}
             molecules={choices}
+            atoms={atoms}
             onChange={(next) => onChange(nodes.map((item, nodeIndex) => (nodeIndex === index ? next : item)))}
           />
         </div>
@@ -81,11 +71,24 @@ export default function AdminDesignNodeEditor({
   );
 }
 
-function addNode(key: string, choices: readonly DesignMolecule[], nodes: readonly DesignNode[], onChange: (nodes: DesignNode[]) => void): void {
+function addNode(
+  key: string,
+  choices: readonly DesignMolecule[],
+  atoms: readonly DesignAtomPreset[],
+  nodes: readonly DesignNode[],
+  onChange: (nodes: DesignNode[]) => void,
+): void {
   if (key === 'molecule') {
     const moleculeId = choices[0]?.id;
     if (moleculeId !== undefined) {
       onChange([...nodes, blankDesignMoleculeUse(nextNodeId(), moleculeId)]);
+    }
+    return;
+  }
+  if (key.startsWith('preset:')) {
+    const preset = atoms.find((atom) => atom.id === key.slice('preset:'.length));
+    if (preset !== undefined) {
+      onChange([...nodes, {id: nextNodeId(), kind: 'atom', atom: preset.base, presetId: preset.id, style: {}, slots: []}]);
     }
     return;
   }
@@ -94,7 +97,17 @@ function addNode(key: string, choices: readonly DesignMolecule[], nodes: readonl
   }
 }
 
-function NodeFields({node, molecules, onChange}: {node: DesignNode; molecules: readonly DesignMolecule[]; onChange: (node: DesignNode) => void}) {
+function NodeFields({
+  node,
+  molecules,
+  atoms,
+  onChange,
+}: {
+  node: DesignNode;
+  molecules: readonly DesignMolecule[];
+  atoms: readonly DesignAtomPreset[];
+  onChange: (node: DesignNode) => void;
+}) {
   if (node.kind === 'molecule') {
     return (
       <label>
@@ -109,11 +122,52 @@ function NodeFields({node, molecules, onChange}: {node: DesignNode; molecules: r
       </label>
     );
   }
-  return <AtomFields node={node} onChange={onChange} />;
+  return <AtomFields node={node} atoms={atoms} onChange={onChange} />;
 }
 
-function AtomFields({node, onChange}: {node: DesignAtomNode; onChange: (node: DesignNode) => void}) {
-  const options = designAtomOptions(node.atom);
+function AtomFields({node, atoms, onChange}: {node: DesignAtomNode; atoms: readonly DesignAtomPreset[]; onChange: (node: DesignNode) => void}) {
+  const preset = atoms.find((atom) => atom.id === node.presetId);
+  return (
+    <>
+      {atoms.length > 0 ? (
+        <label>
+          Preset
+          <select
+            value={node.presetId ?? ''}
+            onChange={(event) => {
+              const next = atoms.find((atom) => atom.id === event.target.value);
+              if (next === undefined) {
+                onChange({
+                  id: node.id,
+                  kind: node.kind,
+                  atom: node.atom,
+                  slots: preset === undefined ? node.slots : mergedDesignAtom(preset, atoms).fields.filter((field) => field.group === 'content').map((field) => field.key),
+                  style: {...(preset === undefined ? {} : mergedDesignAtom(preset, atoms).style), ...node.style},
+                });
+                return;
+              }
+              onChange({...node, atom: next.base, presetId: next.id, slots: []});
+            }}
+          >
+            <option value="">Custom</option>
+            {atoms
+              .filter((atom) => node.presetId !== undefined || atom.base === node.atom)
+              .map((atom) => (
+                <option key={atom.id} value={atom.id}>
+                  {atom.name}
+                </option>
+              ))}
+          </select>
+        </label>
+      ) : null}
+      {preset === undefined ? <AtomOptions node={node} onChange={onChange} /> : <p className="admin-muted">Content and preset style come from {preset.name}. Add an option here only to override that style.</p>}
+      {preset === undefined ? null : <AtomOptions node={node} onChange={onChange} settingsOnly />}
+    </>
+  );
+}
+
+function AtomOptions({node, onChange, settingsOnly = false}: {node: DesignAtomNode; onChange: (node: DesignNode) => void; settingsOnly?: boolean}) {
+  const options = designAtomOptions(node.atom).filter((option) => (settingsOnly ? option.group === 'setting' : true));
   const available = options.filter((option) => (option.group === 'content' ? !node.slots.includes(option.key) : node.style[option.key] === undefined));
   return (
     <>
@@ -130,10 +184,12 @@ function AtomFields({node, onChange}: {node: DesignAtomNode; onChange: (node: De
             onChange({...node, slots: [...node.slots, option.key]});
             return;
           }
-          onChange({...node, style: {...node.style, [option.key]: settingInitial(option)}});
+          onChange({...node, style: {...node.style, [option.key]: designSettingInitial(option)}});
         }}
       />
-      {node.slots.map((slot) => (
+      {settingsOnly
+        ? null
+        : node.slots.map((slot) => (
         <div key={slot} className="design-slot-row">
           <span>{options.find((option) => option.key === slot)?.label ?? slot}</span>
           <span className="admin-muted">Filled in on the template</span>
@@ -183,9 +239,8 @@ function SettingField({
             ))}
           </select>
         ) : null}
-        {option.kind === 'text' || option.kind === 'colour' ? (
-          <input value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} />
-        ) : null}
+        {option.kind === 'colour' ? <DesignColourControl value={String(value ?? 'siteAccent')} onChange={onChange} /> : null}
+        {option.kind === 'text' ? <input value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} /> : null}
       </label>
       <AdminIconButton label={`Remove ${option.label}`} icon="bin" onClick={onRemove} />
     </div>

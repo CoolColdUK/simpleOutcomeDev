@@ -1,5 +1,6 @@
 import type {DesignAtomNode, DesignStyle} from '@so/model';
 import type {CSSProperties} from 'react';
+import {designColourCss} from './designLayoutStyle';
 
 export interface DesignAtomProps {
   readonly node: DesignAtomNode;
@@ -16,20 +17,31 @@ export function designSlotText(node: DesignAtomNode, values: DesignAtomProps['va
 
 export function designAtomCss(style: DesignStyle): CSSProperties {
   const borderWidth = numberStyle(style['borderWidthPx']);
+  const gap = numberStyle(style['gapPx']);
   return {
-    background: textStyle(style['background']),
-    color: textStyle(style['color']),
+    background: designColourCss(style['background']),
+    color: designColourCss(style['color']),
     borderRadius: numberStyle(style['radiusPx']),
     borderStyle: borderWidth === undefined ? undefined : 'solid',
     borderWidth,
-    borderColor: textStyle(style['borderColor']),
+    borderColor: designColourCss(style['borderColor']),
+    padding: numberStyle(style['paddingPx']),
+    margin: numberStyle(style['marginPx']),
+    gap,
+    display: gap === undefined ? undefined : 'inline-flex',
+    fontSize: numberStyle(style['fontSizePx']),
+    textAlign: alignStyle(style['align']),
+    boxSizing: 'border-box',
   };
-}
-
-export function textStyle(value: string | number | boolean | undefined): string | undefined {
-  return typeof value === 'string' ? value : undefined;
 }
 
 function numberStyle(value: string | number | boolean | undefined): number | undefined {
   return typeof value === 'number' ? value : undefined;
+}
+
+function alignStyle(value: string | number | boolean | undefined): CSSProperties['textAlign'] {
+  if (value === 'center' || value === 'end' || value === 'start') {
+    return value;
+  }
+  return undefined;
 }

@@ -4,7 +4,7 @@ import {DesignNodes} from '../DesignNodes';
 const footerBarDocument: DesignOrganismDocument = {
   children: [
     {id: 'line', kind: 'atom', atom: 'text', style: {}, slots: ['text']},
-    {id: 'home', kind: 'atom', atom: 'link', style: {color: '#111111'}, slots: ['label', 'href']},
+    {id: 'home', kind: 'atom', atom: 'link', style: {color: 'siteAccent'}, slots: ['label', 'href']},
   ],
 };
 

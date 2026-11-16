@@ -1,14 +1,17 @@
 import {renderToStaticMarkup} from 'react-dom/server';
-import {parseDesignMoleculeDocument} from '@so/model';
+import {BOLD_NAIL_ATOMS, BOLD_NAIL_MOLECULES, BOLD_NAIL_TEMPLATE_ITEMS, parseDesignMoleculeDocument} from '@so/model';
 import {readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {ButtonAtom} from './atoms/button';
 import {DESIGN_ATOMS} from './atoms';
+import {assertDesignAtomPreset} from './designAtomCatalog';
+import {DesignNodes} from './DesignNodes';
 import {DESIGN_ATOM_GUIDE} from './designLibraryGuide';
 import {listMoleculeContentFields} from './listMoleculeContentFields';
 import {DESIGN_MOLECULE_SEED} from './molecules';
 import {DESIGN_ORGANISM_SEED} from './organisms';
 import {ActionRow} from './molecules/actionRow';
+import {BoldHero} from './molecules/boldHero';
 
 describe('design parts', () => {
   it('renders the button component from an atom node', () => {
@@ -17,6 +20,14 @@ describe('design parts', () => {
     );
     expect(html).toContain('Book');
     expect(html).toContain('#111111');
+  });
+
+  it('paints an atom with the theme colour and spacing', () => {
+    const html = renderToStaticMarkup(
+      <ButtonAtom node={{id: 'book', kind: 'atom', atom: 'button', style: {background: 'siteAccent', paddingPx: 12}, slots: ['label']}} values={{label: 'Book'}} />,
+    );
+    expect(html).toContain('var(--chakra-colors-siteAccent)');
+    expect(html).toContain('padding:12px');
   });
 
   it('renders a molecule through its component', () => {
@@ -44,5 +55,29 @@ describe('design parts', () => {
     const fields = listMoleculeContentFields(grouped, DESIGN_MOLECULE_SEED);
     expect(fields.some((field) => field.slot === 'text' && field.nodeId === 'intro')).toBe(true);
     expect(fields.some((field) => field.slot === 'label' && field.nodeId.startsWith('actions.'))).toBe(true);
+  });
+
+  it('renders the bold nail hero from theme colours and preset atoms', () => {
+    BOLD_NAIL_ATOMS.forEach((preset) => {
+      expect(() => assertDesignAtomPreset(preset)).not.toThrow();
+    });
+    const html = renderToStaticMarkup(<BoldHero />);
+    expect(html).toContain('var(--site-hero-background)');
+    expect(html).toContain('var(--chakra-colors-siteButtonForeground)');
+    const services = BOLD_NAIL_MOLECULES.find((molecule) => molecule.id === 'bold-services');
+    const item = BOLD_NAIL_TEMPLATE_ITEMS.find((entry) => entry.id === 'services');
+    expect(services).toBeDefined();
+    expect(item).toBeDefined();
+    if (services === undefined || item === undefined) {
+      return;
+    }
+    const fields = listMoleculeContentFields(services, BOLD_NAIL_MOLECULES, BOLD_NAIL_ATOMS);
+    expect(fields.some((field) => field.nodeId === 'cards.gel.name' && field.slot === 'text')).toBe(true);
+    const filled = renderToStaticMarkup(
+      <DesignNodes nodes={services.document.children} molecules={BOLD_NAIL_MOLECULES} atoms={BOLD_NAIL_ATOMS} values={item.values} />,
+    );
+    expect(filled).toContain('Sets');
+    expect(filled).toContain('Gel manicure');
+    expect(filled).toContain('£28');
   });
 });

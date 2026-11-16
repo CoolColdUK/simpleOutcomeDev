@@ -19,18 +19,28 @@ export default function AdminTemplatesPanel() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const load = async (): Promise<void> => {
-    const response = await fetch('/api/admin/templates');
-    const payload = (await response.json().catch(() => ({}))) as {templates?: TemplateRow[]; error?: string};
-    if (!response.ok) {
-      setError(payload.error ?? 'Could not load templates');
-      return;
-    }
-    setTemplates(payload.templates ?? []);
-  };
-
   useEffect(() => {
-    void load();
+    let ignore = false;
+    void fetch('/api/admin/templates')
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as {templates?: TemplateRow[]; error?: string};
+        if (ignore) {
+          return;
+        }
+        if (!response.ok) {
+          setError(payload.error ?? 'Could not load templates');
+          return;
+        }
+        setTemplates(payload.templates ?? []);
+      })
+      .catch(() => {
+        if (!ignore) {
+          setError('Could not load templates');
+        }
+      });
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (
