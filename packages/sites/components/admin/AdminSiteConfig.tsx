@@ -1,7 +1,7 @@
 'use client';
 
 import type {SiteDocument, SiteTheme} from '@so/model';
-import {useEffect, useState} from 'react';
+import {useState, useSyncExternalStore} from 'react';
 
 const TAB_STORAGE_KEY = 'so-admin-site-config-tab';
 
@@ -21,6 +21,25 @@ function withoutEmpty(value: string): string | undefined {
   return value.length === 0 ? undefined : value;
 }
 
+const tabListeners = new Set<() => void>();
+
+function subscribeTab(onStoreChange: () => void): () => void {
+  tabListeners.add(onStoreChange);
+  return () => {
+    tabListeners.delete(onStoreChange);
+  };
+}
+
+function storedTab(): ConfigTab {
+  const stored = window.localStorage.getItem(TAB_STORAGE_KEY);
+  return isConfigTab(stored) ? stored : 'layout';
+}
+
+function publishTab(next: ConfigTab): void {
+  window.localStorage.setItem(TAB_STORAGE_KEY, next);
+  tabListeners.forEach((listener) => listener());
+}
+
 export default function AdminSiteConfig({
   siteDocument,
   onChange,
@@ -28,18 +47,10 @@ export default function AdminSiteConfig({
   siteDocument: SiteDocument;
   onChange: (next: SiteDocument) => void;
 }) {
-  const [tab, setTab] = useState<ConfigTab>('layout');
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(TAB_STORAGE_KEY);
-    if (isConfigTab(stored)) {
-      setTab(stored);
-    }
-  }, []);
+  const tab = useSyncExternalStore(subscribeTab, storedTab, () => 'layout' as const);
 
   const chooseTab = (next: ConfigTab): void => {
-    setTab(next);
-    window.localStorage.setItem(TAB_STORAGE_KEY, next);
+    publishTab(next);
   };
 
   return (

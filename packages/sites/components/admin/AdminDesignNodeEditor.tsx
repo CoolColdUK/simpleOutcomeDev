@@ -137,8 +137,13 @@ function AtomFields({node, atoms, onChange}: {node: DesignAtomNode; atoms: reado
             onChange={(event) => {
               const next = atoms.find((atom) => atom.id === event.target.value);
               if (next === undefined) {
-                const {presetId: _presetId, ...rest} = node;
-                onChange({...rest, slots: preset === undefined ? node.slots : preset.fields.filter((field) => field.group === 'content').map((field) => field.key), style: {...(preset?.style ?? {}), ...node.style}});
+                onChange({
+                  id: node.id,
+                  kind: node.kind,
+                  atom: node.atom,
+                  slots: preset === undefined ? node.slots : preset.fields.filter((field) => field.group === 'content').map((field) => field.key),
+                  style: {...(preset?.style ?? {}), ...node.style},
+                });
                 return;
               }
               onChange({...node, atom: next.base, presetId: next.id, slots: []});

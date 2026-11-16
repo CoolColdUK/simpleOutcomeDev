@@ -83,8 +83,33 @@ export default function AdminDesignLibrary() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let ignore = false;
+    void fetch('/api/admin/design')
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as Library & {error?: string};
+        if (ignore) {
+          return;
+        }
+        if (!response.ok) {
+          setError(payload.error ?? 'Could not load the design library');
+          return;
+        }
+        setLibrary({
+          atoms: payload.atoms ?? [],
+          colourSchemes: payload.colourSchemes ?? [],
+          molecules: payload.molecules ?? [],
+          organisms: payload.organisms ?? [],
+        });
+      })
+      .catch(() => {
+        if (!ignore) {
+          setError('Could not load the design library');
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const refresh = useCallback(() => {
     setNotice('Library updated.');

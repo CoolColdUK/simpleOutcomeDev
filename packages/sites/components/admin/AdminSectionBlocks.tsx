@@ -1,7 +1,7 @@
 'use client';
 
 import type {SiteBlock, SiteBlockIcon} from '@so/model';
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {isSiteBlockIcon} from '@/components/SiteBlockView';
 
 const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -16,9 +16,11 @@ export function AdminColourField({
   onChange: (next: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
-  useEffect(() => {
+  const [synced, setSynced] = useState(value);
+  if (value !== synced) {
+    setSynced(value);
     setDraft(value);
-  }, [value]);
+  }
   const picker = HEX.test(draft) && draft.length === 7 ? draft : '#ffffff';
   const commit = (next: string): void => {
     setDraft(next);
