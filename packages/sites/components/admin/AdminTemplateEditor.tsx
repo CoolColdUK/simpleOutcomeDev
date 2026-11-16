@@ -1,6 +1,6 @@
 'use client';
 
-import {colourSchemeToSiteTheme, type DesignColourScheme, type DesignMolecule, type DesignTemplateItem, type SiteDocument, type SiteSection, type SiteSectionType} from '@so/model';
+import {colourSchemeToSiteTheme, type DesignAtomPreset, type DesignColourScheme, type DesignMolecule, type DesignTemplateItem, type SiteDocument, type SiteSection, type SiteSectionType} from '@so/model';
 import Link from 'next/link';
 import {useCallback, useMemo, useState} from 'react';
 import AdminAddSectionDialog from '@/components/admin/AdminAddSectionDialog';
@@ -20,6 +20,7 @@ export interface AdminTemplateEditorProps {
   readonly colourSchemeId: string | undefined;
   readonly colourSchemes: readonly DesignColourScheme[];
   readonly molecules: readonly DesignMolecule[];
+  readonly atoms: readonly DesignAtomPreset[];
   readonly items: readonly DesignTemplateItem[];
 }
 
@@ -29,16 +30,18 @@ export default function AdminTemplateEditor(props: AdminTemplateEditorProps) {
   const [schemes, setSchemes] = useState(props.colourSchemes);
   const [colourSchemeId, setColourSchemeId] = useState(props.colourSchemeId ?? '');
   const [molecules, setMolecules] = useState(props.molecules);
+  const [atoms, setAtoms] = useState(props.atoms);
   const [items, setItems] = useState(props.items);
   const refreshSchemes = useCallback(() => {
     void fetch('/api/admin/design').then(async (response) => {
       if (!response.ok) {
         return;
       }
-      const payload = (await response.json()) as {colourSchemes?: DesignColourScheme[]; molecules?: DesignMolecule[]};
+      const payload = (await response.json()) as {colourSchemes?: DesignColourScheme[]; molecules?: DesignMolecule[]; atoms?: DesignAtomPreset[]};
       const next = payload.colourSchemes ?? [];
       setSchemes(next);
       setMolecules(payload.molecules ?? []);
+      setAtoms(payload.atoms ?? []);
       const scheme = next.find((item) => item.id === colourSchemeId);
       if (scheme !== undefined) {
         setDocument((current) => ({...current, theme: colourSchemeToSiteTheme(scheme.tokens)}));
@@ -143,7 +146,7 @@ export default function AdminTemplateEditor(props: AdminTemplateEditorProps) {
         {error ? <p className="admin-error">{error}</p> : null}
         {message ? <p className="admin-ok">{message}</p> : null}
       </div>
-      <AdminTemplateMoleculeItems items={items} molecules={molecules} onChange={setItems} />
+      <AdminTemplateMoleculeItems items={items} molecules={molecules} atoms={atoms} onChange={setItems} />
       <AdminSiteConfig siteDocument={document} onChange={setDocument} />
       <div className="admin-section-toolbar">
         <button type="button" onClick={() => setAddOpen(true)}>

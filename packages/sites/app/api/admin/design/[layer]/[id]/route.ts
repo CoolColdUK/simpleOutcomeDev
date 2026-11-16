@@ -2,16 +2,18 @@ import type {DesignCategory} from '@so/model';
 import {NextResponse} from 'next/server';
 import {adminApiDenied, requireAdminApi} from '@/lib/admin/requireAdminApi';
 import {
+  deleteDesignAtom,
   deleteDesignColourScheme,
   deleteDesignMolecule,
   deleteDesignOrganism,
   designNameOk,
+  updateDesignAtom,
   updateDesignColourScheme,
   updateDesignMolecule,
   updateDesignOrganism,
 } from '@/lib/admin/designLibraryAccess';
 
-const LAYERS = ['colour-schemes', 'molecules', 'organisms'] as const;
+const LAYERS = ['atoms', 'colour-schemes', 'molecules', 'organisms'] as const;
 
 type DesignLayer = (typeof LAYERS)[number];
 
@@ -37,13 +39,18 @@ export async function PUT(request: Request, context: {params: Promise<{layer: st
     return NextResponse.json({error: 'Unknown design layer'}, {status: 404});
   }
   const body = (await request.json().catch(() => undefined)) as
-    | {name?: unknown; tokens?: unknown; document?: unknown; category?: unknown}
+    | {name?: unknown; tokens?: unknown; document?: unknown; category?: unknown; base?: unknown; fields?: unknown; style?: unknown}
     | undefined;
   const name = typeof body?.name === 'string' ? body.name.trim() : undefined;
   if (name !== undefined && !designNameOk(name)) {
     return NextResponse.json({error: 'Name is required'}, {status: 400});
   }
   try {
+    if (layer === 'atoms') {
+      const base = typeof body?.base === 'string' ? body.base : undefined;
+      const atom = await updateDesignAtom(id, {name, base, fields: body?.fields, style: body?.style});
+      return NextResponse.json({atom});
+    }
     if (layer === 'colour-schemes') {
       const scheme = await updateDesignColourScheme(id, {name, tokens: body?.tokens});
       return NextResponse.json({scheme});
@@ -71,7 +78,9 @@ export async function DELETE(_request: Request, context: {params: Promise<{layer
     return NextResponse.json({error: 'Unknown design layer'}, {status: 404});
   }
   try {
-    if (layer === 'colour-schemes') {
+    if (layer === 'atoms') {
+      await deleteDesignAtom(id);
+    } else if (layer === 'colour-schemes') {
       await deleteDesignColourScheme(id);
     } else if (layer === 'molecules') {
       await deleteDesignMolecule(id);

@@ -1,22 +1,27 @@
 import {
   blankMoleculeDocument,
   blankOrganismDocument,
+  designAtomUsedBy,
   designLibraryError,
   designMoleculeUsedBy,
+  designPresetError,
+  parseDesignAtomPreset,
   parseDesignCategory,
   parseDesignColourTokens,
   parseDesignId,
   parseDesignMoleculeDocument,
   parseDesignOrganismDocument,
+  type DesignAtomPreset,
   type DesignCategory,
   type DesignColourScheme,
   type DesignMolecule,
   type DesignOrganism,
 } from '@so/model';
-import {assertDesignNodes} from '@so/component';
+import {assertDesignAtomPreset, assertDesignNodes} from '@so/component';
 import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
 
 export interface DesignLibrary {
+  readonly atoms: readonly DesignAtomPreset[];
   readonly colourSchemes: readonly DesignColourScheme[];
   readonly molecules: readonly DesignMolecule[];
   readonly organisms: readonly DesignOrganism[];
@@ -31,6 +36,10 @@ function libraryError(message: string | undefined): void {
   if (message !== undefined) {
     throw new Error(message);
   }
+}
+
+function atomFromRow(row: {id: string; name: string; base: string; fields: unknown; style: unknown}): DesignAtomPreset {
+  return parseDesignAtomPreset({id: row.id, name: row.name, base: row.base, fields: row.fields, style: row.style});
 }
 
 function colourFromRow(row: {id: string; name: string; tokens: unknown}): DesignColourScheme {
@@ -52,11 +61,15 @@ function organismFromRow(row: {id: string; name: string; category: string; docum
 
 export async function listDesignLibrary(): Promise<DesignLibrary> {
   const supabase = createSitesServiceClient();
-  const [colours, molecules, organisms] = await Promise.all([
+  const [atoms, colours, molecules, organisms] = await Promise.all([
+    supabase.from('design_atom').select('id, name, base, fields, style').order('name'),
     supabase.from('design_colour_scheme').select('id, name, tokens').order('name'),
     supabase.from('design_molecule').select('id, name, document').order('name'),
     supabase.from('design_organism').select('id, name, category, document').order('name'),
   ]);
+  if (atoms.error) {
+    throw new Error(atoms.error.message || 'Could not list atoms');
+  }
   if (colours.error) {
     throw new Error(colours.error.message || 'Could not list colour schemes');
   }
@@ -67,6 +80,7 @@ export async function listDesignLibrary(): Promise<DesignLibrary> {
     throw new Error(organisms.error.message || 'Could not list sections');
   }
   return {
+    atoms: (atoms.data ?? []).map((row) => atomFromRow(row as {id: string; name: string; base: string; fields: unknown; style: unknown})),
     colourSchemes: (colours.data ?? []).map((row) => colourFromRow(row as {id: string; name: string; tokens: unknown})),
     molecules: (molecules.data ?? []).map((row) => moleculeFromRow(row as {id: string; name: string; document: unknown})),
     organisms: (organisms.data ?? []).map((row) =>
@@ -132,6 +146,7 @@ export async function createDesignMolecule(input: {id: string; name: string; doc
   const document = input.document === undefined ? blankMoleculeDocument() : parseDesignMoleculeDocument(input.document);
   assertDesignNodes(document.children);
   const library = await listDesignLibrary();
+  libraryError(designPresetError(document.children, library.atoms));
   if (library.molecules.some((molecule) => molecule.id === id)) {
     throw new Error('Id already exists');
   }
@@ -156,6 +171,7 @@ export async function updateDesignMolecule(id: string, input: {name?: string; do
     document: input.document === undefined ? current.document : parseDesignMoleculeDocument(input.document),
   };
   assertDesignNodes(next.document.children);
+  libraryError(designPresetError(next.document.children, library.atoms));
   const molecules = library.molecules.map((molecule) => (molecule.id === id ? next : molecule));
   await assertComposition(molecules, library.organisms);
   const supabase = createSitesServiceClient();
@@ -195,6 +211,7 @@ export async function createDesignOrganism(input: {
   const document = input.document === undefined ? blankOrganismDocument() : parseDesignOrganismDocument(input.document);
   assertDesignNodes(document.children);
   const library = await listDesignLibrary();
+  libraryError(designPresetError(document.children, library.atoms));
   if (library.organisms.some((organism) => organism.id === id)) {
     throw new Error('Id already exists');
   }
@@ -227,6 +244,7 @@ export async function updateDesignOrganism(
     document: input.document === undefined ? current.document : parseDesignOrganismDocument(input.document),
   };
   assertDesignNodes(next.document.children);
+  libraryError(designPresetError(next.document.children, library.atoms));
   const organisms = library.organisms.map((organism) => (organism.id === id ? next : organism));
   await assertComposition(library.molecules, organisms);
   const supabase = createSitesServiceClient();
@@ -240,6 +258,71 @@ export async function updateDesignOrganism(
     throw new Error(error?.message || 'Section not found');
   }
   return organismFromRow(data as {id: string; name: string; category: string; document: unknown});
+}
+
+export async function createDesignAtom(input: {id: string; name: string; base: string; fields: unknown; style?: unknown}): Promise<DesignAtomPreset> {
+  const preset = parseDesignAtomPreset({id: input.id, name: input.name, base: input.base, fields: input.fields, style: input.style ?? {}});
+  assertDesignAtomPreset(preset);
+  const library = await listDesignLibrary();
+  if (library.atoms.some((atom) => atom.id === preset.id)) {
+    throw new Error('Id already exists');
+  }
+  const supabase = createSitesServiceClient();
+  const {data, error} = await supabase
+    .from('design_atom')
+    .insert({id: preset.id, name: preset.name, base: preset.base, fields: preset.fields, style: preset.style})
+    .select('id, name, base, fields, style')
+    .single();
+  if (error || data === null) {
+    throw new Error(error?.message || 'Could not create atom');
+  }
+  return atomFromRow(data as {id: string; name: string; base: string; fields: unknown; style: unknown});
+}
+
+export async function updateDesignAtom(id: string, input: {name?: string; base?: string; fields?: unknown; style?: unknown}): Promise<DesignAtomPreset> {
+  const library = await listDesignLibrary();
+  const current = library.atoms.find((atom) => atom.id === id);
+  if (current === undefined) {
+    throw new Error('Atom not found');
+  }
+  const preset = parseDesignAtomPreset({
+    id,
+    name: input.name ?? current.name,
+    base: input.base ?? current.base,
+    fields: input.fields ?? current.fields,
+    style: input.style ?? current.style,
+  });
+  assertDesignAtomPreset(preset);
+  const usedWithOtherBase = [...library.molecules.flatMap((molecule) => molecule.document.children), ...library.organisms.flatMap((organism) => organism.document.children)].some(
+    (node) => node.kind === 'atom' && node.presetId === id && node.atom !== preset.base,
+  );
+  if (usedWithOtherBase) {
+    throw new Error('This atom is already used with a different base');
+  }
+  const supabase = createSitesServiceClient();
+  const {data, error} = await supabase
+    .from('design_atom')
+    .update({name: preset.name, base: preset.base, fields: preset.fields, style: preset.style})
+    .eq('id', id)
+    .select('id, name, base, fields, style')
+    .maybeSingle();
+  if (error || data === null) {
+    throw new Error(error?.message || 'Atom not found');
+  }
+  return atomFromRow(data as {id: string; name: string; base: string; fields: unknown; style: unknown});
+}
+
+export async function deleteDesignAtom(id: string): Promise<void> {
+  const library = await listDesignLibrary();
+  const usedBy = designAtomUsedBy(id, {molecules: library.molecules, organisms: library.organisms});
+  if (usedBy !== undefined) {
+    throw new Error(`Used by ${usedBy}`);
+  }
+  const supabase = createSitesServiceClient();
+  const {error} = await supabase.from('design_atom').delete().eq('id', id);
+  if (error) {
+    throw new Error(error.message || 'Could not delete atom');
+  }
 }
 
 export async function deleteDesignOrganism(id: string): Promise<void> {

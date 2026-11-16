@@ -1,5 +1,7 @@
 export {DESIGN_ATOM_DEFINITIONS, DESIGN_ATOMS, type DesignAtom} from './atoms';
-export {assertDesignNodes, designAtomOptions, designAtomPart, isDesignAtom} from './designAtomCatalog';
+export {assertDesignAtomPreset, assertDesignNodes, designAtomOptions, designAtomPart, isDesignAtom} from './designAtomCatalog';
+export {designColourCss} from './designLayoutStyle';
+export {resolveDesignAtom} from './resolveDesignAtom';
 export {DESIGN_ATOM_GUIDE, designLibraryGuide, type DesignAtomField, type DesignAtomGuide, type DesignLibraryGuide} from './designLibraryGuide';
 export {DesignNodes, type DesignNodeValues} from './DesignNodes';
 export {default as DesignPreview, designPreviewStyle} from './DesignPreview';

@@ -2,15 +2,18 @@
 
 import {DESIGN_ATOM_GUIDE} from '@so/component';
 import {
+  blankDesignAtomPreset,
   blankMoleculeDocument,
   blankOrganismDocument,
   colourSchemeToSiteTheme,
+  type DesignAtomPreset,
   type DesignColourScheme,
   type DesignColourTokens,
   type DesignMolecule,
   type DesignOrganism,
 } from '@so/model';
 import {useCallback, useEffect, useState} from 'react';
+import {DesignAtomPresetFields} from '@/components/admin/AdminDesignAtomFields';
 import {DesignColourFields, DesignIdName, DesignMoleculeFields, DesignOrganismFields} from '@/components/admin/AdminDesignFields';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 import useDesignLibraryLive from '@/components/admin/useDesignLibraryLive';
@@ -21,6 +24,7 @@ const ID_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 type Layer = 'atoms' | 'colour-schemes' | 'molecules' | 'organisms';
 
 interface Library {
+  atoms: readonly DesignAtomPreset[];
   colourSchemes: readonly DesignColourScheme[];
   molecules: readonly DesignMolecule[];
   organisms: readonly DesignOrganism[];
@@ -50,12 +54,13 @@ const FALLBACK_TOKENS: DesignColourTokens = {
 };
 
 type Draft =
+  | {layer: 'atoms'; creating: boolean; atom: DesignAtomPreset}
   | {layer: 'colour-schemes'; creating: boolean; scheme: DesignColourScheme}
   | {layer: 'molecules'; creating: boolean; molecule: DesignMolecule}
   | {layer: 'organisms'; creating: boolean; organism: DesignOrganism};
 
 export default function AdminDesignLibrary() {
-  const [library, setLibrary] = useState<Library>({colourSchemes: [], molecules: [], organisms: []});
+  const [library, setLibrary] = useState<Library>({atoms: [], colourSchemes: [], molecules: [], organisms: []});
   const [layer, setLayer] = useState<Layer>('colour-schemes');
   const [draft, setDraft] = useState<Draft | undefined>(undefined);
   const [error, setError] = useState('');
@@ -70,6 +75,7 @@ export default function AdminDesignLibrary() {
       return;
     }
     setLibrary({
+      atoms: payload.atoms ?? [],
       colourSchemes: payload.colourSchemes ?? [],
       molecules: payload.molecules ?? [],
       organisms: payload.organisms ?? [],
@@ -93,7 +99,7 @@ export default function AdminDesignLibrary() {
       <div className="admin-card">
         <h1>Design</h1>
         <p className="admin-muted">
-          Atoms are built into the app. Colour schemes, molecules, and sections are saved in the database and marked Editable. Templates pick a scheme on the template page.
+          Built-in atoms are the drawing components. Create an atom preset to choose its fields and starting colours, spacing, and border. Colour schemes, presets, molecules, and sections are saved in the database.
         </p>
         {error ? <p className="admin-error">{error}</p> : null}
         {notice ? <p className="admin-ok">{notice}</p> : null}
@@ -112,12 +118,7 @@ export default function AdminDesignLibrary() {
             setDraft(next);
           }}
           onDelete={(id) => void remove(layer, id, setBusy, setError, setLibrary)}
-          onCreate={() => {
-            if (layer === 'atoms') {
-              return;
-            }
-            setDraft(blankDraft(layer, tokens));
-          }}
+          onCreate={() => setDraft(blankDraft(layer, tokens))}
         />
       </div>
       {draft === undefined ? null : (
@@ -185,6 +186,13 @@ function LibraryTable({
                       label={`Edit ${row.name}`}
                       icon="settings"
                       onClick={() => {
+                        if (layer === 'atoms') {
+                          const atom = library.atoms.find((item) => item.id === row.id);
+                          if (atom !== undefined) {
+                            onEdit({layer, creating: false, atom});
+                          }
+                          return;
+                        }
                         if (layer === 'colour-schemes') {
                           const scheme = library.colourSchemes.find((item) => item.id === row.id);
                           if (scheme !== undefined) {
@@ -225,13 +233,11 @@ function LibraryTable({
           ))}
         </tbody>
       </table>
-      {layer === 'atoms' ? null : (
-        <div className="admin-actions">
-          <button type="button" onClick={onCreate}>
-            New
-          </button>
-        </div>
-      )}
+      <div className="admin-actions">
+        <button type="button" onClick={onCreate}>
+          New
+        </button>
+      </div>
     </>
   );
 }
@@ -261,12 +267,13 @@ function DraftEditor({
           onId={(id) => onChange(withIdentity(draft, id, draftName(draft)))}
           onName={(name) => onChange(withIdentity(draft, draftId(draft), name))}
         />
+        {draft.layer === 'atoms' ? <DesignAtomPresetFields preset={draft.atom} onChange={(atom) => onChange({...draft, atom})} /> : null}
         {draft.layer === 'colour-schemes' ? <DesignColourFields scheme={draft.scheme} onChange={(scheme) => onChange({...draft, scheme})} /> : null}
         {draft.layer === 'molecules' ? (
-          <DesignMoleculeFields molecule={draft.molecule} molecules={library.molecules} onChange={(molecule) => onChange({...draft, molecule})} />
+          <DesignMoleculeFields molecule={draft.molecule} molecules={library.molecules} atoms={library.atoms} onChange={(molecule) => onChange({...draft, molecule})} />
         ) : null}
         {draft.layer === 'organisms' ? (
-          <DesignOrganismFields organism={draft.organism} molecules={library.molecules} onChange={(organism) => onChange({...draft, organism})} />
+          <DesignOrganismFields organism={draft.organism} molecules={library.molecules} atoms={library.atoms} onChange={(organism) => onChange({...draft, organism})} />
         ) : null}
       </div>
       <div className="admin-actions">
@@ -282,17 +289,26 @@ function DraftEditor({
             <a className="design-atom-button">Button</a>
           </div>
         ) : null}
+        {draft.layer === 'atoms' ? (
+          <DesignPreview
+            nodes={[{id: 'sample', kind: 'atom', atom: draft.atom.base, presetId: previewAtom(draft.atom).id, style: {}, slots: []}]}
+            molecules={[]}
+            atoms={[previewAtom(draft.atom)]}
+            tokens={previewTokens}
+          />
+        ) : null}
         {draft.layer === 'molecules' ? (
           <DesignPreview
             nodes={draft.molecule.document.children}
             layout={draft.molecule.document.layout}
             container={draft.molecule.document.container}
             molecules={[draft.molecule, ...library.molecules.filter((item) => item.id !== draft.molecule.id)]}
+            atoms={library.atoms}
             tokens={previewTokens}
           />
         ) : null}
         {draft.layer === 'organisms' ? (
-          <DesignPreview nodes={draft.organism.document.children} molecules={library.molecules} tokens={previewTokens} />
+          <DesignPreview nodes={draft.organism.document.children} molecules={library.molecules} atoms={library.atoms} tokens={previewTokens} />
         ) : null}
       </div>
     </div>
@@ -301,7 +317,10 @@ function DraftEditor({
 
 function rowsForLayer(layer: Layer, library: Library): readonly {id: string; name: string; detail: string; editable: boolean}[] {
   if (layer === 'atoms') {
-    return DESIGN_ATOM_GUIDE.map((atom) => ({id: atom.atom, name: atom.label, detail: 'Built in', editable: false}));
+    return [
+      ...DESIGN_ATOM_GUIDE.map((atom) => ({id: `built-in-${atom.atom}`, name: atom.label, detail: 'Built in', editable: false})),
+      ...library.atoms.map((atom) => ({id: atom.id, name: atom.name, detail: atom.base, editable: true})),
+    ];
   }
   if (layer === 'colour-schemes') {
     return library.colourSchemes.map((scheme) => ({
@@ -318,6 +337,9 @@ function rowsForLayer(layer: Layer, library: Library): readonly {id: string; nam
 }
 
 function draftId(draft: Draft): string {
+  if (draft.layer === 'atoms') {
+    return draft.atom.id;
+  }
   if (draft.layer === 'colour-schemes') {
     return draft.scheme.id;
   }
@@ -328,6 +350,9 @@ function draftId(draft: Draft): string {
 }
 
 function draftName(draft: Draft): string {
+  if (draft.layer === 'atoms') {
+    return draft.atom.name;
+  }
   if (draft.layer === 'colour-schemes') {
     return draft.scheme.name;
   }
@@ -338,6 +363,9 @@ function draftName(draft: Draft): string {
 }
 
 function withIdentity(draft: Draft, id: string, name: string): Draft {
+  if (draft.layer === 'atoms') {
+    return {...draft, atom: {...draft.atom, id, name}};
+  }
   if (draft.layer === 'colour-schemes') {
     return {...draft, scheme: {...draft.scheme, id, name}};
   }
@@ -347,7 +375,10 @@ function withIdentity(draft: Draft, id: string, name: string): Draft {
   return {...draft, organism: {...draft.organism, id, name}};
 }
 
-function blankDraft(layer: Exclude<Layer, 'atoms'>, tokens: DesignColourTokens): Draft {
+function blankDraft(layer: Layer, tokens: DesignColourTokens): Draft {
+  if (layer === 'atoms') {
+    return {layer, creating: true, atom: blankDesignAtomPreset()};
+  }
   if (layer === 'colour-schemes') {
     return {layer, creating: true, scheme: {id: '', name: '', tokens}};
   }
@@ -374,6 +405,7 @@ async function remove(
     return;
   }
   setLibrary((current) => ({
+    atoms: layer === 'atoms' ? current.atoms.filter((item) => item.id !== id) : current.atoms,
     colourSchemes: layer === 'colour-schemes' ? current.colourSchemes.filter((item) => item.id !== id) : current.colourSchemes,
     molecules: layer === 'molecules' ? current.molecules.filter((item) => item.id !== id) : current.molecules,
     organisms: layer === 'organisms' ? current.organisms.filter((item) => item.id !== id) : current.organisms,
@@ -405,7 +437,13 @@ async function save(
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(saveBody(draft, id, name)),
   });
-  const payload = (await response.json().catch(() => ({}))) as {error?: string; scheme?: DesignColourScheme; molecule?: DesignMolecule; organism?: DesignOrganism};
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    atom?: DesignAtomPreset;
+    scheme?: DesignColourScheme;
+    molecule?: DesignMolecule;
+    organism?: DesignOrganism;
+  };
   setBusy(false);
   if (!response.ok) {
     setError(payload.error ?? 'Could not save');
@@ -417,6 +455,9 @@ async function save(
 }
 
 function saveBody(draft: Draft, id: string, name: string): Record<string, unknown> {
+  if (draft.layer === 'atoms') {
+    return {id, name, base: draft.atom.base, fields: draft.atom.fields, style: draft.atom.style};
+  }
   if (draft.layer === 'colour-schemes') {
     return {id, name, tokens: draft.scheme.tokens};
   }
@@ -426,7 +467,10 @@ function saveBody(draft: Draft, id: string, name: string): Record<string, unknow
   return {id, name, category: draft.organism.category, document: draft.organism.document};
 }
 
-function mergeSaved(current: Library, payload: {scheme?: DesignColourScheme; molecule?: DesignMolecule; organism?: DesignOrganism}): Library {
+function mergeSaved(current: Library, payload: {atom?: DesignAtomPreset; scheme?: DesignColourScheme; molecule?: DesignMolecule; organism?: DesignOrganism}): Library {
+  if (payload.atom !== undefined) {
+    return {...current, atoms: upsert(current.atoms, payload.atom)};
+  }
   if (payload.scheme !== undefined) {
     return {...current, colourSchemes: upsert(current.colourSchemes, payload.scheme)};
   }
@@ -437,6 +481,10 @@ function mergeSaved(current: Library, payload: {scheme?: DesignColourScheme; mol
     return {...current, organisms: upsert(current.organisms, payload.organism)};
   }
   return current;
+}
+
+function previewAtom(atom: DesignAtomPreset): DesignAtomPreset {
+  return atom.id.trim().length > 0 ? atom : {...atom, id: 'preview'};
 }
 
 function upsert<T extends {id: string}>(items: readonly T[], next: T): T[] {

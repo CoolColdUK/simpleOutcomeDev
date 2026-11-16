@@ -1,3 +1,19 @@
+export {blankDesignAtomPreset, designAtomContentKeys, designAtomFieldSchema, designAtomPresetSchema, type DesignAtomField, type DesignAtomPreset} from './designAtomPreset';
+export {DESIGN_THEME_COLOURS, designColourValueSchema, type DesignColourValue, type DesignThemeColour} from './designColourValue';
+export {
+  BOLD_NAIL_ATOMS,
+  BOLD_NAIL_MOLECULES,
+  BOLD_NAIL_ORGANISMS,
+  BOLD_NAIL_TEMPLATE_ITEMS,
+  boldGalleryDocument,
+  boldHeroDocument,
+  boldNavDocument,
+  boldServiceRowDocument,
+  boldServicesDocument,
+  footerNoteDocument,
+  galleryTileDocument,
+  serviceCardDocument,
+} from './boldNailBarLibrary';
 export {blankCombineDocument, blankDesignAtom, blankDesignMoleculeUse, blankMoleculeDocument, blankOrganismDocument} from './blankDesignNode';
 export {
   chakraConfigFromColourScheme,
@@ -39,9 +55,10 @@ export {
   type DesignStyle,
 } from './designNode';
 export {designOrganismDocumentSchema, organismNodes, type DesignOrganism, type DesignOrganismDocument} from './designOrganism';
-export {designLibraryError, designMoleculeUsedBy, type DesignLibraryRefs} from './designReferences';
+export {designAtomUsedBy, designLibraryError, designMoleculeUsedBy, designPresetError, type DesignLibraryRefs} from './designReferences';
 export {designTemplateItemSchema, designTemplateItemsSchema, type DesignTemplateItem} from './designTemplateItem';
 export {
+  parseDesignAtomPreset,
   parseDesignCategory,
   parseDesignColourTokens,
   parseDesignId,

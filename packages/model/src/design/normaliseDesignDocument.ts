@@ -25,7 +25,14 @@ function normaliseAtom(node: Record<string, unknown>): Record<string, unknown> {
       slots.push(key);
     }
   });
-  return {id: node.id, kind: 'atom', atom: node.atom, style, slots};
+  return {
+    id: node.id,
+    kind: 'atom',
+    atom: node.atom,
+    ...(typeof node['presetId'] === 'string' ? {presetId: node['presetId']} : {}),
+    style,
+    slots,
+  };
 }
 
 export function normaliseDesignNodes(value: unknown): unknown[] {

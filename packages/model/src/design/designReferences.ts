@@ -1,3 +1,4 @@
+import type {DesignAtomPreset} from './designAtomPreset';
 import type {DesignMolecule} from './designMolecule';
 import {moleculeNodes} from './designMolecule';
 import type {DesignNode} from './designNode';
@@ -51,6 +52,34 @@ export function designLibraryError(library: DesignLibraryRefs): string | undefin
     return moleculeError;
   }
   return first(library.organisms.map((organism) => walk(organism.document.children, molecules, new Set(), 1)));
+}
+
+export function designPresetError(nodes: readonly DesignNode[], atoms: readonly Pick<DesignAtomPreset, 'id' | 'base'>[]): string | undefined {
+  return first(
+    nodes.map((node) => {
+      if (node.kind !== 'atom' || node.presetId === undefined) {
+        return undefined;
+      }
+      const preset = atoms.find((atom) => atom.id === node.presetId);
+      if (preset === undefined) {
+        return `Unknown atom preset ${node.presetId}`;
+      }
+      if (preset.base !== node.atom) {
+        return `Atom preset ${node.presetId} is a ${preset.base}`;
+      }
+      return undefined;
+    }),
+  );
+}
+
+export function designAtomUsedBy(id: string, library: DesignLibraryRefs): string | undefined {
+  const used = (nodes: readonly DesignNode[]): boolean => nodes.some((node) => node.kind === 'atom' && node.presetId === id);
+  const molecule = library.molecules.find((item) => used(moleculeNodes(item.document)));
+  if (molecule !== undefined) {
+    return molecule.name;
+  }
+  const organism = library.organisms.find((item) => used(item.document.children));
+  return organism?.name;
 }
 
 export function designMoleculeUsedBy(id: string, library: DesignLibraryRefs): string | undefined {

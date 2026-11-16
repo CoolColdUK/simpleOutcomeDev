@@ -11,10 +11,12 @@ import {
   type DesignContainerKey,
   type DesignFlex,
   type DesignFlexKey,
+  type DesignAtomPreset,
   type DesignMolecule,
   type DesignOrganism,
 } from '@so/model';
 import AdminDesignNodeEditor from '@/components/admin/AdminDesignNodeEditor';
+import DesignColourControl from '@/components/admin/DesignColourControl';
 import AdminDesignOptionMenu from '@/components/admin/AdminDesignOptionMenu';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
@@ -125,10 +127,12 @@ export function DesignColourFields({scheme, onChange}: {scheme: DesignColourSche
 export function DesignMoleculeFields({
   molecule,
   molecules,
+  atoms = [],
   onChange,
 }: {
   molecule: DesignMolecule;
   molecules: readonly DesignMolecule[];
+  atoms?: readonly DesignAtomPreset[];
   onChange: (molecule: DesignMolecule) => void;
 }) {
   const document = molecule.document;
@@ -182,6 +186,7 @@ export function DesignMoleculeFields({
       <AdminDesignNodeEditor
         nodes={document.children}
         molecules={molecules}
+        atoms={atoms}
         excludeMoleculeId={molecule.id}
         onChange={(children) => onChange({...molecule, document: {...document, children}})}
       />
@@ -271,7 +276,15 @@ function ContainerFields({container, onChange}: {container: DesignContainer; onC
   return (
     <>
       {DESIGN_CONTAINER_OPTIONS.filter((option) => container[option.key] !== undefined).map((option) =>
-        option.max === undefined ? (
+        option.key === 'background' || option.key === 'borderColor' ? (
+          <div key={option.key} className="design-field-row">
+            <label>
+              {option.label}
+              <DesignColourControl value={String(container[option.key] ?? 'siteCard')} onChange={(value) => onChange({...container, [option.key]: value})} />
+            </label>
+            <AdminIconButton label={`Remove ${option.label}`} icon="bin" onClick={() => onChange(containerWithout(container, option.key))} />
+          </div>
+        ) : option.max === undefined ? (
           <div key={option.key} className="design-field-row">
             <label>
               {option.label}
@@ -346,8 +359,8 @@ function containerDefault(key: DesignContainerKey): DesignContainer[DesignContai
   if (key === 'minHeightPx') {
     return 48;
   }
-  if (key === 'paddingPx') {
-    return 12;
+  if (key === 'paddingPx' || key === 'marginPx') {
+    return key === 'paddingPx' ? 12 : 0;
   }
   if (key === 'radiusPx') {
     return 8;
@@ -356,9 +369,9 @@ function containerDefault(key: DesignContainerKey): DesignContainer[DesignContai
     return 1;
   }
   if (key === 'background') {
-    return '#ffffff';
+    return 'siteCard';
   }
-  return '#111111';
+  return 'siteAccent';
 }
 
 function containerWithout(container: DesignContainer, key: DesignContainerKey): DesignContainer {
@@ -370,10 +383,12 @@ function containerWithout(container: DesignContainer, key: DesignContainerKey): 
 export function DesignOrganismFields({
   organism,
   molecules,
+  atoms = [],
   onChange,
 }: {
   organism: DesignOrganism;
   molecules: readonly DesignMolecule[];
+  atoms?: readonly DesignAtomPreset[];
   onChange: (organism: DesignOrganism) => void;
 }) {
   return (
@@ -389,7 +404,7 @@ export function DesignOrganismFields({
           <option value="footer">Footer</option>
         </select>
       </label>
-      <AdminDesignNodeEditor nodes={organism.document.children} molecules={molecules} onChange={(children) => onChange({...organism, document: {children}})} />
+      <AdminDesignNodeEditor nodes={organism.document.children} molecules={molecules} atoms={atoms} onChange={(children) => onChange({...organism, document: {children}})} />
     </>
   );
 }

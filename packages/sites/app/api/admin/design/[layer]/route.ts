@@ -2,13 +2,14 @@ import type {DesignCategory} from '@so/model';
 import {NextResponse} from 'next/server';
 import {adminApiDenied, requireAdminApi} from '@/lib/admin/requireAdminApi';
 import {
+  createDesignAtom,
   createDesignColourScheme,
   createDesignMolecule,
   createDesignOrganism,
   designNameOk,
 } from '@/lib/admin/designLibraryAccess';
 
-const LAYERS = ['colour-schemes', 'molecules', 'organisms'] as const;
+const LAYERS = ['atoms', 'colour-schemes', 'molecules', 'organisms'] as const;
 
 type DesignLayer = (typeof LAYERS)[number];
 
@@ -34,7 +35,7 @@ export async function POST(request: Request, context: {params: Promise<{layer: s
     return NextResponse.json({error: 'Unknown design layer'}, {status: 404});
   }
   const body = (await request.json().catch(() => undefined)) as
-    | {id?: unknown; name?: unknown; tokens?: unknown; document?: unknown; category?: unknown}
+    | {id?: unknown; name?: unknown; tokens?: unknown; document?: unknown; category?: unknown; base?: unknown; fields?: unknown; style?: unknown}
     | undefined;
   const id = typeof body?.id === 'string' ? body.id.trim().toLowerCase() : '';
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
@@ -42,6 +43,11 @@ export async function POST(request: Request, context: {params: Promise<{layer: s
     return NextResponse.json({error: 'Name is required'}, {status: 400});
   }
   try {
+    if (layer === 'atoms') {
+      const base = typeof body?.base === 'string' ? body.base : '';
+      const atom = await createDesignAtom({id, name, base, fields: body?.fields, style: body?.style});
+      return NextResponse.json({atom});
+    }
     if (layer === 'colour-schemes') {
       const scheme = await createDesignColourScheme({id, name, tokens: body?.tokens});
       return NextResponse.json({scheme});

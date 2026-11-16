@@ -3,7 +3,7 @@ import AdminShell from '@/components/admin/AdminShell';
 import AdminTemplateEditor from '@/components/admin/AdminTemplateEditor';
 import {requireAdminHostPage} from '@/lib/admin/requireAdminHost';
 import {actingIsAdmin, requireSiteSession} from '@/lib/admin/requireSiteSession';
-import type {DesignColourScheme, DesignMolecule} from '@so/model';
+import type {DesignAtomPreset, DesignColourScheme, DesignMolecule} from '@so/model';
 import {listDesignLibrary} from '@/lib/admin/designLibraryAccess';
 import {getSiteTemplate} from '@/lib/admin/siteTemplateAccess';
 
@@ -11,12 +11,12 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = {title: 'Edit template', robots: {index: false, follow: false}};
 
-async function loadDesign(): Promise<{colourSchemes: readonly DesignColourScheme[]; molecules: readonly DesignMolecule[]}> {
+async function loadDesign(): Promise<{atoms: readonly DesignAtomPreset[]; colourSchemes: readonly DesignColourScheme[]; molecules: readonly DesignMolecule[]}> {
   try {
     const library = await listDesignLibrary();
-    return {colourSchemes: library.colourSchemes, molecules: library.molecules};
+    return {atoms: library.atoms, colourSchemes: library.colourSchemes, molecules: library.molecules};
   } catch {
-    return {colourSchemes: [], molecules: []};
+    return {atoms: [], colourSchemes: [], molecules: []};
   }
 }
 
@@ -41,6 +41,7 @@ export default async function TemplateEditPage({params}: {params: Promise<{id: s
         colourSchemeId={template.colourSchemeId}
         colourSchemes={design.colourSchemes}
         molecules={design.molecules}
+        atoms={design.atoms}
         items={template.items}
       />
     </AdminShell>

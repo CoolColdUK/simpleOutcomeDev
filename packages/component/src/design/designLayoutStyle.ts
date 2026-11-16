@@ -1,5 +1,22 @@
-import type {DesignColourTokens, DesignContainer, DesignFlex} from '@so/model';
+import {DESIGN_THEME_COLOURS, type DesignColourTokens, type DesignContainer, type DesignFlex} from '@so/model';
 import type {CSSProperties} from 'react';
+
+const THEME_COLOUR_VAR: Record<(typeof DESIGN_THEME_COLOURS)[number], string> = {
+  siteBackground: 'var(--chakra-colors-siteBackground)',
+  siteForeground: 'var(--chakra-colors-siteForeground)',
+  siteAccent: 'var(--chakra-colors-siteAccent)',
+  siteButtonForeground: 'var(--chakra-colors-siteButtonForeground)',
+  siteCard: 'var(--chakra-colors-siteCard)',
+  hero: 'var(--site-hero-background)',
+};
+
+export function designColourCss(value: string | number | boolean | undefined): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const token = DESIGN_THEME_COLOURS.find((colour) => colour === value);
+  return token === undefined ? value : THEME_COLOUR_VAR[token];
+}
 
 export function designPreviewStyle(tokens: DesignColourTokens): CSSProperties {
   const {colors, fonts, radii} = tokens.chakra.theme.tokens;
@@ -12,6 +29,7 @@ export function designPreviewStyle(tokens: DesignColourTokens): CSSProperties {
     '--chakra-fonts-siteHeading': fonts.siteHeading.value,
     '--chakra-fonts-siteBody': fonts.siteBody.value,
     '--chakra-radii-site': radii.site.value,
+    '--site-hero-background': tokens.heroBackground === 'none' ? colors.siteBackground.value : tokens.heroBackground,
   } as CSSProperties;
 }
 
@@ -44,11 +62,12 @@ export function designContainerStyle(container: DesignContainer | undefined): CS
     maxWidth: px(container.maxWidthPx),
     maxHeight: px(container.maxHeightPx),
     padding: px(container.paddingPx),
-    background: container.background,
+    margin: px(container.marginPx),
+    background: designColourCss(container.background),
     borderRadius: px(container.radiusPx),
     borderStyle: container.borderWidthPx === undefined ? undefined : 'solid',
     borderWidth: px(container.borderWidthPx),
-    borderColor: container.borderColor,
+    borderColor: designColourCss(container.borderColor),
     boxSizing: 'border-box',
   };
 }

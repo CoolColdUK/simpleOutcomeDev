@@ -1,12 +1,14 @@
 import * as v from 'valibot';
 import {cleanStudioTheme} from '../site/siteThemes';
+import {BOLD_NAIL_ATOMS, BOLD_NAIL_MOLECULES, BOLD_NAIL_ORGANISMS, BOLD_NAIL_TEMPLATE_ITEMS} from './boldNailBarLibrary';
 import {blankDesignAtom, blankMoleculeDocument} from './blankDesignNode';
+import {blankDesignAtomPreset} from './designAtomPreset';
 import {chakraConfigFromColourScheme, colourSchemeToSiteTheme, siteThemeToColourTokens} from './designColourScheme';
 import {DESIGN_COLOUR_SCHEME_SEED} from './designLibrarySeed';
 import {designMoleculeDocumentSchema} from './designMolecule';
 import {designNodeSchema} from './designNode';
-import {parseDesignColourTokens, parseDesignId, parseDesignMoleculeDocument} from './parseDesignValue';
-import {designLibraryError} from './designReferences';
+import {parseDesignAtomPreset, parseDesignColourTokens, parseDesignId, parseDesignMoleculeDocument, parseDesignTemplateItems} from './parseDesignValue';
+import {designLibraryError, designPresetError} from './designReferences';
 
 describe('design library', () => {
   it('turns a site theme into Chakra tokens and back', () => {
@@ -75,5 +77,33 @@ describe('design library', () => {
   it('parses a blank atom', () => {
     expect(v.parse(designNodeSchema, blankDesignAtom('link', 'home')).kind).toBe('atom');
     expect(blankMoleculeDocument().pattern).toBe('tree');
+  });
+
+  it('accepts a theme colour on a molecule box', () => {
+    const document = parseDesignMoleculeDocument({
+      pattern: 'tree',
+      layout: {direction: 'column', gapPx: 8},
+      container: {paddingPx: 16, marginPx: 0, background: 'hero', borderColor: 'siteAccent', borderWidthPx: 1},
+      children: [{id: 'title', kind: 'atom', atom: 'text', presetId: 'heading', style: {color: 'siteButtonForeground'}, slots: []}],
+    });
+    expect(document.container?.background).toBe('hero');
+    expect(document.children[0]).toMatchObject({presetId: 'heading'});
+  });
+
+  it('breaks bold nail bar into its own sections and molecules', () => {
+    expect(BOLD_NAIL_ORGANISMS.map((section) => section.id)).toEqual([
+      'bold-nail-header',
+      'bold-nail-hero',
+      'bold-nail-services',
+      'bold-nail-gallery',
+      'bold-nail-footer',
+    ]);
+    expect(designLibraryError({molecules: [...BOLD_NAIL_MOLECULES], organisms: [...BOLD_NAIL_ORGANISMS]})).toBeUndefined();
+    BOLD_NAIL_MOLECULES.forEach((molecule) => {
+      expect(designPresetError(molecule.document.children, [...BOLD_NAIL_ATOMS])).toBeUndefined();
+    });
+    expect(parseDesignTemplateItems([...BOLD_NAIL_TEMPLATE_ITEMS])).toHaveLength(5);
+    expect(parseDesignAtomPreset(blankDesignAtomPreset()).base).toBe('text');
+    expect(designPresetError([{id: 'title', kind: 'atom', atom: 'text', presetId: 'missing', style: {}, slots: []}], [])).toBe('Unknown atom preset missing');
   });
 });
