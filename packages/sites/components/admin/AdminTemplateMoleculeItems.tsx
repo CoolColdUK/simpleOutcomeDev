@@ -1,6 +1,7 @@
 'use client';
 
 import {SITE_BLOCK_ICONS, listMoleculeContentFields, type DesignMolecule, type DesignTemplateItem} from '@so/model';
+import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
 function nextItemId(): string {
   const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -26,11 +27,9 @@ export default function AdminTemplateMoleculeItems({
         const fields = molecule === undefined ? [] : listMoleculeContentFields(molecule, molecules);
         return (
           <div key={item.id} className="design-node">
-            <div className="admin-actions">
+            <div className="design-node-head">
               <strong>{molecule?.name ?? item.moleculeId}</strong>
-              <button type="button" className="secondary" onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}>
-                Remove
-              </button>
+              <AdminIconButton label="Remove item" icon="bin" onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))} />
             </div>
             {fields.length === 0 ? <p className="admin-muted">This molecule has no content options yet.</p> : null}
             {fields.map((field) => (

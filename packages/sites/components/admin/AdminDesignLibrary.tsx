@@ -11,6 +11,7 @@ import {
 } from '@so/model';
 import {useCallback, useEffect, useState} from 'react';
 import {DesignColourFields, DesignIdName, DesignMoleculeFields, DesignOrganismFields} from '@/components/admin/AdminDesignFields';
+import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 import useDesignLibraryLive from '@/components/admin/useDesignLibraryLive';
 import DesignPreview, {designPreviewStyle} from '@/components/design/DesignPreview';
 
@@ -169,9 +170,9 @@ function LibraryTable({
               </td>
               <td>{row.id}</td>
               <td>
-                <button
-                  type="button"
-                  className="secondary"
+                <AdminIconButton
+                  label={`Edit ${row.name}`}
+                  icon="settings"
                   onClick={() => {
                     if (layer === 'colour-schemes') {
                       const scheme = library.colourSchemes.find((item) => item.id === row.id);
@@ -192,21 +193,17 @@ function LibraryTable({
                       onEdit({layer, creating: false, organism});
                     }
                   }}
-                >
-                  Edit
-                </button>{' '}
-                <button
-                  type="button"
-                  className="danger"
+                />{' '}
+                <AdminIconButton
+                  label={`Delete ${row.name}`}
+                  icon="bin"
                   disabled={busy}
                   onClick={() => {
                     if (window.confirm(`Delete ${row.name}?`)) {
                       onDelete(row.id);
                     }
                   }}
-                >
-                  Delete
-                </button>
+                />
               </td>
             </tr>
           ))}

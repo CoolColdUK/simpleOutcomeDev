@@ -12,6 +12,8 @@ import {
   type DesignOrganism,
 } from '@so/model';
 import AdminDesignNodeEditor from '@/components/admin/AdminDesignNodeEditor';
+import AdminDesignOptionMenu from '@/components/admin/AdminDesignOptionMenu';
+import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
 export function DesignIdName({
   id,
@@ -131,44 +133,38 @@ export function DesignMoleculeFields({
   const unusedLayout = DESIGN_FLEX_OPTIONS.filter((option) => layout[option.key] === undefined);
   return (
     <>
-      <label>
-        Pattern
-        <select
-          value={document.pattern}
-          onChange={(event) => {
-            const pattern = event.target.value === 'combine' ? 'combine' : 'tree';
-            const next = pattern === 'combine' ? blankCombineDocument() : blankMoleculeDocument();
-            onChange({...molecule, document: {...next, children: document.children, layout}});
+      <div className="design-field-row">
+        <label>
+          Pattern
+          <select
+            value={document.pattern}
+            onChange={(event) => {
+              const pattern = event.target.value === 'combine' ? 'combine' : 'tree';
+              const next = pattern === 'combine' ? blankCombineDocument() : blankMoleculeDocument();
+              onChange({...molecule, document: {...next, children: document.children, layout}});
+            }}
+          >
+            <option value="tree">Tree of atoms</option>
+            <option value="combine">Combine</option>
+          </select>
+        </label>
+        <AdminDesignOptionMenu
+          label="Add layout option"
+          icon
+          options={unusedLayout.map((option) => ({key: option.key, label: option.label}))}
+          onPick={(key) => {
+            const flex = flexKey(key);
+            if (flex !== undefined) {
+              onChange({...molecule, document: {...document, layout: {...layout, [flex]: flexDefault(flex, document.pattern)}}});
+            }
           }}
-        >
-          <option value="tree">Tree of atoms</option>
-          <option value="combine">Combine</option>
-        </select>
-      </label>
+        />
+      </div>
       <p className="admin-muted">
         {document.pattern === 'tree'
           ? 'Lay atoms and molecules out as a flex row or column. Add only the layout options you want.'
           : 'Combine atoms and other molecules into one larger molecule. Words and links are filled in on the template.'}
       </p>
-      <label>
-        Add layout option
-        <select
-          value=""
-          onChange={(event) => {
-            const key = flexKey(event.target.value);
-            if (key !== undefined) {
-              onChange({...molecule, document: {...document, layout: {...layout, [key]: flexDefault(key, document.pattern)}}});
-            }
-          }}
-        >
-          <option value="">Choose</option>
-          {unusedLayout.map((option) => (
-            <option key={option.key} value={option.key}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
       <FlexFields layout={layout} onChange={(next) => onChange({...molecule, document: {...document, layout: next}})} />
       <AdminDesignNodeEditor
         nodes={document.children}
@@ -184,7 +180,7 @@ function FlexFields({layout, onChange}: {layout: DesignFlex; onChange: (layout: 
   return (
     <>
       {layout.direction !== undefined ? (
-        <div className="admin-actions">
+        <div className="design-field-row">
           <label>
             Direction
             <select value={layout.direction} onChange={(event) => onChange({...layout, direction: event.target.value === 'column' ? 'column' : 'row'})}>
@@ -192,20 +188,16 @@ function FlexFields({layout, onChange}: {layout: DesignFlex; onChange: (layout: 
               <option value="column">column</option>
             </select>
           </label>
-          <button type="button" className="secondary" onClick={() => onChange(flexWithout(layout, 'direction'))}>
-            Remove
-          </button>
+          <AdminIconButton label="Remove direction" icon="bin" onClick={() => onChange(flexWithout(layout, 'direction'))} />
         </div>
       ) : null}
       {layout.gapPx !== undefined ? (
-        <div className="admin-actions">
+        <div className="design-field-row">
           <label>
             Gap
             <input type="number" min={0} max={64} value={layout.gapPx} onChange={(event) => onChange({...layout, gapPx: Number(event.target.value)})} />
           </label>
-          <button type="button" className="secondary" onClick={() => onChange(flexWithout(layout, 'gapPx'))}>
-            Remove
-          </button>
+          <AdminIconButton label="Remove gap" icon="bin" onClick={() => onChange(flexWithout(layout, 'gapPx'))} />
         </div>
       ) : null}
       {layout.align !== undefined ? (
@@ -220,7 +212,7 @@ function FlexFields({layout, onChange}: {layout: DesignFlex; onChange: (layout: 
         />
       ) : null}
       {layout.wrap !== undefined ? (
-        <div className="admin-actions">
+        <div className="design-field-row">
           <label>
             Wrap
             <select value={layout.wrap} onChange={(event) => onChange({...layout, wrap: event.target.value === 'wrap' ? 'wrap' : 'nowrap'})}>
@@ -228,9 +220,7 @@ function FlexFields({layout, onChange}: {layout: DesignFlex; onChange: (layout: 
               <option value="wrap">wrap</option>
             </select>
           </label>
-          <button type="button" className="secondary" onClick={() => onChange(flexWithout(layout, 'wrap'))}>
-            Remove
-          </button>
+          <AdminIconButton label="Remove wrap" icon="bin" onClick={() => onChange(flexWithout(layout, 'wrap'))} />
         </div>
       ) : null}
     </>
@@ -249,7 +239,7 @@ function AlignField({
   onRemove: () => void;
 }) {
   return (
-    <div className="admin-actions">
+    <div className="design-field-row">
       <label>
         {label}
         <select value={value} onChange={(event) => onChange(alignValue(event.target.value))}>
@@ -259,9 +249,7 @@ function AlignField({
           <option value="stretch">stretch</option>
         </select>
       </label>
-      <button type="button" className="secondary" onClick={onRemove}>
-        Remove
-      </button>
+      <AdminIconButton label={`Remove ${label}`} icon="bin" onClick={onRemove} />
     </div>
   );
 }

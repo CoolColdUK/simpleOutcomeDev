@@ -236,12 +236,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: none;
+  align-self: center;
   width: 2rem;
   height: 2rem;
   padding: 0;
-  background: transparent;
+  background: #fff;
   color: var(--admin-fg);
   border: 1px solid var(--admin-border);
+}
+
+.admin button.admin-icon-button:hover:not(:disabled) {
+  background: #f4f1ea;
 }
 
 .admin button.admin-icon-button.danger {
@@ -486,6 +492,38 @@
   border-radius: 8px;
 }
 
+.design-node-head,
+.design-field-row,
+.design-slot-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.design-node-head,
+.design-slot-row {
+  align-items: center;
+}
+
+.design-node-head {
+  justify-content: space-between;
+}
+
+.design-field-row > label,
+.design-slot-row .admin-muted {
+  flex: 1;
+  min-width: 0;
+}
+
+.design-option {
+  position: relative;
+  flex: none;
+}
+
+.admin .design-option > button:not(.admin-icon-button) {
+  min-height: 2rem;
+}
+
 .design-preview {
   background: var(--chakra-colors-siteBackground);
   color: var(--chakra-colors-siteForeground);
@@ -556,11 +594,34 @@
   color: var(--chakra-colors-siteAccent);
 }
 
+.design-option-end .design-option-menu {
+  left: auto;
+  right: 0;
+}
+
 .design-option-menu {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.4rem;
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  display: grid;
+  min-width: 11rem;
+  padding: 0.25rem;
+  background: #fff;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+}
+
+.admin .design-option-menu button {
+  background: transparent;
+  color: var(--admin-fg);
+  text-align: left;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+}
+
+.admin .design-option-menu button:hover {
+  background: #f4f1ea;
 }
 
 .design-image-placeholder {

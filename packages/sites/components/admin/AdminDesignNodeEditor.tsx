@@ -13,7 +13,8 @@ import {
   type DesignStyle,
   type DesignStyleKey,
 } from '@so/model';
-import {useState} from 'react';
+import AdminDesignOptionMenu from '@/components/admin/AdminDesignOptionMenu';
+import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
 function nextNodeId(): string {
   const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -54,11 +55,9 @@ export default function AdminDesignNodeEditor({
     <div>
       {nodes.map((node, index) => (
         <div key={node.id} className="design-node">
-          <div className="admin-actions">
+          <div className="design-node-head">
             <strong>{node.kind === 'atom' ? node.atom : 'molecule'}</strong>
-            <button type="button" className="secondary" disabled={nodes.length < 2} onClick={() => onChange(nodes.filter((_, nodeIndex) => nodeIndex !== index))}>
-              Remove
-            </button>
+            <AdminIconButton label="Remove piece" icon="bin" disabled={nodes.length < 2} onClick={() => onChange(nodes.filter((_, nodeIndex) => nodeIndex !== index))} />
           </div>
           <NodeFields
             node={node}
@@ -67,7 +66,7 @@ export default function AdminDesignNodeEditor({
           />
         </div>
       ))}
-      <OptionMenu
+      <AdminDesignOptionMenu
         label="Add piece"
         options={[
           ...DESIGN_ATOMS.map((atom) => ({key: atom, label: atom})),
@@ -113,8 +112,9 @@ function AtomFields({node, onChange}: {node: DesignAtomNode; onChange: (node: De
   const available = options.filter((option) => (option.group === 'content' ? !node.slots.includes(option.key) : node.style[option.key as DesignStyleKey] === undefined));
   return (
     <>
-      <OptionMenu
+      <AdminDesignOptionMenu
         label="Add option"
+        icon
         options={available.map((option) => ({key: option.key, label: option.label}))}
         onPick={(key) => {
           const option = options.find((item) => item.key === key);
@@ -130,12 +130,10 @@ function AtomFields({node, onChange}: {node: DesignAtomNode; onChange: (node: De
         }}
       />
       {node.slots.map((slot) => (
-        <div key={slot} className="admin-actions">
+        <div key={slot} className="design-slot-row">
           <span>{options.find((option) => option.key === slot)?.label ?? slot}</span>
           <span className="admin-muted">Filled in on the template</span>
-          <button type="button" className="secondary" onClick={() => onChange({...node, slots: node.slots.filter((item) => item !== slot)})}>
-            Remove
-          </button>
+          <AdminIconButton label={`Remove ${slot}`} icon="bin" onClick={() => onChange({...node, slots: node.slots.filter((item) => item !== slot)})} />
         </div>
       ))}
       {options
@@ -168,7 +166,7 @@ function StyleField({
   onRemove: () => void;
 }) {
   return (
-    <div className="admin-actions">
+    <div className="design-field-row">
       {optionKey === 'radiusPx' || optionKey === 'borderWidthPx' ? (
         <label>
           {label}
@@ -180,9 +178,7 @@ function StyleField({
           <input value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} />
         </label>
       )}
-      <button type="button" className="secondary" onClick={onRemove}>
-        Remove
-      </button>
+      <AdminIconButton label={`Remove ${label}`} icon="bin" onClick={onRemove} />
     </div>
   );
 }
@@ -193,33 +189,3 @@ function styleWithout(style: DesignStyle, key: DesignStyleKey): DesignStyle {
   return next;
 }
 
-function OptionMenu({label, options, onPick}: {label: string; options: readonly {key: string; label: string}[]; onPick: (key: string) => void}) {
-  const [open, setOpen] = useState(false);
-  if (options.length === 0) {
-    return null;
-  }
-  return (
-    <div>
-      <button type="button" className="secondary" onClick={() => setOpen(!open)}>
-        {label}
-      </button>
-      {open ? (
-        <div className="design-option-menu">
-          {options.map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              className="secondary"
-              onClick={() => {
-                onPick(option.key);
-                setOpen(false);
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
