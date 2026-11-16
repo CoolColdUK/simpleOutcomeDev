@@ -1,11 +1,12 @@
-import {isDesignContentKey, isDesignStyleKey, type DesignAtom} from './designAtomOptions';
+const LEGACY_SETTINGS = new Set(['background', 'color', 'radiusPx', 'borderWidthPx', 'borderColor']);
+const LEGACY_CONTENT = new Set(['label', 'href', 'icon', 'src', 'alt', 'text', 'role', 'checked']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isAtomName(value: unknown): value is DesignAtom {
-  return value === 'button' || value === 'iconButton' || value === 'imageButton' || value === 'link' || value === 'switch' || value === 'checkbox' || value === 'text';
+function isAtomName(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-z][A-Za-z0-9]{0,40}$/.test(value);
 }
 
 function normaliseAtom(node: Record<string, unknown>): Record<string, unknown> {
@@ -16,11 +17,11 @@ function normaliseAtom(node: Record<string, unknown>): Record<string, unknown> {
   const style = isRecord(node.style) ? {...node.style} : {};
   const slots = Array.isArray(node.slots) ? node.slots.filter((slot): slot is string => typeof slot === 'string') : [];
   Object.entries(props).forEach(([key, value]) => {
-    if (isDesignStyleKey(node.atom as DesignAtom, key)) {
+    if (LEGACY_SETTINGS.has(key)) {
       style[key] = value;
       return;
     }
-    if (isDesignContentKey(node.atom as DesignAtom, key) && !slots.includes(key)) {
+    if (LEGACY_CONTENT.has(key) && !slots.includes(key)) {
       slots.push(key);
     }
   });

@@ -1,19 +1,7 @@
 'use client';
 
-import {
-  DESIGN_ATOM_GUIDE,
-  DESIGN_ATOMS,
-  blankDesignAtom,
-  blankDesignMoleculeUse,
-  designAtomOptions,
-  type DesignAtom,
-  type DesignAtomNode,
-  type DesignContentKey,
-  type DesignMolecule,
-  type DesignNode,
-  type DesignStyle,
-  type DesignStyleKey,
-} from '@so/model';
+import {DESIGN_ATOM_GUIDE, DESIGN_ATOMS, designAtomOptions, type DesignAtom, type DesignOptionDefinition} from '@so/component';
+import {blankDesignAtom, blankDesignMoleculeUse, type DesignAtomNode, type DesignMolecule, type DesignNode, type DesignStyle} from '@so/model';
 import AdminDesignOptionMenu from '@/components/admin/AdminDesignOptionMenu';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
@@ -23,7 +11,7 @@ function nextNodeId(): string {
   return `n${Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('')}`;
 }
 
-function atomLabel(atom: DesignAtom): string {
+function atomLabel(atom: string): string {
   return DESIGN_ATOM_GUIDE.find((entry) => entry.atom === atom)?.label ?? atom;
 }
 
@@ -31,15 +19,18 @@ function isDesignAtom(value: string): value is DesignAtom {
   return DESIGN_ATOMS.some((atom) => atom === value);
 }
 
-function styleDefault(key: DesignStyleKey): DesignStyle[DesignStyleKey] {
-  if (key === 'radiusPx') {
-    return 8;
+function settingInitial(option: DesignOptionDefinition): DesignStyle[string] {
+  if (option.initial !== undefined) {
+    return option.initial;
   }
-  if (key === 'borderWidthPx') {
-    return 1;
+  if (option.kind === 'number') {
+    return option.min ?? 0;
   }
-  if (key === 'color') {
-    return '#ffffff';
+  if (option.kind === 'boolean') {
+    return false;
+  }
+  if (option.kind === 'choice') {
+    return option.values?.[0] ?? '';
   }
   return '#111111';
 }
@@ -120,7 +111,7 @@ function NodeFields({node, molecules, onChange}: {node: DesignNode; molecules: r
 
 function AtomFields({node, onChange}: {node: DesignAtomNode; onChange: (node: DesignNode) => void}) {
   const options = designAtomOptions(node.atom);
-  const available = options.filter((option) => (option.group === 'content' ? !node.slots.includes(option.key) : node.style[option.key as DesignStyleKey] === undefined));
+  const available = options.filter((option) => (option.group === 'content' ? !node.slots.includes(option.key) : node.style[option.key] === undefined));
   return (
     <>
       <AdminDesignOptionMenu
@@ -133,11 +124,10 @@ function AtomFields({node, onChange}: {node: DesignAtomNode; onChange: (node: De
             return;
           }
           if (option.group === 'content') {
-            onChange({...node, slots: [...node.slots, option.key as DesignContentKey]});
+            onChange({...node, slots: [...node.slots, option.key]});
             return;
           }
-          const styleKey = option.key as DesignStyleKey;
-          onChange({...node, style: {...node.style, [styleKey]: styleDefault(styleKey)}});
+          onChange({...node, style: {...node.style, [option.key]: settingInitial(option)}});
         }}
       />
       {node.slots.map((slot) => (
@@ -148,53 +138,58 @@ function AtomFields({node, onChange}: {node: DesignAtomNode; onChange: (node: De
         </div>
       ))}
       {options
-        .filter((option) => option.group === 'style' && node.style[option.key as DesignStyleKey] !== undefined)
+        .filter((option) => option.group === 'setting' && node.style[option.key] !== undefined)
         .map((option) => (
-          <StyleField
+          <SettingField
             key={option.key}
-            optionKey={option.key as DesignStyleKey}
-            label={option.label}
-            value={node.style[option.key as DesignStyleKey]}
+            option={option}
+            value={node.style[option.key]}
             onChange={(value) => onChange({...node, style: {...node.style, [option.key]: value}})}
-            onRemove={() => onChange({...node, style: styleWithout(node.style, option.key as DesignStyleKey)})}
+            onRemove={() => onChange({...node, style: styleWithout(node.style, option.key)})}
           />
         ))}
     </>
   );
 }
 
-function StyleField({
-  optionKey,
-  label,
+function SettingField({
+  option,
   value,
   onChange,
   onRemove,
 }: {
-  optionKey: DesignStyleKey;
-  label: string;
-  value: DesignStyle[DesignStyleKey];
-  onChange: (value: DesignStyle[DesignStyleKey]) => void;
+  option: DesignOptionDefinition;
+  value: DesignStyle[string] | undefined;
+  onChange: (value: DesignStyle[string]) => void;
   onRemove: () => void;
 }) {
   return (
     <div className="design-field-row">
-      {optionKey === 'radiusPx' || optionKey === 'borderWidthPx' ? (
-        <label>
-          {label}
-          <input type="number" min={0} max={optionKey === 'radiusPx' ? 32 : 8} value={Number(value)} onChange={(event) => onChange(Number(event.target.value))} />
-        </label>
-      ) : (
-        <label>
-          {label}
+      <label>
+        {option.label}
+        {option.kind === 'number' ? (
+          <input type="number" min={option.min ?? 0} max={option.max} value={Number(value)} onChange={(event) => onChange(Number(event.target.value))} />
+        ) : null}
+        {option.kind === 'boolean' ? <input type="checkbox" checked={value === true} onChange={(event) => onChange(event.target.checked)} /> : null}
+        {option.kind === 'choice' ? (
+          <select value={String(value ?? '')} onChange={(event) => onChange(event.target.value)}>
+            {(option.values ?? []).map((choice) => (
+              <option key={choice} value={choice}>
+                {choice}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        {option.kind === 'text' || option.kind === 'colour' ? (
           <input value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} />
-        </label>
-      )}
-      <AdminIconButton label={`Remove ${label}`} icon="bin" onClick={onRemove} />
+        ) : null}
+      </label>
+      <AdminIconButton label={`Remove ${option.label}`} icon="bin" onClick={onRemove} />
     </div>
   );
 }
 
-function styleWithout(style: DesignStyle, key: DesignStyleKey): DesignStyle {
+function styleWithout(style: DesignStyle, key: string): DesignStyle {
   const next = {...style};
   delete next[key];
   return next;

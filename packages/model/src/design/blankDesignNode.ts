@@ -1,8 +1,8 @@
-import type {DesignAtom, DesignNode} from './designNode';
+import type {DesignNode} from './designNode';
 import type {DesignMoleculeDocument} from './designMolecule';
 import type {DesignOrganismDocument} from './designOrganism';
 
-export function blankDesignAtom(atom: DesignAtom, id: string): DesignNode {
+export function blankDesignAtom(atom: string, id: string): DesignNode {
   return {id, kind: 'atom', atom, style: {}, slots: []};
 }
 

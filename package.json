@@ -7,7 +7,7 @@
     "build:component": "lerna exec --scope=@so/component -- npm run build:prod",
     "build:model": "lerna exec --scope=@so/model -- npm run build:prod",
     "build:web": "lerna exec --scope=@so/web -- npm run build:prod",
-    "build:sites": "npm run build:model && lerna exec --scope=@so/sites -- npm run build:prod",
+    "build:sites": "npm run build:model && npm run build:component && lerna exec --scope=@so/sites -- npm run build:prod",
     "check": "npm run lint && npm run build",
     "clean": "npm run clean:dist && npm run clean:node",
     "clean:dist": "lerna run clean:dist",

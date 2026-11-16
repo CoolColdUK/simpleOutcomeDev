@@ -1,6 +1,7 @@
 'use client';
 
-import {SITE_BLOCK_ICONS, listMoleculeContentFields, type DesignMolecule, type DesignTemplateItem} from '@so/model';
+import {listMoleculeContentFields} from '@so/component';
+import type {DesignMolecule, DesignTemplateItem} from '@so/model';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
 function nextItemId(): string {
@@ -42,13 +43,13 @@ export default function AdminTemplateMoleculeItems({
                     onChange={(event) => onChange(setValue(items, index, field.nodeId, field.slot, event.target.checked))}
                   />
                 ) : null}
-                {field.kind === 'icon' || field.kind === 'role' ? (
+                {field.kind === 'choice' ? (
                   <select
                     value={textValue(item, field.nodeId, field.slot)}
                     onChange={(event) => onChange(setValue(items, index, field.nodeId, field.slot, event.target.value))}
                   >
                     <option value="">Choose</option>
-                    {(field.kind === 'icon' ? SITE_BLOCK_ICONS : ['heading', 'body']).map((choice) => (
+                    {(field.values ?? []).map((choice) => (
                       <option key={choice} value={choice}>
                         {choice}
                       </option>

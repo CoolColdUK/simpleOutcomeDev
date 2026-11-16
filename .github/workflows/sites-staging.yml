@@ -49,6 +49,9 @@ jobs:
       - name: Build model
         run: npm run build:model
 
+      - name: Build component
+        run: npm run build:component
+
       - name: Deploy sites to Vercel (staging / preview, prebuilt)
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}

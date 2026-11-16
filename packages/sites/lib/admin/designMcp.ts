@@ -1,4 +1,5 @@
-import {designLibraryGuide, parseDesignCategory, parseDesignId, type DesignCategory} from '@so/model';
+import {designLibraryGuide} from '@so/component';
+import {parseDesignCategory, parseDesignId, type DesignCategory} from '@so/model';
 import {
   createDesignColourScheme,
   createDesignMolecule,

@@ -6,6 +6,6 @@ export default defineConfig({
   clean: true,
   dts: true,
   deps: {
-    neverBundle: ['react', 'react/jsx-runtime'],
+    neverBundle: ['react', 'react/jsx-runtime', '@so/model'],
   },
 });

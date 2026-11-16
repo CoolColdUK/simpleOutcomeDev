@@ -13,6 +13,7 @@ import {
   type DesignMolecule,
   type DesignOrganism,
 } from '@so/model';
+import {assertDesignNodes} from '@so/component';
 import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
 
 export interface DesignLibrary {
@@ -129,6 +130,7 @@ export async function deleteDesignColourScheme(id: string): Promise<void> {
 export async function createDesignMolecule(input: {id: string; name: string; document?: unknown}): Promise<DesignMolecule> {
   const id = parseDesignId(input.id);
   const document = input.document === undefined ? blankMoleculeDocument() : parseDesignMoleculeDocument(input.document);
+  assertDesignNodes(document.children);
   const library = await listDesignLibrary();
   if (library.molecules.some((molecule) => molecule.id === id)) {
     throw new Error('Id already exists');
@@ -153,6 +155,7 @@ export async function updateDesignMolecule(id: string, input: {name?: string; do
     name: input.name === undefined ? current.name : input.name.trim(),
     document: input.document === undefined ? current.document : parseDesignMoleculeDocument(input.document),
   };
+  assertDesignNodes(next.document.children);
   const molecules = library.molecules.map((molecule) => (molecule.id === id ? next : molecule));
   await assertComposition(molecules, library.organisms);
   const supabase = createSitesServiceClient();
@@ -190,6 +193,7 @@ export async function createDesignOrganism(input: {
   const id = parseDesignId(input.id);
   const category = input.category ?? 'page';
   const document = input.document === undefined ? blankOrganismDocument() : parseDesignOrganismDocument(input.document);
+  assertDesignNodes(document.children);
   const library = await listDesignLibrary();
   if (library.organisms.some((organism) => organism.id === id)) {
     throw new Error('Id already exists');
@@ -222,6 +226,7 @@ export async function updateDesignOrganism(
     category: input.category ?? current.category,
     document: input.document === undefined ? current.document : parseDesignOrganismDocument(input.document),
   };
+  assertDesignNodes(next.document.children);
   const organisms = library.organisms.map((organism) => (organism.id === id ? next : organism));
   await assertComposition(library.molecules, organisms);
   const supabase = createSitesServiceClient();
