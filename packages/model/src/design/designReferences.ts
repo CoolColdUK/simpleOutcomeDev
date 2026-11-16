@@ -72,7 +72,36 @@ export function designPresetError(nodes: readonly DesignNode[], atoms: readonly 
   );
 }
 
-export function designAtomUsedBy(id: string, library: DesignLibraryRefs): string | undefined {
+export function designAtomParentError(preset: Pick<DesignAtomPreset, 'id' | 'base' | 'parentId'>, atoms: readonly Pick<DesignAtomPreset, 'id' | 'base' | 'parentId'>[]): string | undefined {
+  if (preset.parentId === undefined) {
+    return undefined;
+  }
+  const byId = new Map(atoms.map((atom) => [atom.id, atom]));
+  byId.set(preset.id, preset);
+  const seen = new Set<string>([preset.id]);
+  let parentId: string | undefined = preset.parentId;
+  while (parentId !== undefined) {
+    if (seen.has(parentId)) {
+      return 'An atom cannot extend itself';
+    }
+    const parent = byId.get(parentId);
+    if (parent === undefined) {
+      return `Unknown atom ${parentId}`;
+    }
+    if (parent.base !== preset.base) {
+      return `Atom ${parentId} is a ${parent.base}`;
+    }
+    seen.add(parentId);
+    parentId = parent.parentId;
+  }
+  return undefined;
+}
+
+export function designAtomUsedBy(id: string, library: DesignLibraryRefs & {atoms?: readonly Pick<DesignAtomPreset, 'id' | 'name' | 'parentId'>[]}): string | undefined {
+  const child = library.atoms?.find((atom) => atom.parentId === id);
+  if (child !== undefined) {
+    return child.name;
+  }
   const used = (nodes: readonly DesignNode[]): boolean => nodes.some((node) => node.kind === 'atom' && node.presetId === id);
   const molecule = library.molecules.find((item) => used(moleculeNodes(item.document)));
   if (molecule !== undefined) {

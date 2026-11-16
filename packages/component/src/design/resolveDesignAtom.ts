@@ -1,4 +1,4 @@
-import {designAtomContentKeys, type DesignAtomNode, type DesignAtomPreset} from '@so/model';
+import {designAtomContentKeys, mergedDesignAtom, type DesignAtomNode, type DesignAtomPreset} from '@so/model';
 
 export function resolveDesignAtom(node: DesignAtomNode, atoms: readonly DesignAtomPreset[]): DesignAtomNode {
   if (node.presetId === undefined) {
@@ -8,6 +8,7 @@ export function resolveDesignAtom(node: DesignAtomNode, atoms: readonly DesignAt
   if (preset === undefined) {
     return node;
   }
-  const slots = node.slots.length > 0 ? node.slots : designAtomContentKeys(preset);
-  return {...node, atom: preset.base, slots, style: {...preset.style, ...node.style}};
+  const merged = mergedDesignAtom(preset, atoms);
+  const slots = node.slots.length > 0 ? node.slots : designAtomContentKeys(preset, atoms);
+  return {...node, atom: merged.base, slots, style: {...merged.style, ...node.style}};
 }

@@ -2,13 +2,13 @@ import * as v from 'valibot';
 import {cleanStudioTheme} from '../site/siteThemes';
 import {BOLD_NAIL_ATOMS, BOLD_NAIL_MOLECULES, BOLD_NAIL_ORGANISMS, BOLD_NAIL_TEMPLATE_ITEMS} from './boldNailBarLibrary';
 import {blankDesignAtom, blankMoleculeDocument} from './blankDesignNode';
-import {blankDesignAtomPreset} from './designAtomPreset';
+import {blankDesignAtomPreset, mergedDesignAtom} from './designAtomPreset';
 import {chakraConfigFromColourScheme, colourSchemeToSiteTheme, siteThemeToColourTokens} from './designColourScheme';
 import {DESIGN_COLOUR_SCHEME_SEED} from './designLibrarySeed';
 import {designMoleculeDocumentSchema} from './designMolecule';
 import {designNodeSchema} from './designNode';
 import {parseDesignAtomPreset, parseDesignColourTokens, parseDesignId, parseDesignMoleculeDocument, parseDesignTemplateItems} from './parseDesignValue';
-import {designLibraryError, designPresetError} from './designReferences';
+import {designAtomParentError, designLibraryError, designPresetError} from './designReferences';
 
 describe('design library', () => {
   it('turns a site theme into Chakra tokens and back', () => {
@@ -103,7 +103,16 @@ describe('design library', () => {
       expect(designPresetError(molecule.document.children, [...BOLD_NAIL_ATOMS])).toBeUndefined();
     });
     expect(parseDesignTemplateItems([...BOLD_NAIL_TEMPLATE_ITEMS])).toHaveLength(5);
-    expect(parseDesignAtomPreset(blankDesignAtomPreset()).base).toBe('text');
+    expect(parseDesignAtomPreset(blankDesignAtomPreset()).fields).toEqual([]);
+    const button = {id: 'button', name: 'Button', base: 'button', fields: [], style: {}};
+    const accent = BOLD_NAIL_ATOMS.find((atom) => atom.id === 'accent-button');
+    expect(accent?.parentId).toBe('button');
+    if (accent !== undefined) {
+      const pink = {id: 'pink-button', name: 'Pink button', base: 'button', parentId: 'accent-button', fields: [], style: {}};
+      expect(mergedDesignAtom(pink, [button, accent, pink]).style.background).toBe('siteAccent');
+      expect(designAtomParentError(pink, [button, accent])).toBeUndefined();
+      expect(designAtomParentError({id: 'pink-text', base: 'text', parentId: 'accent-button'}, [accent])).toBe('Atom accent-button is a button');
+    }
     expect(designPresetError([{id: 'title', kind: 'atom', atom: 'text', presetId: 'missing', style: {}, slots: []}], [])).toBe('Unknown atom preset missing');
   });
 });

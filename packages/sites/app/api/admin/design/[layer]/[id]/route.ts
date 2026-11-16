@@ -39,7 +39,7 @@ export async function PUT(request: Request, context: {params: Promise<{layer: st
     return NextResponse.json({error: 'Unknown design layer'}, {status: 404});
   }
   const body = (await request.json().catch(() => undefined)) as
-    | {name?: unknown; tokens?: unknown; document?: unknown; category?: unknown; base?: unknown; fields?: unknown; style?: unknown}
+    | {name?: unknown; tokens?: unknown; document?: unknown; category?: unknown; base?: unknown; parentId?: unknown; fields?: unknown; style?: unknown}
     | undefined;
   const name = typeof body?.name === 'string' ? body.name.trim() : undefined;
   if (name !== undefined && !designNameOk(name)) {
@@ -48,7 +48,8 @@ export async function PUT(request: Request, context: {params: Promise<{layer: st
   try {
     if (layer === 'atoms') {
       const base = typeof body?.base === 'string' ? body.base : undefined;
-      const atom = await updateDesignAtom(id, {name, base, fields: body?.fields, style: body?.style});
+      const parentId = body !== undefined && 'parentId' in body ? (typeof body.parentId === 'string' ? body.parentId : null) : undefined;
+      const atom = await updateDesignAtom(id, {name, base, ...(parentId === undefined ? {} : {parentId}), fields: body?.fields, style: body?.style});
       return NextResponse.json({atom});
     }
     if (layer === 'colour-schemes') {

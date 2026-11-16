@@ -1,6 +1,7 @@
 'use client';
 
 import type {SiteDocument, SiteTheme} from '@so/model';
+import DesignColourControl, {HeroBackgroundControl} from '@/components/admin/DesignColourControl';
 import {useState, useSyncExternalStore} from 'react';
 
 const TAB_STORAGE_KEY = 'so-admin-site-config-tab';
@@ -90,19 +91,26 @@ function LayoutFields({
   return (
     <div className="admin-form admin-form-wide">
       <h3>Theme</h3>
-      <ColourField label="Background" value={siteDocument.theme.background} onChange={(background) => setTheme({background})} />
-      <ColourField label="Text" value={siteDocument.theme.foreground} onChange={(foreground) => setTheme({foreground})} />
-      <ColourField label="Accent" value={siteDocument.theme.accent} onChange={(accent) => setTheme({accent})} />
-      <ColourField
-        label="Button text"
-        value={siteDocument.theme.buttonForeground}
-        onChange={(buttonForeground) => setTheme({buttonForeground})}
-      />
-      <ColourField
-        label="Card background"
-        value={siteDocument.theme.cardBackground}
-        onChange={(cardBackground) => setTheme({cardBackground})}
-      />
+      <label>
+        Background
+        <DesignColourControl value={siteDocument.theme.background} allowTheme={false} onChange={(background) => setTheme({background})} />
+      </label>
+      <label>
+        Text
+        <DesignColourControl value={siteDocument.theme.foreground} allowTheme={false} onChange={(foreground) => setTheme({foreground})} />
+      </label>
+      <label>
+        Accent
+        <DesignColourControl value={siteDocument.theme.accent} allowTheme={false} onChange={(accent) => setTheme({accent})} />
+      </label>
+      <label>
+        Button text
+        <DesignColourControl value={siteDocument.theme.buttonForeground} allowTheme={false} onChange={(buttonForeground) => setTheme({buttonForeground})} />
+      </label>
+      <label>
+        Card background
+        <DesignColourControl value={siteDocument.theme.cardBackground} allowTheme={false} onChange={(cardBackground) => setTheme({cardBackground})} />
+      </label>
       <label>
         Heading font
         <input
@@ -125,11 +133,11 @@ function LayoutFields({
       </label>
       <label>
         Hero background
-        <input
+        <HeroBackgroundControl
           value={siteDocument.theme.heroBackground}
-          onChange={(event) => setTheme({heroBackground: event.target.value})}
+          onChange={(heroBackground) => setTheme({heroBackground: heroBackground as SiteTheme['heroBackground']})}
         />
-        <span className="admin-hint">none, a hex colour, or linear-gradient(135deg,#hex,#hex)</span>
+        <span className="admin-hint">none, or linear-gradient(135deg,#hex,#hex)</span>
       </label>
       <label>
         Corner radius (px)
@@ -296,26 +304,3 @@ function MetadataFields({
   );
 }
 
-function pickerHex(value: string): string {
-  if (/^#[0-9a-fA-F]{6}$/.test(value)) {
-    return value;
-  }
-  const short = /^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/.exec(value);
-  if (short !== null) {
-    return `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`;
-  }
-  return '#000000';
-}
-
-function ColourField({label, value, onChange}: {label: string; value: string; onChange: (next: string) => void}) {
-  const picker = pickerHex(value);
-  return (
-    <label>
-      {label}
-      <span className="admin-colour">
-        <input type="color" value={picker} aria-label={`${label} colour`} onChange={(event) => onChange(event.target.value)} />
-        <input value={value} maxLength={7} onChange={(event) => onChange(event.target.value)} />
-      </span>
-    </label>
-  );
-}

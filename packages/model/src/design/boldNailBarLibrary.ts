@@ -19,8 +19,8 @@ const setting = (key: string, label: string, kind: DesignAtomField['kind']): Des
   kind,
 });
 
-function preset(id: string, name: string, base: string, fields: DesignAtomField[], style: DesignStyle): DesignAtomPreset {
-  return {id, name, base, fields, style};
+function preset(id: string, name: string, base: string, fields: DesignAtomField[], style: DesignStyle, parentId: string): DesignAtomPreset {
+  return {id, name, base, parentId, fields, style};
 }
 
 export const BOLD_NAIL_ATOMS: readonly DesignAtomPreset[] = [
@@ -28,13 +28,13 @@ export const BOLD_NAIL_ATOMS: readonly DesignAtomPreset[] = [
     color: 'siteForeground',
     fontSizePx: 32,
     align: 'start',
-  }),
+  }, 'text'),
   preset('body-copy', 'Body copy', 'text', [content('text', 'Text'), setting('color', 'Text colour', 'colour'), setting('fontSizePx', 'Font size', 'number'), setting('align', 'Text align', 'choice')], {
     color: 'siteForeground',
     fontSizePx: 16,
     align: 'start',
-  }),
-  preset('nav-link', 'Nav link', 'link', [content('label', 'Label'), content('href', 'Link'), setting('color', 'Text colour', 'colour')], {color: 'siteForeground'}),
+  }, 'text'),
+  preset('nav-link', 'Nav link', 'link', [content('label', 'Label'), content('href', 'Link'), setting('color', 'Text colour', 'colour')], {color: 'siteForeground'}, 'link'),
   preset(
     'accent-button',
     'Accent button',
@@ -48,15 +48,16 @@ export const BOLD_NAIL_ATOMS: readonly DesignAtomPreset[] = [
       setting('borderWidthPx', 'Border width', 'number'),
     ],
     {background: 'siteAccent', color: 'siteButtonForeground', radiusPx: 16, borderWidthPx: 0},
+    'button',
   ),
   preset('service-name', 'Service name', 'text', [content('text', 'Text'), setting('color', 'Text colour', 'colour'), setting('fontSizePx', 'Font size', 'number')], {
     color: 'siteForeground',
     fontSizePx: 18,
-  }),
+  }, 'text'),
   preset('service-price', 'Service price', 'text', [content('text', 'Text'), setting('color', 'Text colour', 'colour'), setting('fontSizePx', 'Font size', 'number')], {
     color: 'siteAccent',
     fontSizePx: 20,
-  }),
+  }, 'text'),
 ];
 
 function atom(id: string, base: string, presetId: string, style: DesignStyle = {}): DesignAtomNode {

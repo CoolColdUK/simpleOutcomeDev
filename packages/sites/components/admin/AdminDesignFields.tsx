@@ -16,7 +16,7 @@ import {
   type DesignOrganism,
 } from '@so/model';
 import AdminDesignNodeEditor from '@/components/admin/AdminDesignNodeEditor';
-import DesignColourControl from '@/components/admin/DesignColourControl';
+import DesignColourControl, {HeroBackgroundControl} from '@/components/admin/DesignColourControl';
 import AdminDesignOptionMenu from '@/components/admin/AdminDesignOptionMenu';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
@@ -61,11 +61,11 @@ export function DesignColourFields({scheme, onChange}: {scheme: DesignColourSche
   };
   return (
     <>
-      <DesignTextInput label="Background" value={colors.siteBackground.value} onChange={(value) => setColour('siteBackground', value)} />
-      <DesignTextInput label="Foreground" value={colors.siteForeground.value} onChange={(value) => setColour('siteForeground', value)} />
-      <DesignTextInput label="Accent" value={colors.siteAccent.value} onChange={(value) => setColour('siteAccent', value)} />
-      <DesignTextInput label="Button text" value={colors.siteButtonForeground.value} onChange={(value) => setColour('siteButtonForeground', value)} />
-      <DesignTextInput label="Card" value={colors.siteCard.value} onChange={(value) => setColour('siteCard', value)} />
+      <ThemeColour label="Background" value={colors.siteBackground.value} onChange={(value) => setColour('siteBackground', value)} />
+      <ThemeColour label="Foreground" value={colors.siteForeground.value} onChange={(value) => setColour('siteForeground', value)} />
+      <ThemeColour label="Accent" value={colors.siteAccent.value} onChange={(value) => setColour('siteAccent', value)} />
+      <ThemeColour label="Button text" value={colors.siteButtonForeground.value} onChange={(value) => setColour('siteButtonForeground', value)} />
+      <ThemeColour label="Card" value={colors.siteCard.value} onChange={(value) => setColour('siteCard', value)} />
       <DesignTextInput
         label="Heading font"
         value={fonts.siteHeading.value}
@@ -105,13 +105,15 @@ export function DesignColourFields({scheme, onChange}: {scheme: DesignColourSche
           }}
         />
       </label>
-      <DesignTextInput
-        label="Hero background"
-        value={scheme.tokens.heroBackground}
-        onChange={(heroBackground) =>
-          onChange({...scheme, tokens: {...scheme.tokens, heroBackground: heroBackground as DesignColourTokens['heroBackground']}})
-        }
-      />
+      <label>
+        Hero background
+        <HeroBackgroundControl
+          value={scheme.tokens.heroBackground}
+          onChange={(heroBackground) =>
+            onChange({...scheme, tokens: {...scheme.tokens, heroBackground: heroBackground as DesignColourTokens['heroBackground']}})
+          }
+        />
+      </label>
       <label>
         <input
           type="checkbox"
@@ -406,6 +408,15 @@ export function DesignOrganismFields({
       </label>
       <AdminDesignNodeEditor nodes={organism.document.children} molecules={molecules} atoms={atoms} onChange={(children) => onChange({...organism, document: {children}})} />
     </>
+  );
+}
+
+function ThemeColour({label, value, onChange}: {label: string; value: string; onChange: (value: string) => void}) {
+  return (
+    <label>
+      {label}
+      <DesignColourControl value={value} allowTheme={false} onChange={onChange} />
+    </label>
   );
 }
 

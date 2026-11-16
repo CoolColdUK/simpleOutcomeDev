@@ -1,7 +1,7 @@
 'use client';
 
 import {DESIGN_ATOM_GUIDE, DESIGN_ATOMS, designAtomOptions, type DesignAtom, type DesignOptionDefinition} from '@so/component';
-import {blankDesignAtom, blankDesignMoleculeUse, type DesignAtomNode, type DesignAtomPreset, type DesignMolecule, type DesignNode, type DesignStyle} from '@so/model';
+import {blankDesignAtom, blankDesignMoleculeUse, mergedDesignAtom, type DesignAtomNode, type DesignAtomPreset, type DesignMolecule, type DesignNode, type DesignStyle} from '@so/model';
 import AdminDesignOptionMenu from '@/components/admin/AdminDesignOptionMenu';
 import DesignColourControl from '@/components/admin/DesignColourControl';
 import {designSettingInitial} from '@/components/admin/designSettingInitial';
@@ -141,8 +141,8 @@ function AtomFields({node, atoms, onChange}: {node: DesignAtomNode; atoms: reado
                   id: node.id,
                   kind: node.kind,
                   atom: node.atom,
-                  slots: preset === undefined ? node.slots : preset.fields.filter((field) => field.group === 'content').map((field) => field.key),
-                  style: {...(preset?.style ?? {}), ...node.style},
+                  slots: preset === undefined ? node.slots : mergedDesignAtom(preset, atoms).fields.filter((field) => field.group === 'content').map((field) => field.key),
+                  style: {...(preset === undefined ? {} : mergedDesignAtom(preset, atoms).style), ...node.style},
                 });
                 return;
               }

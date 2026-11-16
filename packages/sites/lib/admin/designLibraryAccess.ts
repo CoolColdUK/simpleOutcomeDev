@@ -1,6 +1,7 @@
 import {
   blankMoleculeDocument,
   blankOrganismDocument,
+  designAtomParentError,
   designAtomUsedBy,
   designLibraryError,
   designMoleculeUsedBy,
@@ -38,8 +39,15 @@ function libraryError(message: string | undefined): void {
   }
 }
 
-function atomFromRow(row: {id: string; name: string; base: string; fields: unknown; style: unknown}): DesignAtomPreset {
-  return parseDesignAtomPreset({id: row.id, name: row.name, base: row.base, fields: row.fields, style: row.style});
+function atomFromRow(row: {id: string; name: string; base: string; parent_id?: string | null; fields: unknown; style: unknown}): DesignAtomPreset {
+  return parseDesignAtomPreset({
+    id: row.id,
+    name: row.name,
+    base: row.base,
+    ...(typeof row.parent_id === 'string' ? {parentId: row.parent_id} : {}),
+    fields: row.fields,
+    style: row.style,
+  });
 }
 
 function colourFromRow(row: {id: string; name: string; tokens: unknown}): DesignColourScheme {
@@ -62,7 +70,7 @@ function organismFromRow(row: {id: string; name: string; category: string; docum
 export async function listDesignLibrary(): Promise<DesignLibrary> {
   const supabase = createSitesServiceClient();
   const [atoms, colours, molecules, organisms] = await Promise.all([
-    supabase.from('design_atom').select('id, name, base, fields, style').order('name'),
+    supabase.from('design_atom').select('id, name, base, parent_id, fields, style').order('name'),
     supabase.from('design_colour_scheme').select('id, name, tokens').order('name'),
     supabase.from('design_molecule').select('id, name, document').order('name'),
     supabase.from('design_organism').select('id, name, category, document').order('name'),
@@ -260,39 +268,53 @@ export async function updateDesignOrganism(
   return organismFromRow(data as {id: string; name: string; category: string; document: unknown});
 }
 
-export async function createDesignAtom(input: {id: string; name: string; base: string; fields: unknown; style?: unknown}): Promise<DesignAtomPreset> {
-  const preset = parseDesignAtomPreset({id: input.id, name: input.name, base: input.base, fields: input.fields, style: input.style ?? {}});
+export async function createDesignAtom(input: {id: string; name: string; base: string; parentId?: string; fields: unknown; style?: unknown}): Promise<DesignAtomPreset> {
+  const preset = parseDesignAtomPreset({
+    id: input.id,
+    name: input.name,
+    base: input.base,
+    ...(input.parentId === undefined ? {} : {parentId: input.parentId}),
+    fields: input.fields,
+    style: input.style ?? {},
+  });
   assertDesignAtomPreset(preset);
   const library = await listDesignLibrary();
   if (library.atoms.some((atom) => atom.id === preset.id)) {
     throw new Error('Id already exists');
   }
+  libraryError(designAtomParentError(preset, library.atoms));
   const supabase = createSitesServiceClient();
   const {data, error} = await supabase
     .from('design_atom')
-    .insert({id: preset.id, name: preset.name, base: preset.base, fields: preset.fields, style: preset.style})
-    .select('id, name, base, fields, style')
+    .insert({id: preset.id, name: preset.name, base: preset.base, parent_id: preset.parentId ?? null, fields: preset.fields, style: preset.style})
+    .select('id, name, base, parent_id, fields, style')
     .single();
   if (error || data === null) {
     throw new Error(error?.message || 'Could not create atom');
   }
-  return atomFromRow(data as {id: string; name: string; base: string; fields: unknown; style: unknown});
+  return atomFromRow(data as {id: string; name: string; base: string; parent_id: string | null; fields: unknown; style: unknown});
 }
 
-export async function updateDesignAtom(id: string, input: {name?: string; base?: string; fields?: unknown; style?: unknown}): Promise<DesignAtomPreset> {
+export async function updateDesignAtom(
+  id: string,
+  input: {name?: string; base?: string; parentId?: string | null; fields?: unknown; style?: unknown},
+): Promise<DesignAtomPreset> {
   const library = await listDesignLibrary();
   const current = library.atoms.find((atom) => atom.id === id);
   if (current === undefined) {
     throw new Error('Atom not found');
   }
+  const parentId = input.parentId === undefined ? current.parentId : input.parentId === null ? undefined : input.parentId;
   const preset = parseDesignAtomPreset({
     id,
     name: input.name ?? current.name,
     base: input.base ?? current.base,
+    ...(parentId === undefined ? {} : {parentId}),
     fields: input.fields ?? current.fields,
     style: input.style ?? current.style,
   });
   assertDesignAtomPreset(preset);
+  libraryError(designAtomParentError(preset, library.atoms));
   const usedWithOtherBase = [...library.molecules.flatMap((molecule) => molecule.document.children), ...library.organisms.flatMap((organism) => organism.document.children)].some(
     (node) => node.kind === 'atom' && node.presetId === id && node.atom !== preset.base,
   );
@@ -302,19 +324,19 @@ export async function updateDesignAtom(id: string, input: {name?: string; base?:
   const supabase = createSitesServiceClient();
   const {data, error} = await supabase
     .from('design_atom')
-    .update({name: preset.name, base: preset.base, fields: preset.fields, style: preset.style})
+    .update({name: preset.name, base: preset.base, parent_id: preset.parentId ?? null, fields: preset.fields, style: preset.style})
     .eq('id', id)
-    .select('id, name, base, fields, style')
+    .select('id, name, base, parent_id, fields, style')
     .maybeSingle();
   if (error || data === null) {
     throw new Error(error?.message || 'Atom not found');
   }
-  return atomFromRow(data as {id: string; name: string; base: string; fields: unknown; style: unknown});
+  return atomFromRow(data as {id: string; name: string; base: string; parent_id: string | null; fields: unknown; style: unknown});
 }
 
 export async function deleteDesignAtom(id: string): Promise<void> {
   const library = await listDesignLibrary();
-  const usedBy = designAtomUsedBy(id, {molecules: library.molecules, organisms: library.organisms});
+  const usedBy = designAtomUsedBy(id, {atoms: library.atoms, molecules: library.molecules, organisms: library.organisms});
   if (usedBy !== undefined) {
     throw new Error(`Used by ${usedBy}`);
   }

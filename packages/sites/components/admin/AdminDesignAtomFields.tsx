@@ -1,28 +1,55 @@
 'use client';
 
 import {DESIGN_ATOMS, designAtomOptions, type DesignOptionDefinition} from '@so/component';
-import type {DesignAtomField, DesignAtomPreset, DesignStyle} from '@so/model';
+import {mergedDesignAtom, type DesignAtomField, type DesignAtomPreset, type DesignStyle} from '@so/model';
 import AdminDesignOptionMenu from '@/components/admin/AdminDesignOptionMenu';
 import DesignColourControl from '@/components/admin/DesignColourControl';
 import {designSettingInitial} from '@/components/admin/designSettingInitial';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 
-export function DesignAtomPresetFields({preset, onChange}: {preset: DesignAtomPreset; onChange: (preset: DesignAtomPreset) => void}) {
+export function DesignAtomPresetFields({
+  preset,
+  atoms,
+  onChange,
+}: {
+  preset: DesignAtomPreset;
+  atoms: readonly DesignAtomPreset[];
+  onChange: (preset: DesignAtomPreset) => void;
+}) {
   const options = designAtomOptions(preset.base);
   const available = options.filter((option) => !preset.fields.some((field) => field.key === option.key));
+  const parent = atoms.find((atom) => atom.id === preset.parentId);
+  const inherited = parent === undefined ? [] : mergedDesignAtom(parent, atoms).fields;
+  const source = preset.parentId ?? `component:${preset.base}`;
   return (
     <>
       <label>
-        Base
-        <select value={preset.base} onChange={(event) => onChange(presetForBase(preset, event.target.value))}>
-          {DESIGN_ATOMS.map((atom) => (
-            <option key={atom} value={atom}>
-              {atom}
-            </option>
-          ))}
+        Based on
+        <select value={source} onChange={(event) => onChange(presetFromSource(preset, event.target.value, atoms))}>
+          <optgroup label="Components">
+            {DESIGN_ATOMS.map((atom) => (
+              <option key={atom} value={`component:${atom}`}>
+                {atom}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Atoms">
+            {atoms
+              .filter((atom) => atom.id !== preset.id)
+              .map((atom) => (
+                <option key={atom.id} value={atom.id}>
+                  {atom.name}
+                </option>
+              ))}
+          </optgroup>
         </select>
       </label>
-      <p className="admin-muted">Add a field this atom can draw. Setting fields store the preset. Content fields are filled in on a template. Edit the label to name the field.</p>
+      <p className="admin-muted">
+        The component name is the base atom. Start from that component, or from an atom already saved. Add fields when you need them. Setting fields store on this atom. Content fields are filled in on a template.
+      </p>
+      {inherited.length === 0 ? null : (
+        <p className="admin-muted">Inherited from {parent?.name}: {inherited.map((field) => field.label).join(', ')}</p>
+      )}
       <AdminDesignOptionMenu
         label="Add field"
         icon
@@ -47,7 +74,7 @@ export function DesignAtomPresetFields({preset, onChange}: {preset: DesignAtomPr
             ) : (
               <span className="admin-muted">Filled in on the template</span>
             )}
-            <AdminIconButton label={`Remove ${field.label}`} icon="bin" disabled={preset.fields.length < 2} onClick={() => onChange(removeField(preset, field.key))} />
+            <AdminIconButton label={`Remove ${field.label}`} icon="bin" onClick={() => onChange(removeField(preset, field.key))} />
           </div>
         );
       })}
@@ -87,14 +114,29 @@ function SettingControl({
   return <input value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} />;
 }
 
-function presetForBase(preset: DesignAtomPreset, base: string): DesignAtomPreset {
-  const option = designAtomOptions(base).find((item) => item.group === 'content') ?? designAtomOptions(base)[0];
-  if (option === undefined) {
-    return {...preset, base, fields: preset.fields, style: {}};
+function presetFromSource(preset: DesignAtomPreset, source: string, atoms: readonly DesignAtomPreset[]): DesignAtomPreset {
+  if (source.startsWith('component:')) {
+    return keepCompatible({...preset, base: source.slice('component:'.length), parentId: undefined});
   }
-  const field: DesignAtomField = {key: option.key, label: option.label, group: option.group, kind: option.kind};
-  const style = option.group === 'setting' ? {[option.key]: designSettingInitial(option)} : {};
-  return {...preset, base, fields: [field], style};
+  const parent = atoms.find((atom) => atom.id === source);
+  if (parent === undefined) {
+    return preset;
+  }
+  return keepCompatible({...preset, base: parent.base, parentId: parent.id});
+}
+
+function keepCompatible(preset: DesignAtomPreset): DesignAtomPreset {
+  const options = designAtomOptions(preset.base);
+  const fields = preset.fields.filter((field) => options.some((option) => option.key === field.key && option.group === field.group && option.kind === field.kind));
+  const style: DesignStyle = {};
+  fields.forEach((field) => {
+    const value = preset.style[field.key];
+    if (field.group === 'setting' && value !== undefined) {
+      style[field.key] = value;
+    }
+  });
+  const {parentId, ...rest} = preset;
+  return parentId === undefined ? {...rest, fields, style} : {...rest, parentId, fields, style};
 }
 
 function addField(preset: DesignAtomPreset, option: DesignOptionDefinition): DesignAtomPreset {

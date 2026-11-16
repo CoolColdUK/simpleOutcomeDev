@@ -52,13 +52,14 @@ export const DESIGN_MCP_TOOLS: readonly DesignMcpTool[] = [
   {
     name: 'sites_save_atom',
     description:
-      'Create or replace an atom preset. base is a built-in atom from guide.atoms. fields are the options this preset exposes: {key, label, group: content|setting, kind}. style stores setting values. Colours may be a theme name. Content fields are filled on a template item.',
+      'Create or replace an atom. base is a built-in component from guide.atoms, such as button or text. parentId extends another saved atom with the same base, so a button variant inherits that atom and can add fields later. fields may be empty. style stores this atom’s own setting values. Colours may be a theme name.',
     inputSchema: {
       type: 'object',
       properties: {
         id: idSchema,
         name: nameSchema,
         base: {type: 'string'},
+        parentId: idSchema,
         fields: {type: 'array'},
         style: {type: 'object'},
       },
@@ -139,11 +140,12 @@ export async function callDesignMcpTool(name: string, args: Record<string, unkno
     const id = designId(args.id);
     const atomName = designName(args.name);
     const base = typeof args.base === 'string' ? args.base : '';
+    const parentId = 'parentId' in args ? (typeof args.parentId === 'string' && args.parentId !== '' ? args.parentId : null) : undefined;
     const library = await listDesignLibrary();
     const exists = library.atoms.some((atom) => atom.id === id);
     const atom = exists
-      ? await updateDesignAtom(id, {name: atomName, base, fields: args.fields, style: args.style})
-      : await createDesignAtom({id, name: atomName, base, fields: args.fields, style: args.style});
+      ? await updateDesignAtom(id, {name: atomName, base, ...(parentId === undefined ? {} : {parentId}), fields: args.fields, style: args.style})
+      : await createDesignAtom({id, name: atomName, base, ...(typeof parentId === 'string' ? {parentId} : {}), fields: args.fields, style: args.style});
     return {atom};
   }
   if (name === 'sites_delete_atom') {

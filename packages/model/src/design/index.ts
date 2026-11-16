@@ -1,4 +1,4 @@
-export {blankDesignAtomPreset, designAtomContentKeys, designAtomFieldSchema, designAtomPresetSchema, type DesignAtomField, type DesignAtomPreset} from './designAtomPreset';
+export {blankDesignAtomPreset, designAtomContentKeys, designAtomFieldSchema, designAtomPresetSchema, mergedDesignAtom, type DesignAtomField, type DesignAtomPreset} from './designAtomPreset';
 export {DESIGN_THEME_COLOURS, designColourValueSchema, type DesignColourValue, type DesignThemeColour} from './designColourValue';
 export {
   BOLD_NAIL_ATOMS,
@@ -55,7 +55,7 @@ export {
   type DesignStyle,
 } from './designNode';
 export {designOrganismDocumentSchema, organismNodes, type DesignOrganism, type DesignOrganismDocument} from './designOrganism';
-export {designAtomUsedBy, designLibraryError, designMoleculeUsedBy, designPresetError, type DesignLibraryRefs} from './designReferences';
+export {designAtomParentError, designAtomUsedBy, designLibraryError, designMoleculeUsedBy, designPresetError, type DesignLibraryRefs} from './designReferences';
 export {designTemplateItemSchema, designTemplateItemsSchema, type DesignTemplateItem} from './designTemplateItem';
 export {
   parseDesignAtomPreset,

@@ -292,7 +292,7 @@ function DraftEditor({
           onId={(id) => onChange(withIdentity(draft, id, draftName(draft)))}
           onName={(name) => onChange(withIdentity(draft, draftId(draft), name))}
         />
-        {draft.layer === 'atoms' ? <DesignAtomPresetFields preset={draft.atom} onChange={(atom) => onChange({...draft, atom})} /> : null}
+        {draft.layer === 'atoms' ? <DesignAtomPresetFields preset={draft.atom} atoms={library.atoms} onChange={(atom) => onChange({...draft, atom})} /> : null}
         {draft.layer === 'colour-schemes' ? <DesignColourFields scheme={draft.scheme} onChange={(scheme) => onChange({...draft, scheme})} /> : null}
         {draft.layer === 'molecules' ? (
           <DesignMoleculeFields molecule={draft.molecule} molecules={library.molecules} atoms={library.atoms} onChange={(molecule) => onChange({...draft, molecule})} />
@@ -318,7 +318,7 @@ function DraftEditor({
           <DesignPreview
             nodes={[{id: 'sample', kind: 'atom', atom: draft.atom.base, presetId: previewAtom(draft.atom).id, style: {}, slots: []}]}
             molecules={[]}
-            atoms={[previewAtom(draft.atom)]}
+            atoms={[previewAtom(draft.atom), ...library.atoms.filter((atom) => atom.id !== previewAtom(draft.atom).id)]}
             tokens={previewTokens}
           />
         ) : null}
@@ -343,8 +343,13 @@ function DraftEditor({
 function rowsForLayer(layer: Layer, library: Library): readonly {id: string; name: string; detail: string; editable: boolean}[] {
   if (layer === 'atoms') {
     return [
-      ...DESIGN_ATOM_GUIDE.map((atom) => ({id: `built-in-${atom.atom}`, name: atom.label, detail: 'Built in', editable: false})),
-      ...library.atoms.map((atom) => ({id: atom.id, name: atom.name, detail: atom.base, editable: true})),
+      ...DESIGN_ATOM_GUIDE.map((atom) => ({id: `built-in-${atom.atom}`, name: atom.label, detail: 'Component', editable: false})),
+      ...library.atoms.map((atom) => ({
+        id: atom.id,
+        name: atom.name,
+        detail: atom.parentId === undefined ? atom.base : `extends ${library.atoms.find((parent) => parent.id === atom.parentId)?.name ?? atom.parentId}`,
+        editable: true,
+      })),
     ];
   }
   if (layer === 'colour-schemes') {
@@ -481,7 +486,7 @@ async function save(
 
 function saveBody(draft: Draft, id: string, name: string): Record<string, unknown> {
   if (draft.layer === 'atoms') {
-    return {id, name, base: draft.atom.base, fields: draft.atom.fields, style: draft.atom.style};
+    return {id, name, base: draft.atom.base, parentId: draft.atom.parentId ?? null, fields: draft.atom.fields, style: draft.atom.style};
   }
   if (draft.layer === 'colour-schemes') {
     return {id, name, tokens: draft.scheme.tokens};

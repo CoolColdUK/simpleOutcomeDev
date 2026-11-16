@@ -1,4 +1,4 @@
-import {designAtomContentKeys, type DesignAtomPreset, type DesignMolecule} from '@so/model';
+import {designAtomContentKeys, mergedDesignAtom, type DesignAtomPreset, type DesignMolecule} from '@so/model';
 import {designAtomOptions} from './designAtomCatalog';
 import type {DesignOptionKind} from './designOption';
 
@@ -24,10 +24,11 @@ export function listMoleculeContentFields(
   return molecule.document.children.flatMap((node) => {
     if (node.kind === 'atom') {
       const preset = atoms.find((atom) => atom.id === node.presetId);
-      const slots = node.slots.length > 0 ? node.slots : preset === undefined ? [] : designAtomContentKeys(preset);
+      const slots = node.slots.length > 0 ? node.slots : preset === undefined ? [] : designAtomContentKeys(preset, atoms);
+      const fields = preset === undefined ? [] : mergedDesignAtom(preset, atoms).fields;
       return slots.map((slot) => {
         const option = designAtomOptions(node.atom).find((item) => item.key === slot);
-        const field = preset?.fields.find((item) => item.key === slot);
+        const field = fields.find((item) => item.key === slot);
         return {
           nodeId: node.id,
           slot,
