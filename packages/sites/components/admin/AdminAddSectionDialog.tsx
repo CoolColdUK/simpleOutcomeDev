@@ -1,9 +1,9 @@
 'use client';
 
 import {SITE_COMPONENT_CATEGORIES, SITE_COMPONENT_CATALOG, type SiteDocument, type SiteSectionType} from '@so/model';
-import type {CSSProperties} from 'react';
 import {useEffect, useMemo, useState} from 'react';
 import SiteSections from '@/components/SiteSections';
+import SiteThemeProvider from '@/components/SiteThemeProvider';
 import {createDefaultSection} from '@/lib/admin/defaultSection';
 
 export default function AdminAddSectionDialog({
@@ -38,18 +38,6 @@ export default function AdminAddSectionDialog({
     return null;
   }
 
-  const theme = siteDocument.theme;
-  const style = {
-    '--site-bg': theme.background,
-    '--site-fg': theme.foreground,
-    '--site-accent': theme.accent,
-    '--site-btn-fg': theme.buttonForeground,
-    '--site-card': theme.cardBackground,
-    '--site-heading': theme.headingFont,
-    '--site-body': theme.bodyFont,
-    '--site-radius': `${theme.radiusPx}px`,
-    '--site-hero': theme.heroBackground === 'none' ? 'transparent' : theme.heroBackground,
-  } as CSSProperties;
   const previewDocument: SiteDocument = {
     ...siteDocument,
     sections: [previewSection],
@@ -93,9 +81,9 @@ export default function AdminAddSectionDialog({
           </div>
           <div className="admin-section-preview">
             <p className="admin-muted">{entry.label} preview</p>
-            <div className="site" data-uppercase={theme.uppercaseHeadings ? 'true' : 'false'} style={style}>
+            <SiteThemeProvider theme={siteDocument.theme}>
               <SiteSections document={previewDocument} status="draft" />
-            </div>
+            </SiteThemeProvider>
           </div>
         </div>
         <div className="admin-dialog-foot">

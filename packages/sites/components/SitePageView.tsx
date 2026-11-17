@@ -1,9 +1,10 @@
-import type {CSSProperties} from 'react';
+import {Box} from '@chakra-ui/react';
 import {siteMessageFormOffered} from '@so/model';
 import type {LoadedSite} from '@/lib/site/loadSiteForHost';
 import {documentWithoutContactForm} from '@/lib/site/mapSiteSection';
 import SiteSalesBanner from '@/components/SiteSalesBanner';
 import SiteSections from '@/components/SiteSections';
+import SiteThemeProvider from '@/components/SiteThemeProvider';
 
 function presentedDocument(document: LoadedSite['document'], messagesEnabled: boolean): LoadedSite['document'] {
   if (siteMessageFormOffered(messagesEnabled)) {
@@ -14,22 +15,12 @@ function presentedDocument(document: LoadedSite['document'], messagesEnabled: bo
 
 export default function SitePageView({site}: {site: LoadedSite}) {
   const document = presentedDocument(site.document, site.messagesEnabled);
-  const {theme} = document;
-  const style = {
-    '--site-bg': theme.background,
-    '--site-fg': theme.foreground,
-    '--site-accent': theme.accent,
-    '--site-btn-fg': theme.buttonForeground,
-    '--site-card': theme.cardBackground,
-    '--site-heading': theme.headingFont,
-    '--site-body': theme.bodyFont,
-    '--site-radius': `${theme.radiusPx}px`,
-    '--site-hero': theme.heroBackground === 'none' ? 'transparent' : theme.heroBackground,
-  } as CSSProperties;
   return (
-    <div className="site" data-uppercase={theme.uppercaseHeadings ? 'true' : 'false'} style={style}>
-      {site.status === 'demo' ? <SiteSalesBanner businessName={document.businessName} messagesEnabled={site.messagesEnabled} /> : null}
-      <SiteSections document={document} status={site.status} />
-    </div>
+    <SiteThemeProvider theme={document.theme}>
+      <Box bg="siteBackground" color="siteForeground" fontFamily="siteBody" fontSize="md" lineHeight="1.5" minH="100vh">
+        {site.status === 'demo' ? <SiteSalesBanner businessName={document.businessName} messagesEnabled={site.messagesEnabled} /> : null}
+        <SiteSections document={document} status={site.status} />
+      </Box>
+    </SiteThemeProvider>
   );
 }

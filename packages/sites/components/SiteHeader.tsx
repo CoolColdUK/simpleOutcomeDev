@@ -1,8 +1,10 @@
 'use client';
 
+import {Button, Flex, Link} from '@chakra-ui/react';
 import type {SiteBlock, SiteDocument} from '@so/model';
 import {useState} from 'react';
 import SiteBlockView from '@/components/SiteBlockView';
+import SiteCta from '@/components/SiteCta';
 
 export interface SiteHeaderProps {
   readonly businessName: string;
@@ -15,32 +17,30 @@ export interface SiteHeaderProps {
 export default function SiteHeader({businessName, booking, links, background, items}: SiteHeaderProps) {
   const [open, setOpen] = useState(false);
   return (
-    <header className="nav" style={background === undefined ? undefined : {background}}>
-      <a className="logo" href="#hero">
+    <Flex as="header" wrap="wrap" align="center" justify="space-between" gap="3" px={{base: 5, lg: 16}} py={{base: 4, lg: 6}} bg={background} w="full">
+      <Link href="#hero" color="inherit" fontFamily="siteHeading" fontSize="xl" fontWeight="700" textDecoration="none">
         {businessName}
-      </a>
-      <div className="nav-actions">
+      </Link>
+      <Flex gap="2" align="center">
         {items.map((block) => (
           <SiteBlockView key={block.id} block={block} />
         ))}
         {links.length === 0 ? null : (
-          <button type="button" className="menu-button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+          <Button type="button" variant="plain" display={{base: 'inline-flex', lg: 'none'}} borderWidth="2px" borderColor="siteAccent" borderRadius="full" minH="44px" px="4" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
             {open ? 'Close' : 'Menu'}
-          </button>
+          </Button>
         )}
-        <a className="btn" href={booking.href} target="_blank" rel="noopener noreferrer">
-          {booking.label}
-        </a>
-      </div>
+        <SiteCta label={booking.label} target="booking" booking={booking} />
+      </Flex>
       {links.length === 0 ? null : (
-        <nav className="nav-links" data-open={open ? 'true' : 'false'}>
+        <Flex as="nav" display={{base: open ? 'flex' : 'none', lg: 'flex'}} direction={{base: 'column', lg: 'row'}} basis={{base: '100%', lg: 'auto'}} justify={{lg: 'flex-end'}} gap={{base: '1', lg: '6'}} pe={{lg: 4}}>
           {links.map((link) => (
-            <a key={link.sectionId} href={`#${link.sectionId}`} onClick={() => setOpen(false)}>
+            <Link key={link.sectionId} href={`#${link.sectionId}`} color="inherit" textDecoration="none" minH="44px" display="inline-flex" alignItems="center" onClick={() => setOpen(false)}>
               {link.label}
-            </a>
+            </Link>
           ))}
-        </nav>
+        </Flex>
       )}
-    </header>
+    </Flex>
   );
 }

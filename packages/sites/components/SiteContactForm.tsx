@@ -1,5 +1,6 @@
 'use client';
 
+import {Box, Button, chakra, Field, Input, Text, Textarea} from '@chakra-ui/react';
 import {useEffect, useId, useRef, useState} from 'react';
 import {removeTurnstileWidget, requestTurnstileToken} from '@/lib/siteMessage/requestTurnstileToken';
 
@@ -155,54 +156,51 @@ export default function SiteContactForm({status, submitLabel}: SiteContactFormPr
   };
 
   if (success !== '') {
-    return <p>{success}</p>;
+    return <Text>{success}</Text>;
   }
 
   return (
-    <form
-      className="contact-form"
+    <chakra.form
+      display="flex"
+      flexDirection="column"
+      gap="3.5"
+      maxW="36rem"
       onSubmit={(event) => {
         event.preventDefault();
         void submit(event.currentTarget);
       }}
     >
-      <p>{status === 'demo' ? DEMO_NOTICE : LIVE_NOTICE}</p>
-      <label htmlFor={nameId}>
-        Name
-        <input id={nameId} name="name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} />
-        {errors.name ? <span className="contact-error">{errors.name}</span> : null}
-      </label>
-      <label htmlFor={emailId}>
-        Email
-        <input id={emailId} name="email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} />
-        {errors.email ? <span className="contact-error">{errors.email}</span> : null}
-      </label>
-      <label htmlFor={messageId}>
-        Message
-        <textarea id={messageId} name="message" rows={5} value={message} onChange={(event) => setMessage(event.target.value)} />
-        {errors.message ? <span className="contact-error">{errors.message}</span> : null}
-      </label>
-      <div className="contact-honeypot">
-        <label>
-          Company website
-          <input
-            name="company_website"
-            tabIndex={-1}
-            autoComplete="off"
-            value={companyWebsite}
-            onChange={(event) => setCompanyWebsite(event.target.value)}
-          />
-        </label>
-      </div>
-      {siteKey.length > 0 ? <div ref={widgetRef} className="contact-turnstile" /> : null}
+      <Text>{status === 'demo' ? DEMO_NOTICE : LIVE_NOTICE}</Text>
+      <Field.Root invalid={errors.name !== undefined}>
+        <Field.Label htmlFor={nameId}>Name</Field.Label>
+        <Input id={nameId} name="name" autoComplete="name" value={name} bg="siteCard" onChange={(event) => setName(event.target.value)} />
+        {errors.name ? <Field.ErrorText>{errors.name}</Field.ErrorText> : null}
+      </Field.Root>
+      <Field.Root invalid={errors.email !== undefined}>
+        <Field.Label htmlFor={emailId}>Email</Field.Label>
+        <Input id={emailId} name="email" type="email" autoComplete="email" value={email} bg="siteCard" onChange={(event) => setEmail(event.target.value)} />
+        {errors.email ? <Field.ErrorText>{errors.email}</Field.ErrorText> : null}
+      </Field.Root>
+      <Field.Root invalid={errors.message !== undefined}>
+        <Field.Label htmlFor={messageId}>Message</Field.Label>
+        <Textarea id={messageId} name="message" rows={5} value={message} bg="siteCard" onChange={(event) => setMessage(event.target.value)} />
+        {errors.message ? <Field.ErrorText>{errors.message}</Field.ErrorText> : null}
+      </Field.Root>
+      <Box position="absolute" w="1px" h="1px" overflow="hidden" clipPath="rect(0 0 0 0)">
+        <Field.Root>
+          <Field.Label>Company website</Field.Label>
+          <Input name="company_website" tabIndex={-1} autoComplete="off" value={companyWebsite} onChange={(event) => setCompanyWebsite(event.target.value)} />
+        </Field.Root>
+      </Box>
+      {siteKey.length > 0 ? <Box ref={widgetRef} w="full" /> : null}
       {formError !== '' ? (
-        <p className="contact-error" role="alert">
+        <Text color="red.700" role="alert">
           {formError}
-        </p>
+        </Text>
       ) : null}
-      <button className="btn" type="submit" disabled={sending} aria-busy={sending}>
+      <Button type="submit" alignSelf="flex-start" minH="44px" px="5" fontWeight="700" borderRadius="full" bg="siteAccent" color="siteButtonForeground" disabled={sending} aria-busy={sending}>
         {sending ? 'Sending…' : submitLabel}
-      </button>
-    </form>
+      </Button>
+    </chakra.form>
   );
 }

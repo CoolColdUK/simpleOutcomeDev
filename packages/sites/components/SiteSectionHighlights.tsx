@@ -1,16 +1,19 @@
+import {Box, Grid, Text} from '@chakra-ui/react';
 import type {SiteSection} from '@so/model';
+import SiteHeading from '@/components/SiteHeading';
+import SiteSectionFrame from '@/components/SiteSectionFrame';
 
 export default function SiteSectionHighlights({section}: {section: Extract<SiteSection, {type: 'highlights'}>}) {
   return (
-    <section id={section.id} className="section">
-      <div className="card-grid">
+    <SiteSectionFrame id={section.id}>
+      <Grid gap="4" templateColumns={{base: '1fr', lg: 'repeat(3, minmax(0, 1fr))'}}>
         {section.props.items.map((item) => (
-          <article key={item.title} className="card">
-            <h2>{item.title}</h2>
-            <p>{item.body}</p>
-          </article>
+          <Box as="article" key={item.title} bg="siteCard" borderRadius="site" p="4">
+            <SiteHeading as="h2">{item.title}</SiteHeading>
+            <Text>{item.body}</Text>
+          </Box>
         ))}
-      </div>
-    </section>
+      </Grid>
+    </SiteSectionFrame>
   );
 }

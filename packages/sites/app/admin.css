@@ -527,12 +527,60 @@
 
 .design-field-row {
   flex-wrap: wrap;
+  align-items: end;
+}
+
+.design-field-row > label,
+.design-node > label,
+.design-slot-row > label,
+.design-stack-label {
+  display: grid;
+  gap: 0.35rem;
+  align-content: end;
+  min-width: 0;
 }
 
 .design-field-row > label,
 .design-slot-row .admin-muted {
-  flex: 1;
+  flex: 1 1 8rem;
   min-width: 8rem;
+}
+
+.design-field-row > label input:not([type='checkbox']),
+.design-field-row > label select,
+.design-field-row > input:not([type='checkbox']),
+.design-field-row > select,
+.design-node > label input:not([type='checkbox']),
+.design-node > label select,
+.design-stack-label input:not([type='checkbox']),
+.design-stack-label select,
+.design-slot-row input:not([type='checkbox']),
+.design-slot-row select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.design-node > label + label,
+.design-stack-label {
+  margin-top: 0.55rem;
+}
+
+.design-field-row > .admin-muted,
+.design-field-row > button,
+.design-field-row > .admin-icon-button {
+  flex: 0 0 auto;
+  align-self: end;
+}
+
+.design-field-row > .admin-muted {
+  padding-bottom: 0.45rem;
 }
 
 .design-choice-tags {

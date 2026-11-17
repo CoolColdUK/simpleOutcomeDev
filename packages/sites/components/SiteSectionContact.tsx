@@ -1,17 +1,20 @@
+import {Flex, Link, Text} from '@chakra-ui/react';
 import type {SiteSection} from '@so/model';
+import SiteHeading from '@/components/SiteHeading';
+import SiteSectionFrame from '@/components/SiteSectionFrame';
 
 export default function SiteSectionContact({section}: {section: Extract<SiteSection, {type: 'contact'}>}) {
   return (
-    <section id={section.id} className="section">
-      <h2>{section.props.title}</h2>
-      {section.props.intro ? <p>{section.props.intro}</p> : null}
-      <div className="contact-list">
+    <SiteSectionFrame id={section.id}>
+      <SiteHeading as="h2">{section.props.title}</SiteHeading>
+      {section.props.intro ? <Text mb="3">{section.props.intro}</Text> : null}
+      <Flex direction="column" gap="2">
         {section.props.channels.map((channel) => (
-          <a key={channel.href} href={channel.href} {...(channel.href.startsWith('http') ? {target: '_blank', rel: 'noopener noreferrer'} : {})}>
+          <Link key={channel.href} href={channel.href} color="siteAccent" {...(channel.href.startsWith('http') ? {target: '_blank', rel: 'noopener noreferrer'} : {})}>
             {channel.label}
-          </a>
+          </Link>
         ))}
-      </div>
-    </section>
+      </Flex>
+    </SiteSectionFrame>
   );
 }

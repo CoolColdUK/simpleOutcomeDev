@@ -1,17 +1,20 @@
+import {Box, Stack, Text} from '@chakra-ui/react';
 import type {SiteSection} from '@so/model';
+import SiteHeading from '@/components/SiteHeading';
+import SiteSectionFrame from '@/components/SiteSectionFrame';
 
 export default function SiteSectionFaq({section}: {section: Extract<SiteSection, {type: 'faq'}>}) {
   return (
-    <section id={section.id} className="section">
-      <h2>{section.props.title}</h2>
-      <div className="faq-list">
+    <SiteSectionFrame id={section.id}>
+      <SiteHeading as="h2">{section.props.title}</SiteHeading>
+      <Stack gap="4">
         {section.props.items.map((item) => (
-          <article key={item.question}>
-            <h3>{item.question}</h3>
-            <p>{item.answer}</p>
-          </article>
+          <Box as="article" key={item.question} bg="siteCard" borderRadius="site" p="4">
+            <SiteHeading as="h3">{item.question}</SiteHeading>
+            <Text>{item.answer}</Text>
+          </Box>
         ))}
-      </div>
-    </section>
+      </Stack>
+    </SiteSectionFrame>
   );
 }

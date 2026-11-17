@@ -1,5 +1,6 @@
 'use client';
 
+import {Box, Button, Flex, Heading, Text} from '@chakra-ui/react';
 import {useId, useRef} from 'react';
 import SiteContactForm from '@/components/SiteContactForm';
 
@@ -15,20 +16,33 @@ export default function SiteSalesBanner({businessName, messagesEnabled}: SiteSal
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   return (
-    <div className="sales-banner">
-      <p>Sample made for {businessName} by Simple Outcome</p>
-      <button type="button" onClick={() => dialogRef.current?.showModal()}>
+    <Flex direction={{base: 'column', lg: 'row'}} align={{lg: 'center'}} justify={{lg: 'space-between'}} gap="3" px={{base: 5, lg: 16}} py="3" bg="black" color="white">
+      <Text m="0">Sample made for {businessName} by Simple Outcome</Text>
+      <Button type="button" borderRadius="full" bg="white" color="black" fontWeight="700" onClick={() => dialogRef.current?.showModal()}>
         Make this yours
-      </button>
-      <dialog ref={dialogRef} className="sales-panel" aria-labelledby={titleId}>
-        <h2 id={titleId}>Make this yours</h2>
-        <p>Setup {SETUP_PRICE}</p>
-        <p>Care plan {CARE_PRICE}</p>
+      </Button>
+      <Box
+        as="dialog"
+        ref={dialogRef}
+        w="min(calc(100vw - 2rem), 26rem)"
+        maxH="calc(100vh - 2rem)"
+        overflow="auto"
+        borderRadius="2xl"
+        p="5"
+        color="black"
+        bg="white"
+        aria-labelledby={titleId}
+      >
+        <Heading id={titleId} as="h2" size="lg" mb="2">
+          Make this yours
+        </Heading>
+        <Text>Setup {SETUP_PRICE}</Text>
+        <Text>Care plan {CARE_PRICE}</Text>
         {messagesEnabled ? <SiteContactForm status="demo" submitLabel="Send message" /> : null}
-        <button type="button" onClick={() => dialogRef.current?.close()}>
+        <Button type="button" mt="3" borderRadius="full" bg="black" color="white" onClick={() => dialogRef.current?.close()}>
           Close
-        </button>
-      </dialog>
-    </div>
+        </Button>
+      </Box>
+    </Flex>
   );
 }

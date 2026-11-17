@@ -69,7 +69,7 @@ export default function AdminTemplateMoleculeItems({
           </div>
         );
       })}
-      <label>
+      <label className="design-stack-label">
         Add molecule
         <select
           value=""

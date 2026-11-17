@@ -1,3 +1,4 @@
+import {Box} from '@chakra-ui/react';
 import type {SiteDocument, SiteSection} from '@so/model';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
@@ -88,5 +89,5 @@ function renderSection(section: SiteSection, document: SiteDocument, status: 'de
 }
 
 export default function SiteSections({document, status}: {document: SiteDocument; status: 'demo' | 'draft' | 'live' | 'archived'}) {
-  return document.sections.map((section) => <div key={section.id}>{renderSection(section, document, status)}</div>);
+  return document.sections.map((section) => <Box key={section.id}>{renderSection(section, document, status)}</Box>);
 }

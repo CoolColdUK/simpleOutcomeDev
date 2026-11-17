@@ -1,22 +1,27 @@
+import {Box, Grid, Text} from '@chakra-ui/react';
 import type {SiteSection} from '@so/model';
+import SiteHeading from '@/components/SiteHeading';
 import SiteMediaBlock from '@/components/SiteMediaBlock';
+import SiteSectionFrame from '@/components/SiteSectionFrame';
 
 export default function SiteSectionTeam({section}: {section: Extract<SiteSection, {type: 'team'}>}) {
   return (
-    <section id={section.id} className="section">
-      <h2>{section.props.title}</h2>
-      <div className="team-grid">
+    <SiteSectionFrame id={section.id}>
+      <SiteHeading as="h2">{section.props.title}</SiteHeading>
+      <Grid gap="4" templateColumns={{base: '1fr', lg: 'repeat(4, minmax(0, 1fr))'}}>
         {section.props.members.map((member) => (
-          <article key={member.role}>
+          <Box as="article" key={member.role}>
             <SiteMediaBlock media={member.media} />
-            <p>
+            <Text mt="2">
               <strong>{member.name}</strong>
               <br />
-              <small>{member.role}</small>
-            </p>
-          </article>
+              <Box as="small" opacity="0.7" fontSize="sm">
+                {member.role}
+              </Box>
+            </Text>
+          </Box>
         ))}
-      </div>
-    </section>
+      </Grid>
+    </SiteSectionFrame>
   );
 }

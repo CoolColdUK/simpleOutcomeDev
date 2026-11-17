@@ -2,6 +2,7 @@ import type {ReactNode} from 'react';
 import type {Metadata, Viewport} from 'next';
 import {isSiteAdminHost, siteSeoLocale} from '@so/model';
 import {readSitesPublicEnv} from '@/lib/env';
+import SitesProvider from '@/components/SitesProvider';
 import {loadSiteForHostCached} from '@/lib/site/loadSiteForHost';
 import readRequestHost from '@/lib/site/readRequestHost';
 import './globals.css';
@@ -35,7 +36,9 @@ export default async function RootLayout({children}: {children: ReactNode}) {
   if (isSiteAdminHost(host, env.rootDomain)) {
     return (
       <html lang="en-GB">
-        <body>{children}</body>
+        <body>
+          <SitesProvider>{children}</SitesProvider>
+        </body>
       </html>
     );
   }
@@ -43,7 +46,9 @@ export default async function RootLayout({children}: {children: ReactNode}) {
   const lang = site === undefined ? 'en-GB' : siteSeoLocale(site.document);
   return (
     <html lang={lang}>
-      <body>{children}</body>
+      <body>
+        <SitesProvider>{children}</SitesProvider>
+      </body>
     </html>
   );
 }

@@ -1,5 +1,8 @@
+import {Text} from '@chakra-ui/react';
 import type {SiteSection} from '@so/model';
 import SiteContactForm from '@/components/SiteContactForm';
+import SiteHeading from '@/components/SiteHeading';
+import SiteSectionFrame from '@/components/SiteSectionFrame';
 
 export default function SiteSectionContactForm({
   section,
@@ -10,10 +13,10 @@ export default function SiteSectionContactForm({
 }) {
   const formStatus = status === 'demo' ? 'demo' : 'live';
   return (
-    <section id={section.id} className="section">
-      <h2>{section.props.title}</h2>
-      {section.props.intro ? <p>{section.props.intro}</p> : null}
+    <SiteSectionFrame id={section.id}>
+      <SiteHeading as="h2">{section.props.title}</SiteHeading>
+      {section.props.intro ? <Text mb="3">{section.props.intro}</Text> : null}
       <SiteContactForm status={formStatus} submitLabel={section.props.submitLabel} />
-    </section>
+    </SiteSectionFrame>
   );
 }
