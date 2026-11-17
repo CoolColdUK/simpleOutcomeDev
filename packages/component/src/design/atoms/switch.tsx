@@ -1,4 +1,4 @@
-import {withBoxOptions} from '../designBoxOptions';
+import {switchRecord} from '../designAtomRecords';
 import type {DesignAtomPart} from '../designOption';
 import {designColourCss} from '../designLayoutStyle';
 import {designAtomCss, designSlotText, type DesignAtomProps} from '../designAtomProps';
@@ -14,13 +14,4 @@ export function SwitchAtom({node, values}: DesignAtomProps) {
   );
 }
 
-export const switchAtom = {
-  atom: 'switch' as const,
-  label: 'Switch',
-  options: withBoxOptions([
-    {key: 'label', label: 'Label', group: 'content', kind: 'text'},
-    {key: 'checked', label: 'On', group: 'content', kind: 'boolean'},
-    {key: 'color', label: 'Colour', group: 'setting', kind: 'colour', initial: 'siteAccent'},
-  ]),
-  Component: SwitchAtom,
-} satisfies DesignAtomPart;
+export const switchAtom = {...switchRecord, Component: SwitchAtom} satisfies DesignAtomPart;

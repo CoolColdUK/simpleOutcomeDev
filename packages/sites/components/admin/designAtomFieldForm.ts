@@ -1,4 +1,4 @@
-import type {DesignOptionDefinition} from '@so/component';
+import type {DesignOptionDefinition} from '@so/component/server';
 import {DesignFieldKind, type DesignAtomField, type DesignAtomPreset, type DesignStyle} from '@so/model';
 import {designSettingInitial} from '@/components/admin/designSettingInitial';
 

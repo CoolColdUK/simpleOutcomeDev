@@ -1,6 +1,6 @@
 'use client';
 
-import {designAtomOptions, type DesignOptionDefinition} from '@so/component';
+import {designAtomOptions, type DesignOptionDefinition} from '@so/component/server';
 import {DesignFieldKind, type DesignAtomField, type DesignAtomPreset, type DesignStyle} from '@so/model';
 import DesignChoiceTags from '@/components/admin/DesignChoiceTags';
 import DesignColourControl from '@/components/admin/DesignColourControl';

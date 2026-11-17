@@ -1,4 +1,4 @@
-import {withBoxOptions} from '../designBoxOptions';
+import {iconButtonRecord} from '../designAtomRecords';
 import type {DesignAtomPart} from '../designOption';
 import {designAtomCss, designSlotText, type DesignAtomProps} from '../designAtomProps';
 
@@ -11,18 +11,4 @@ export function IconButtonAtom({node, values}: DesignAtomProps) {
   );
 }
 
-export const iconButton = {
-  atom: 'iconButton' as const,
-  label: 'Icon button',
-  options: withBoxOptions([
-    {key: 'label', label: 'Label', group: 'content', kind: 'text'},
-    {key: 'href', label: 'Link', group: 'content', kind: 'text'},
-    {key: 'icon', label: 'Icon', group: 'content', kind: 'choice', values: ['menu', 'close', 'phone', 'arrow']},
-    {key: 'background', label: 'Background', group: 'setting', kind: 'colour', initial: 'siteAccent'},
-    {key: 'color', label: 'Text colour', group: 'setting', kind: 'colour', initial: 'siteButtonForeground'},
-    {key: 'borderRadius', label: 'Corner radius', group: 'setting', kind: 'number', min: 0, max: 32, initial: 16},
-    {key: 'borderWidth', label: 'Border width', group: 'setting', kind: 'number', min: 0, max: 8, initial: 0},
-    {key: 'borderColor', label: 'Border colour', group: 'setting', kind: 'colour', initial: 'siteAccent'},
-  ]),
-  Component: IconButtonAtom,
-} satisfies DesignAtomPart;
+export const iconButton = {...iconButtonRecord, Component: IconButtonAtom} satisfies DesignAtomPart;

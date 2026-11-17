@@ -1,6 +1,6 @@
 'use client';
 
-import {DESIGN_ATOM_GUIDE} from '@so/component';
+import {DESIGN_ATOM_GUIDE} from '@so/component/server';
 import {
   blankDesignAtomPreset,
   blankMoleculeDocument,

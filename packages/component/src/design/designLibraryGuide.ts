@@ -1,5 +1,5 @@
 import {DESIGN_CATEGORIES} from '@so/model';
-import {DESIGN_ATOM_DEFINITIONS, type DesignAtom} from './atoms';
+import {DESIGN_ATOM_RECORDS, type DesignAtom} from './designAtomRecords';
 import type {DesignOptionKind} from './designOption';
 
 export interface DesignAtomField {
@@ -18,7 +18,7 @@ export interface DesignAtomGuide {
   readonly fields: readonly DesignAtomField[];
 }
 
-export const DESIGN_ATOM_GUIDE: readonly DesignAtomGuide[] = DESIGN_ATOM_DEFINITIONS.map((definition) => ({
+export const DESIGN_ATOM_GUIDE: readonly DesignAtomGuide[] = DESIGN_ATOM_RECORDS.map((definition) => ({
   atom: definition.atom,
   label: definition.label,
   fields: definition.options.map((option) => ({

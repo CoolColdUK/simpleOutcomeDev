@@ -1,4 +1,4 @@
-import {withBoxOptions} from '../designBoxOptions';
+import {linkRecord} from '../designAtomRecords';
 import type {DesignAtomPart} from '../designOption';
 import {designAtomCss, designSlotText, type DesignAtomProps} from '../designAtomProps';
 
@@ -10,13 +10,4 @@ export function LinkAtom({node, values}: DesignAtomProps) {
   );
 }
 
-export const link = {
-  atom: 'link' as const,
-  label: 'Link',
-  options: withBoxOptions([
-    {key: 'label', label: 'Label', group: 'content', kind: 'text'},
-    {key: 'href', label: 'Link', group: 'content', kind: 'text'},
-    {key: 'color', label: 'Text colour', group: 'setting', kind: 'colour', initial: 'siteAccent'},
-  ]),
-  Component: LinkAtom,
-} satisfies DesignAtomPart;
+export const link = {...linkRecord, Component: LinkAtom} satisfies DesignAtomPart;

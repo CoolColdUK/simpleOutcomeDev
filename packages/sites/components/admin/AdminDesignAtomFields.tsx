@@ -1,6 +1,6 @@
 'use client';
 
-import {DESIGN_ATOMS} from '@so/component';
+import {DESIGN_ATOMS} from '@so/component/server';
 import {mergedDesignAtom, type DesignAtomPreset} from '@so/model';
 import DesignAtomFieldAdd from '@/components/admin/DesignAtomFieldAdd';
 import DesignAtomFieldRow from '@/components/admin/DesignAtomFieldRow';

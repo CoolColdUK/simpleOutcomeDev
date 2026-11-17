@@ -1,6 +1,6 @@
 'use client';
 
-import {listMoleculeContentFields} from '@so/component';
+import {listMoleculeContentFields} from '@so/component/server';
 import type {DesignAtomPreset, DesignMolecule, DesignTemplateItem} from '@so/model';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
 

@@ -22,6 +22,9 @@ const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, '../..'),
   ...(supabaseUrl === undefined ? {} : {env: {NEXT_PUBLIC_SUPABASE_URL: supabaseUrl}}),
+  experimental: {
+    optimizePackageImports: ['@chakra-ui/react'],
+  },
   agentRules: false,
 };
 

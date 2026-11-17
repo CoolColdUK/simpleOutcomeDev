@@ -1,6 +1,6 @@
 'use client';
 
-import {DESIGN_ATOM_GUIDE, DESIGN_ATOMS, designAtomOptions, type DesignAtom, type DesignOptionDefinition} from '@so/component';
+import {DESIGN_ATOM_GUIDE, DESIGN_ATOMS, designAtomOptions, type DesignAtom, type DesignOptionDefinition} from '@so/component/server';
 import {blankDesignAtom, blankDesignMoleculeUse, mergedDesignAtom, type DesignAtomNode, type DesignAtomPreset, type DesignMolecule, type DesignNode, type DesignStyle} from '@so/model';
 import AdminDesignOptionMenu from '@/components/admin/AdminDesignOptionMenu';
 import DesignColourControl from '@/components/admin/DesignColourControl';

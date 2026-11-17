@@ -1,4 +1,4 @@
-import {designLibraryGuide} from '@so/component';
+import {designLibraryGuide} from '@so/component/server';
 import {parseDesignCategory, parseDesignId, type DesignCategory} from '@so/model';
 import {
   createDesignAtom,

@@ -1,4 +1,4 @@
-import {withBoxOptions} from '../designBoxOptions';
+import {checkboxRecord} from '../designAtomRecords';
 import type {DesignAtomPart} from '../designOption';
 import {designAtomCss, designSlotText, type DesignAtomProps} from '../designAtomProps';
 
@@ -11,13 +11,4 @@ export function CheckboxAtom({node, values}: DesignAtomProps) {
   );
 }
 
-export const checkbox = {
-  atom: 'checkbox' as const,
-  label: 'Checkbox',
-  options: withBoxOptions([
-    {key: 'label', label: 'Label', group: 'content', kind: 'text'},
-    {key: 'checked', label: 'Checked', group: 'content', kind: 'boolean'},
-    {key: 'color', label: 'Colour', group: 'setting', kind: 'colour', initial: 'siteForeground'},
-  ]),
-  Component: CheckboxAtom,
-} satisfies DesignAtomPart;
+export const checkbox = {...checkboxRecord, Component: CheckboxAtom} satisfies DesignAtomPart;

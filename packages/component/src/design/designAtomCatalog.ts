@@ -1,11 +1,11 @@
 import {DESIGN_THEME_COLOURS, type DesignAtomField, type DesignAtomNode, type DesignAtomPreset, type DesignNode} from '@so/model';
-import {DESIGN_ATOM_DEFINITIONS, type DesignAtom} from './atoms';
+import {DESIGN_ATOM_RECORDS, type DesignAtom} from './designAtomRecords';
 import type {DesignOptionDefinition} from './designOption';
 
 const HEX_COLOUR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 export function designAtomPart(atom: string) {
-  return DESIGN_ATOM_DEFINITIONS.find((definition) => definition.atom === atom);
+  return DESIGN_ATOM_RECORDS.find((definition) => definition.atom === atom);
 }
 
 export function designAtomOptions(atom: string): readonly DesignOptionDefinition[] {

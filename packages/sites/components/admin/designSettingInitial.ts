@@ -1,4 +1,4 @@
-import type {DesignOptionDefinition} from '@so/component';
+import type {DesignOptionDefinition} from '@so/component/server';
 import type {DesignStyle} from '@so/model';
 
 export function designSettingInitial(option: DesignOptionDefinition): DesignStyle[string] {

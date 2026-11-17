@@ -1,4 +1,4 @@
-import {withBoxOptions} from '../designBoxOptions';
+import {textRecord} from '../designAtomRecords';
 import type {DesignAtomPart} from '../designOption';
 import {designAtomCss, designSlotText, type DesignAtomProps} from '../designAtomProps';
 
@@ -19,13 +19,4 @@ export function TextAtom({node, values}: DesignAtomProps) {
   );
 }
 
-export const text = {
-  atom: 'text' as const,
-  label: 'Text',
-  options: withBoxOptions([
-    {key: 'text', label: 'Text', group: 'content', kind: 'text'},
-    {key: 'role', label: 'Role', group: 'content', kind: 'choice', values: ['heading', 'body']},
-    {key: 'color', label: 'Text colour', group: 'setting', kind: 'colour', initial: 'siteForeground'},
-  ]),
-  Component: TextAtom,
-} satisfies DesignAtomPart;
+export const text = {...textRecord, Component: TextAtom} satisfies DesignAtomPart;

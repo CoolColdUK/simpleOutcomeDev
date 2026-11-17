@@ -18,7 +18,7 @@ import {
   type DesignMolecule,
   type DesignOrganism,
 } from '@so/model';
-import {assertDesignAtomPreset, assertDesignNodes} from '@so/component';
+import {assertDesignAtomPreset, assertDesignNodes} from '@so/component/server';
 import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
 
 export interface DesignLibrary {

@@ -1,5 +1,5 @@
 import type {DesignAtomPreset, DesignMolecule, DesignNode} from '@so/model';
-import {designAtomPart} from './designAtomCatalog';
+import {DESIGN_ATOM_DEFINITIONS} from './atoms';
 import {designContainerStyle, designFlexStyle} from './designLayoutStyle';
 import {resolveDesignAtom} from './resolveDesignAtom';
 
@@ -28,7 +28,7 @@ export function DesignNodes({
       {nodes.map((node) => {
         if (node.kind === 'atom') {
           const resolved = resolveDesignAtom(node, atoms);
-          const part = designAtomPart(resolved.atom);
+          const part = DESIGN_ATOM_DEFINITIONS.find((definition) => definition.atom === resolved.atom);
           if (part === undefined) {
             return <p key={node.id}>Unknown atom {node.atom}</p>;
           }

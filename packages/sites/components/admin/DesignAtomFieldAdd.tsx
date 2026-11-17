@@ -1,6 +1,6 @@
 'use client';
 
-import {designAtomOptions} from '@so/component';
+import {designAtomOptions} from '@so/component/server';
 import {DesignFieldKind, type DesignAtomPreset} from '@so/model';
 import {useState} from 'react';
 import DesignChoiceTags from '@/components/admin/DesignChoiceTags';
