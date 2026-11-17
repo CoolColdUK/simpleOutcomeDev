@@ -16,7 +16,7 @@ export function proxy(request: NextRequest) {
   }
 
   const resolved = resolveSiteHost({host, rootDomain});
-  if (request.nextUrl.pathname.startsWith('/api/')) {
+  if (request.nextUrl.pathname.startsWith('/api/') || request.nextUrl.pathname.startsWith('/assets/')) {
     return NextResponse.next({request: {headers: requestHeaders}});
   }
   const url = request.nextUrl.clone();

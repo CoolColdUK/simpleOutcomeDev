@@ -37,7 +37,7 @@ export const siteHeroBackgroundSchema = v.pipe(
 export const sitePlaceholderBackgroundSchema = v.pipe(
   v.string(),
   v.trim(),
-  v.check((value) => GRADIENT.test(value) || new RegExp(`^${HEX}$`).test(value)),
+  v.check((value) => GRADIENT.test(value) || new RegExp(`^${HEX}$`).test(value) || /^\/assets\/[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]{2,8}$/.test(value)),
 );
 
 export const siteHttpUrlSchema = v.pipe(

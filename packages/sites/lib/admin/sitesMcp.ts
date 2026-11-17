@@ -1,5 +1,6 @@
 import {parseDesignId, parseDesignTemplateItems, parseSiteDocument, siteComponentsList} from '@so/model';
 import {callDesignMcpTool, DESIGN_MCP_TOOLS} from '@/lib/admin/designMcp';
+import {callSiteAssetMcpTool, SITE_ASSET_MCP_TOOLS} from '@/lib/admin/siteAssetMcp';
 import {
   createSiteForOwner,
   loadDraftDocument,
@@ -47,7 +48,8 @@ const SITE_MCP_TOOLS: readonly McpTool[] = [
   },
   {
     name: 'sites_create_site',
-    description: 'Create a draft site for an owner email. Does not publish.',
+    description:
+      'Create a draft site for an owner email from templateId. Copies that template unless document is sent. Use /assets/{name} from sites_list_assets as media backgrounds. Does not publish.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -62,7 +64,8 @@ const SITE_MCP_TOOLS: readonly McpTool[] = [
   },
   {
     name: 'sites_update_draft',
-    description: 'Replace the working draft document for a site. Does not publish.',
+    description:
+      'Replace the working draft for a site. Start from sites_get_template or sites_get_draft, then change copy and set media backgrounds to /assets/{name}. Does not publish.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -132,7 +135,7 @@ const SITE_MCP_TOOLS: readonly McpTool[] = [
   },
 ];
 
-export const SITES_MCP_TOOLS: readonly McpTool[] = [...SITE_MCP_TOOLS, ...DESIGN_MCP_TOOLS];
+export const SITES_MCP_TOOLS: readonly McpTool[] = [...SITE_MCP_TOOLS, ...SITE_ASSET_MCP_TOOLS, ...DESIGN_MCP_TOOLS];
 
 function colourSchemeId(value: unknown): string | undefined {
   if (value === undefined) {
@@ -157,6 +160,10 @@ function templateId(value: unknown): string {
 }
 
 export async function callSitesMcpTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+  const asset = await callSiteAssetMcpTool(name, args);
+  if (asset !== undefined) {
+    return asset;
+  }
   const design = await callDesignMcpTool(name, args);
   if (design !== undefined) {
     return design;

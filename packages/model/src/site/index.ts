@@ -7,6 +7,7 @@ export {SITE_BLOCK_ICONS, siteBlockSchema, type SiteBlock, type SiteBlockIcon} f
 export {siteSectionSchema, type SiteSection} from './siteSectionSchema';
 export {siteThemeSchema, type SiteTheme} from './siteThemeSchema';
 export {type SiteMedia} from './siteMediaSchema';
+export {parseSiteAssetName, siteAssetContentType, siteAssetPath, SITE_ASSET_EXTENSIONS} from './siteAssetName';
 export {parseSiteDocument, assertSiteDocument} from './parseSiteDocument';
 export {safeParseSiteDocument} from './safeParseSiteDocument';
 export {
