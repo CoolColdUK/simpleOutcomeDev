@@ -14,6 +14,17 @@ function boxPropKey(key: string): string {
   return BOX_PROP_KEY[key] ?? key;
 }
 
+function renamedField(item: unknown): unknown {
+  if (!isRecord(item)) {
+    return item;
+  }
+  const key = field(item, 'key');
+  if (typeof key !== 'string') {
+    return item;
+  }
+  return {...item, key: boxPropKey(key)};
+}
+
 function normaliseStyleRecord(style: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(style).map(([key, value]) => [boxPropKey(key), value]));
 }
@@ -129,7 +140,7 @@ export function normaliseDesignAtomPreset(value: unknown): unknown {
   const style = field(value, 'style');
   return {
     ...value,
-    ...(Array.isArray(fields) ? {fields: fields.map((item) => (isRecord(item) && typeof item.key === 'string' ? {...item, key: boxPropKey(item.key)} : item))} : {}),
+    ...(Array.isArray(fields) ? {fields: fields.map(renamedField)} : {}),
     ...(isRecord(style) ? {style: normaliseStyleRecord(style)} : {}),
   };
 }
