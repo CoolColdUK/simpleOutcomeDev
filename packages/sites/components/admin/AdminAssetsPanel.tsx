@@ -9,9 +9,17 @@ interface OwnerOption {
 
 interface AssetRow {
   readonly name: string;
-  readonly path: string;
+  readonly description: string;
+  readonly visibility: 'private' | 'public';
+  readonly path: string | undefined;
   readonly contentType: string;
   readonly byteSize: number;
+}
+
+interface AssetDraft {
+  readonly name: string;
+  readonly description: string;
+  readonly visibility: 'private' | 'public';
 }
 
 export default function AdminAssetsPanel() {
@@ -21,7 +29,9 @@ export default function AdminAssetsPanel() {
   const [ownersLoading, setOwnersLoading] = useState(false);
   const [assets, setAssets] = useState<AssetRow[]>([]);
   const [fileName, setFileName] = useState('');
-  const [names, setNames] = useState<Record<string, string>>({});
+  const [description, setDescription] = useState('');
+  const [visibility, setVisibility] = useState<'private' | 'public'>('private');
+  const [drafts, setDrafts] = useState<Record<string, AssetDraft>>({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -68,7 +78,9 @@ export default function AdminAssetsPanel() {
   return (
     <section>
       <h1>Assets</h1>
-      <p className="admin-muted">Files and images for one client. A site built from a template can use them at /assets/name.</p>
+      <p className="admin-muted">
+        Photos, PDFs, notes, contracts, and other files for one client. The description tells the AI what the file is. Public files can appear on the website. Private files stay with the client and the operator.
+      </p>
       <div className="admin-owner-picker">
         <label>
           Filter clients
@@ -101,6 +113,8 @@ export default function AdminAssetsPanel() {
           const body = new FormData();
           body.set('ownerId', ownerId);
           body.set('file', file);
+          body.set('description', description);
+          body.set('visibility', visibility);
           if (fileName.trim().length > 0) {
             body.set('name', fileName.trim());
           }
@@ -112,6 +126,8 @@ export default function AdminAssetsPanel() {
             return;
           }
           setFileName('');
+          setDescription('');
+          setVisibility('private');
           form.reset();
           const saved = payload.asset;
           setAssets((current) => [...current.filter((item) => item.name !== saved.name), saved].sort((left, right) => left.name.localeCompare(right.name)));
@@ -125,6 +141,17 @@ export default function AdminAssetsPanel() {
           SEO name
           <input value={fileName} onChange={(event) => setFileName(event.target.value)} placeholder="gel-nails.jpg" autoComplete="off" />
         </label>
+        <label>
+          Description for AI
+          <textarea value={description} onChange={(event) => setDescription(event.target.value)} required placeholder="Shop front photo, or the signed treatment contract" />
+        </label>
+        <label>
+          Who can see it
+          <select value={visibility} onChange={(event) => setVisibility(event.target.value === 'public' ? 'public' : 'private')}>
+            <option value="private">Private — client and operator</option>
+            <option value="public">Public — can be used on the website</option>
+          </select>
+        </label>
         <button type="submit" disabled={busy || ownerId.length === 0}>
           Upload
         </button>
@@ -132,49 +159,87 @@ export default function AdminAssetsPanel() {
       {error ? <p className="admin-error">{error}</p> : null}
       <table className="admin-table">
         <tbody>
-          {assets.map((asset) => (
-            <tr key={asset.name}>
-              <td>
-                <a href={`/api/admin/assets/file?ownerId=${ownerId}&name=${encodeURIComponent(asset.name)}`}>{asset.path}</a>
-                <div className="admin-muted">
-                  {asset.contentType} · {asset.byteSize} bytes
-                </div>
-              </td>
-              <td>
-                <input
-                  value={names[asset.name] ?? asset.name}
-                  onChange={(event) => setNames((current) => ({...current, [asset.name]: event.target.value}))}
-                  aria-label={`Rename ${asset.name}`}
-                />
-              </td>
-              <td>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={async () => {
-                    const nextName = (names[asset.name] ?? asset.name).trim();
-                    setBusy(true);
-                    setError('');
-                    const response = await fetch('/api/admin/assets', {
-                      method: 'PATCH',
-                      headers: {'Content-Type': 'application/json'},
-                      body: JSON.stringify({ownerId, name: asset.name, nextName}),
-                    });
-                    const payload = (await response.json().catch(() => ({}))) as {asset?: AssetRow; error?: string};
-                    setBusy(false);
-                    if (!response.ok || payload.asset === undefined) {
-                      setError(payload.error ?? 'Could not rename the asset');
-                      return;
+          {assets.map((asset) => {
+            const draft = drafts[asset.name] ?? {name: asset.name, description: asset.description, visibility: asset.visibility};
+            return (
+              <tr key={asset.name}>
+                <td>
+                  {asset.path === undefined ? (
+                    <span>{asset.name}</span>
+                  ) : (
+                    <a href={`/api/admin/assets/file?ownerId=${ownerId}&name=${encodeURIComponent(asset.name)}`}>{asset.path}</a>
+                  )}
+                  <div className="admin-muted">
+                    {asset.visibility} · {asset.contentType} · {asset.byteSize} bytes
+                  </div>
+                  {asset.path === undefined ? (
+                    <a href={`/api/admin/assets/file?ownerId=${ownerId}&name=${encodeURIComponent(asset.name)}`}>Download</a>
+                  ) : null}
+                </td>
+                <td>
+                  <input
+                    value={draft.name}
+                    onChange={(event) => setDrafts((current) => ({...current, [asset.name]: {...draft, name: event.target.value}}))}
+                    aria-label={`Rename ${asset.name}`}
+                  />
+                  <textarea
+                    value={draft.description}
+                    onChange={(event) => setDrafts((current) => ({...current, [asset.name]: {...draft, description: event.target.value}}))}
+                    aria-label={`Description for ${asset.name}`}
+                  />
+                  <select
+                    value={draft.visibility}
+                    onChange={(event) =>
+                      setDrafts((current) => ({
+                        ...current,
+                        [asset.name]: {...draft, visibility: event.target.value === 'public' ? 'public' : 'private'},
+                      }))
                     }
-                    const saved = payload.asset;
-                    setAssets((current) => current.map((item) => (item.name === asset.name ? saved : item)).sort((left, right) => left.name.localeCompare(right.name)));
-                  }}
-                >
-                  Rename
-                </button>
-              </td>
-            </tr>
-          ))}
+                    aria-label={`Visibility for ${asset.name}`}
+                  >
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                  </select>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      setError('');
+                      const response = await fetch('/api/admin/assets', {
+                        method: 'PATCH',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                          ownerId,
+                          name: asset.name,
+                          nextName: draft.name,
+                          description: draft.description,
+                          visibility: draft.visibility,
+                        }),
+                      });
+                      const payload = (await response.json().catch(() => ({}))) as {asset?: AssetRow; error?: string};
+                      setBusy(false);
+                      if (!response.ok || payload.asset === undefined) {
+                        setError(payload.error ?? 'Could not update the asset');
+                        return;
+                      }
+                      const saved = payload.asset;
+                      setDrafts((current) => {
+                        const next = {...current};
+                        delete next[asset.name];
+                        return next;
+                      });
+                      setAssets((current) => current.map((item) => (item.name === asset.name ? saved : item)).sort((left, right) => left.name.localeCompare(right.name)));
+                    }}
+                  >
+                    Save
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </section>

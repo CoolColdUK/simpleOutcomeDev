@@ -38,3 +38,21 @@ export function siteAssetContentType(name: string): string {
 export function siteAssetPath(name: string): string {
   return `/assets/${parseSiteAssetName(name)}`;
 }
+
+export type SiteAssetVisibility = 'private' | 'public';
+
+export function parseSiteAssetDescription(value: string): string {
+  const description = value.trim().replace(/\s+/g, ' ');
+  if (description.length < 1 || description.length > 500) {
+    throw new Error('Describe the file in 500 characters or less');
+  }
+  return description;
+}
+
+export function parseSiteAssetVisibility(value: string): SiteAssetVisibility {
+  const visibility = value.trim().toLowerCase();
+  if (visibility === 'private' || visibility === 'public') {
+    return visibility;
+  }
+  throw new Error('Visibility must be private or public');
+}

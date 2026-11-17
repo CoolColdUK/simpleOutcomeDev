@@ -1,4 +1,4 @@
-import {parseSiteAssetName, siteAssetContentType, siteAssetPath} from './siteAssetName';
+import {parseSiteAssetDescription, parseSiteAssetName, parseSiteAssetVisibility, siteAssetContentType, siteAssetPath} from './siteAssetName';
 
 describe('site asset names', () => {
   it('keeps a lowercase seo file name', () => {
@@ -10,5 +10,12 @@ describe('site asset names', () => {
   it('rejects names without a known extension', () => {
     expect(() => parseSiteAssetName('logo')).toThrow(/extension/);
     expect(() => parseSiteAssetName('logo.exe')).toThrow(/jpg/);
+  });
+
+  it('keeps a short description and a private or public mark', () => {
+    expect(parseSiteAssetDescription('  Signed  treatment contract  ')).toBe('Signed treatment contract');
+    expect(parseSiteAssetVisibility('Public')).toBe('public');
+    expect(() => parseSiteAssetDescription('   ')).toThrow(/500/);
+    expect(() => parseSiteAssetVisibility('shared')).toThrow(/private or public/);
   });
 });

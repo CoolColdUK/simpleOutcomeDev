@@ -1,34 +1,43 @@
-import {parseSiteAssetName, siteAssetContentType, siteAssetPath} from '@so/model';
+import {parseSiteAssetDescription, parseSiteAssetName, parseSiteAssetVisibility, siteAssetContentType, siteAssetPath, type SiteAssetVisibility} from '@so/model';
 import createSitesServiceClient from '@/lib/supabase/createSitesServiceClient';
 
 const BUCKET = 'site-private';
 const MAX_BYTES = 5_000_000;
 
+const ASSET_COLUMNS = 'id, owner_id, name, description, visibility, content_type, byte_size';
+
 export interface SiteAssetRecord {
   readonly id: string;
   readonly ownerId: string;
   readonly name: string;
+  readonly description: string;
+  readonly visibility: SiteAssetVisibility;
   readonly contentType: string;
   readonly byteSize: number;
-  readonly path: string;
+  readonly path: string | undefined;
 }
 
 interface SiteAssetRow {
   id: string;
   owner_id: string;
   name: string;
+  description: string;
+  visibility: string;
   content_type: string;
   byte_size: number;
 }
 
 function toRecord(row: SiteAssetRow): SiteAssetRecord {
+  const visibility = row.visibility === 'public' ? 'public' : 'private';
   return {
     id: row.id,
     ownerId: row.owner_id,
     name: row.name,
+    description: row.description,
+    visibility,
     contentType: row.content_type,
     byteSize: row.byte_size,
-    path: siteAssetPath(row.name),
+    path: visibility === 'public' ? siteAssetPath(row.name) : undefined,
   };
 }
 
@@ -46,7 +55,7 @@ export async function listDbSiteAssets(ownerId: string): Promise<readonly SiteAs
   const supabase = createSitesServiceClient();
   const {data, error} = await supabase
     .from('site_asset')
-    .select('id, owner_id, name, content_type, byte_size')
+    .select(ASSET_COLUMNS)
     .eq('owner_id', ownerId)
     .order('name', {ascending: true});
   if (error) {
@@ -60,7 +69,7 @@ export async function getDbSiteAsset(ownerId: string, name: string): Promise<Sit
   const supabase = createSitesServiceClient();
   const {data, error} = await supabase
     .from('site_asset')
-    .select('id, owner_id, name, content_type, byte_size')
+    .select(ASSET_COLUMNS)
     .eq('owner_id', ownerId)
     .eq('name', parsed)
     .maybeSingle();
@@ -85,9 +94,13 @@ export async function readStorageSiteAsset(asset: SiteAssetRecord): Promise<Uint
 export async function createStorageSiteAsset(input: {
   readonly ownerId: string;
   readonly name: string;
+  readonly description: string;
+  readonly visibility: string;
   readonly bytes: Uint8Array;
 }): Promise<SiteAssetRecord> {
   const name = parseSiteAssetName(input.name);
+  const description = parseSiteAssetDescription(input.description);
+  const visibility = parseSiteAssetVisibility(input.visibility);
   const contentType = siteAssetContentType(name);
   if (input.bytes.byteLength === 0 || input.bytes.byteLength > MAX_BYTES) {
     throw new Error('File must be between 1 byte and 5MB');
@@ -109,10 +122,12 @@ export async function createStorageSiteAsset(input: {
       id,
       owner_id: input.ownerId,
       name,
+      description,
+      visibility,
       content_type: contentType,
       byte_size: input.bytes.byteLength,
     })
-    .select('id, owner_id, name, content_type, byte_size')
+    .select(ASSET_COLUMNS)
     .single();
   if (error || data === null) {
     await supabase.storage.from(BUCKET).remove([path]);
@@ -121,26 +136,38 @@ export async function createStorageSiteAsset(input: {
   return toRecord(data as SiteAssetRow);
 }
 
-export async function renameDbSiteAsset(ownerId: string, name: string, nextName: string): Promise<SiteAssetRecord> {
+export interface SiteAssetChange {
+  readonly nextName?: string;
+  readonly description?: string;
+  readonly visibility?: string;
+}
+
+export async function updateDbSiteAsset(ownerId: string, name: string, change: SiteAssetChange): Promise<SiteAssetRecord> {
   const current = await getDbSiteAsset(ownerId, name);
   if (current === undefined) {
     throw new Error('Asset not found');
   }
-  const renamed = parseSiteAssetName(nextName);
-  if (siteAssetContentType(renamed) !== current.contentType) {
+  const nextName = change.nextName === undefined ? current.name : parseSiteAssetName(change.nextName);
+  if (siteAssetContentType(nextName) !== current.contentType) {
     throw new Error('Keep the same kind of file when renaming, such as .jpg to .jpg');
   }
+  const description = change.description === undefined ? current.description : parseSiteAssetDescription(change.description);
+  const visibility = change.visibility === undefined ? current.visibility : parseSiteAssetVisibility(change.visibility);
   const supabase = createSitesServiceClient();
   const {data, error} = await supabase
     .from('site_asset')
-    .update({name: renamed})
+    .update({name: nextName, description, visibility})
     .eq('id', current.id)
-    .select('id, owner_id, name, content_type, byte_size')
+    .select(ASSET_COLUMNS)
     .single();
   if (error || data === null) {
-    throw new Error(error?.message ?? 'Could not rename the asset');
+    throw new Error(error?.message ?? 'Could not update the asset');
   }
   return toRecord(data as SiteAssetRow);
+}
+
+export async function renameDbSiteAsset(ownerId: string, name: string, nextName: string): Promise<SiteAssetRecord> {
+  return updateDbSiteAsset(ownerId, name, {nextName});
 }
 
 export async function ownerIdForAssetHost(input: {readonly slug?: string; readonly customDomain?: string}): Promise<string | undefined> {

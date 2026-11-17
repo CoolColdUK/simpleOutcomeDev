@@ -49,7 +49,7 @@ const SITE_MCP_TOOLS: readonly McpTool[] = [
   {
     name: 'sites_create_site',
     description:
-      'Create a draft site for an owner email from templateId. Copies that template unless document is sent. Use /assets/{name} from sites_list_assets as media backgrounds. Does not publish.',
+      'Create a draft site for an owner email from templateId. Copies that template unless document is sent. Use a public asset path from sites_list_assets as a media background. Leave private files off the site. Does not publish.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -65,7 +65,7 @@ const SITE_MCP_TOOLS: readonly McpTool[] = [
   {
     name: 'sites_update_draft',
     description:
-      'Replace the working draft for a site. Start from sites_get_template or sites_get_draft, then change copy and set media backgrounds to /assets/{name}. Does not publish.',
+      'Replace the working draft for a site. Start from sites_get_template or sites_get_draft, then change copy. Set media backgrounds only to public /assets/{name} paths. Does not publish.',
     inputSchema: {
       type: 'object',
       properties: {

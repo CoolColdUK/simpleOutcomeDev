@@ -37,7 +37,7 @@ export async function GET(request: Request, context: AssetRouteContext): Promise
   }
   try {
     const asset = await getDbSiteAsset(ownerId, name);
-    if (asset === undefined) {
+    if (asset === undefined || asset.visibility !== 'public') {
       return NextResponse.json({error: 'Unknown asset'}, {status: 404});
     }
     const bytes = await readStorageSiteAsset(asset);
