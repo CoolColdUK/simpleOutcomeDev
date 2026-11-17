@@ -525,10 +525,19 @@
   line-height: 1.4;
 }
 
+.design-field-row {
+  flex-wrap: wrap;
+}
+
 .design-field-row > label,
 .design-slot-row .admin-muted {
   flex: 1;
-  min-width: 0;
+  min-width: 8rem;
+}
+
+.design-choice-tags {
+  flex: 1 1 14rem;
+  min-width: 12rem;
 }
 
 .design-option {

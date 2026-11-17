@@ -2,12 +2,23 @@ import * as v from 'valibot';
 import {designIdSchema} from './designId';
 import {designAtomNameSchema, designStyleSchema, type DesignStyle} from './designNode';
 
-export const designAtomFieldSchema = v.strictObject({
-  key: v.pipe(v.string(), v.regex(/^[a-zA-Z][A-Za-z0-9]{0,40}$/)),
-  label: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
-  group: v.picklist(['content', 'setting']),
-  kind: v.picklist(['text', 'boolean', 'number', 'colour', 'choice']),
-});
+const designAtomChoiceSchema = v.pipe(
+  v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40))),
+  v.minLength(1),
+  v.maxLength(24),
+  v.check((values) => new Set(values).size === values.length, 'Choice is listed twice'),
+);
+
+export const designAtomFieldSchema = v.pipe(
+  v.strictObject({
+    key: v.pipe(v.string(), v.regex(/^[a-zA-Z][A-Za-z0-9]{0,40}$/)),
+    label: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
+    group: v.picklist(['content', 'setting']),
+    kind: v.picklist(['text', 'boolean', 'number', 'colour', 'choice']),
+    values: v.optional(designAtomChoiceSchema),
+  }),
+  v.check((field) => field.kind === 'choice' || field.values === undefined, 'Only a dropdown lists choices'),
+);
 
 export interface DesignAtomField extends v.InferOutput<typeof designAtomFieldSchema> {}
 

@@ -1,6 +1,6 @@
-import {designAtomContentKeys, mergedDesignAtom, type DesignAtomPreset, type DesignMolecule} from '@so/model';
+import {designAtomContentKeys, mergedDesignAtom, type DesignAtomField, type DesignAtomPreset, type DesignMolecule} from '@so/model';
 import {designAtomOptions} from './designAtomCatalog';
-import type {DesignOptionKind} from './designOption';
+import type {DesignOptionDefinition, DesignOptionKind} from './designOption';
 
 export interface DesignContentField {
   readonly nodeId: string;
@@ -29,12 +29,13 @@ export function listMoleculeContentFields(
       return slots.map((slot) => {
         const option = designAtomOptions(node.atom).find((item) => item.key === slot);
         const field = fields.find((item) => item.key === slot);
+        const values = choiceValues(field, option);
         return {
           nodeId: node.id,
           slot,
           label: field?.label ?? option?.label ?? slot,
-          kind: contentKind(option?.kind ?? field?.kind),
-          ...(option?.values === undefined ? {} : {values: [...option.values]}),
+          kind: contentKind(field?.kind ?? option?.kind),
+          ...(values === undefined ? {} : {values: [...values]}),
         };
       });
     }
@@ -47,6 +48,19 @@ export function listMoleculeContentFields(
       nodeId: `${node.id}.${field.nodeId}`,
     }));
   });
+}
+
+function choiceValues(field: DesignAtomField | undefined, option: DesignOptionDefinition | undefined): readonly string[] | undefined {
+  if ((field?.kind ?? option?.kind) !== 'choice') {
+    return undefined;
+  }
+  if (field?.values !== undefined) {
+    return field.values;
+  }
+  if (option?.kind === 'choice') {
+    return option.values;
+  }
+  return undefined;
 }
 
 function contentKind(kind: DesignOptionKind | undefined): DesignContentField['kind'] {

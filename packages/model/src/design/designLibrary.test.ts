@@ -104,6 +104,29 @@ describe('design library', () => {
     });
     expect(parseDesignTemplateItems([...BOLD_NAIL_TEMPLATE_ITEMS])).toHaveLength(5);
     expect(parseDesignAtomPreset(blankDesignAtomPreset()).fields).toEqual([]);
+    const heading = BOLD_NAIL_ATOMS.find((atom) => atom.id === 'heading');
+    expect(heading).toBeDefined();
+    if (heading !== undefined) {
+      expect(parseDesignAtomPreset(heading).fields.some((field) => field.kind === 'choice' && field.values === undefined)).toBe(true);
+    }
+    expect(
+      parseDesignAtomPreset({
+        id: 'pill',
+        name: 'Pill',
+        base: 'button',
+        fields: [{key: 'size', label: 'Size', group: 'setting', kind: 'choice', values: ['sm', 'lg']}],
+        style: {size: 'sm'},
+      }).fields[0]?.values,
+    ).toEqual(['sm', 'lg']);
+    expect(() =>
+      parseDesignAtomPreset({
+        id: 'pill',
+        name: 'Pill',
+        base: 'button',
+        fields: [{key: 'label', label: 'Label', group: 'content', kind: 'text', values: ['A']}],
+        style: {},
+      }),
+    ).toThrow(/dropdown/);
     const button = {id: 'button', name: 'Button', base: 'button', fields: [], style: {}};
     const accent = BOLD_NAIL_ATOMS.find((atom) => atom.id === 'accent-button');
     expect(accent?.parentId).toBe('button');

@@ -57,6 +57,50 @@ describe('design parts', () => {
     expect(fields.some((field) => field.slot === 'label' && field.nodeId.startsWith('actions.'))).toBe(true);
   });
 
+  it('accepts a dropdown prop the base atom does not list', () => {
+    expect(() =>
+      assertDesignAtomPreset({
+        id: 'pill',
+        name: 'Pill',
+        base: 'button',
+        fields: [{key: 'size', label: 'Size', group: 'setting', kind: 'choice', values: ['sm', 'lg']}],
+        style: {size: 'sm'},
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertDesignAtomPreset({
+        id: 'pill',
+        name: 'Pill',
+        base: 'button',
+        fields: [{key: 'tone', label: 'Tone', group: 'setting', kind: 'colour'}],
+        style: {tone: 'nope'},
+      }),
+    ).toThrow(/tone/);
+  });
+
+  it('uses the atom field choices for a content dropdown', () => {
+    const atoms = [
+      {
+        id: 'role-text',
+        name: 'Role text',
+        base: 'text',
+        fields: [{key: 'role', label: 'Role', group: 'content' as const, kind: 'choice' as const, values: ['kicker', 'title']}],
+        style: {},
+      },
+    ];
+    const molecule = {
+      id: 'block',
+      name: 'Block',
+      document: {
+        pattern: 'tree' as const,
+        layout: {},
+        children: [{id: 'title', kind: 'atom' as const, atom: 'text', presetId: 'role-text', style: {}, slots: []}],
+      },
+    };
+    const fields = listMoleculeContentFields(molecule, [molecule], atoms);
+    expect(fields.find((field) => field.slot === 'role')?.values).toEqual(['kicker', 'title']);
+  });
+
   it('renders the bold nail hero from theme colours and preset atoms', () => {
     BOLD_NAIL_ATOMS.forEach((preset) => {
       expect(() => assertDesignAtomPreset(preset)).not.toThrow();

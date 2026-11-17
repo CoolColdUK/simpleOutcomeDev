@@ -1,4 +1,4 @@
-import {DESIGN_THEME_COLOURS, type DesignAtomNode, type DesignAtomPreset, type DesignNode} from '@so/model';
+import {DESIGN_THEME_COLOURS, type DesignAtomField, type DesignAtomNode, type DesignAtomPreset, type DesignNode} from '@so/model';
 import {DESIGN_ATOM_DEFINITIONS, type DesignAtom} from './atoms';
 import type {DesignOptionDefinition} from './designOption';
 
@@ -67,16 +67,28 @@ export function assertDesignAtomPreset(preset: DesignAtomPreset): void {
   if (part === undefined) {
     throw new Error(`Unknown atom ${preset.base}`);
   }
-  preset.fields.forEach((field) => {
-    const option = part.options.find((item) => item.key === field.key);
-    if (option === undefined || option.group !== field.group || option.kind !== field.kind) {
-      throw new Error(`Field ${field.key} is not available on ${preset.base}`);
-    }
-  });
   Object.entries(preset.style).forEach(([key, value]) => {
     const field = preset.fields.find((item) => item.key === key && item.group === 'setting');
-    if (field === undefined || !settingOk(part.options, key, value)) {
+    if (field === undefined || !fieldValueOk(field, value, part.options)) {
       throw new Error(`Setting ${key} is not available on ${preset.base}`);
     }
   });
+}
+
+function fieldValueOk(field: DesignAtomField, value: unknown, options: readonly DesignOptionDefinition[]): boolean {
+  const option = options.find((item) => item.key === field.key && item.kind === field.kind);
+  if (field.kind === 'colour') {
+    return typeof value === 'string' && (HEX_COLOUR.test(value) || DESIGN_THEME_COLOURS.some((colour) => colour === value));
+  }
+  if (field.kind === 'number') {
+    return typeof value === 'number' && Number.isInteger(value) && value >= (option?.min ?? 0) && value <= (option?.max ?? 960);
+  }
+  if (field.kind === 'boolean') {
+    return typeof value === 'boolean';
+  }
+  if (field.kind === 'choice') {
+    const values = field.values ?? option?.values;
+    return typeof value === 'string' && (values === undefined ? value.length > 0 && value.length <= 40 : values.some((choice) => choice === value));
+  }
+  return typeof value === 'string' && value.length <= 200;
 }
