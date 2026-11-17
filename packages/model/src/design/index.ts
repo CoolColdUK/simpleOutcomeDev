@@ -1,4 +1,5 @@
 export {blankDesignAtomPreset, designAtomContentKeys, designAtomFieldSchema, designAtomPresetSchema, mergedDesignAtom, type DesignAtomField, type DesignAtomPreset} from './designAtomPreset';
+export {DesignFieldKind} from './designFieldKind';
 export {DESIGN_THEME_COLOURS, designColourValueSchema, type DesignColourValue, type DesignThemeColour} from './designColourValue';
 export {
   BOLD_NAIL_ATOMS,

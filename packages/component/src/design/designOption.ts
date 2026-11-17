@@ -1,13 +1,20 @@
+import {DesignFieldKind} from '@so/model';
 import type {ComponentType} from 'react';
 import type {DesignAtomProps} from './designAtomProps';
 
 export const DESIGN_OPTION_GROUPS = ['content', 'setting'] as const;
 
-export const DESIGN_OPTION_KINDS = ['text', 'boolean', 'number', 'colour', 'choice'] as const;
+export const DESIGN_OPTION_KINDS = [
+  DesignFieldKind.TEXT,
+  DesignFieldKind.BOOLEAN,
+  DesignFieldKind.NUMBER,
+  DesignFieldKind.COLOUR,
+  DesignFieldKind.CHOICE,
+] as const;
 
 export type DesignOptionGroup = (typeof DESIGN_OPTION_GROUPS)[number];
 
-export type DesignOptionKind = (typeof DESIGN_OPTION_KINDS)[number];
+export type DesignOptionKind = `${DesignFieldKind}`;
 
 export interface DesignOptionDefinition {
   readonly key: string;

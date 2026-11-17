@@ -1,11 +1,11 @@
 'use client';
 
 import {designAtomOptions, type DesignOptionDefinition} from '@so/component';
-import type {DesignAtomField, DesignAtomPreset, DesignStyle} from '@so/model';
+import {DesignFieldKind, type DesignAtomField, type DesignAtomPreset, type DesignStyle} from '@so/model';
 import DesignChoiceTags from '@/components/admin/DesignChoiceTags';
 import DesignColourControl from '@/components/admin/DesignColourControl';
 import {AdminIconButton} from '@/components/admin/AdminEditorIcons';
-import {definitionFromField, FIELD_GROUPS, FIELD_KINDS, replaceField, shownChoices} from '@/components/admin/designAtomFieldForm';
+import {definitionFromField, FIELD_GROUPS, FIELD_KINDS, fieldKind, replaceField, shownChoices} from '@/components/admin/designAtomFieldForm';
 
 export default function DesignAtomFieldRow({
   preset,
@@ -72,15 +72,15 @@ export default function DesignAtomFieldRow({
 
 function fieldWithChoices(field: DesignAtomField, values: readonly string[]): DesignAtomField {
   if (values.length === 0) {
-    return {key: field.key, label: field.label, group: field.group, kind: 'choice'};
+    return {key: field.key, label: field.label, group: field.group, kind: DesignFieldKind.CHOICE};
   }
-  return {...field, kind: 'choice', values: [...values]};
+  return {...field, kind: DesignFieldKind.CHOICE, values: [...values]};
 }
 
 function fieldWithKind(field: DesignAtomField, value: string): DesignAtomField {
-  const kind = FIELD_KINDS.find((item) => item.kind === value)?.kind ?? 'text';
-  if (kind === 'choice') {
-    return field.kind === 'choice' ? field : {key: field.key, label: field.label, group: field.group, kind};
+  const kind = fieldKind(value);
+  if (kind === DesignFieldKind.CHOICE) {
+    return field.kind === DesignFieldKind.CHOICE ? field : {key: field.key, label: field.label, group: field.group, kind};
   }
   return {key: field.key, label: field.label, group: field.group, kind};
 }

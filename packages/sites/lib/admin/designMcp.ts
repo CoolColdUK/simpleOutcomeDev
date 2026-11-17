@@ -75,7 +75,7 @@ export const DESIGN_MCP_TOOLS: readonly DesignMcpTool[] = [
   {
     name: 'sites_save_molecule',
     description:
-      'Create or replace a molecule. document is {pattern:"tree"|"combine", layout:{direction,gapPx,align,valign,wrap}, container:{widthPx,heightPx,minWidthPx,minHeightPx,maxWidthPx,maxHeightPx,paddingPx,marginPx,background,radiusPx,borderWidthPx,borderColor}, children}. layout is flex. container is the box. background and borderColor may be a theme colour name. Children are atoms {atom, presetId, style, slots} or {kind:"molecule", moleculeId}. presetId points at a saved atom. slots are content names filled on a template item. Every atom accepts spacing and border settings: paddingPx, marginPx, gapPx, radiusPx, borderWidthPx, borderColor, fontSizePx, align.',
+      'Create or replace a molecule. document is {pattern:"tree"|"combine", layout:{direction,gapPx,align,valign,wrap}, container:{widthPx,heightPx,minWidthPx,minHeightPx,maxWidthPx,maxHeightPx,paddingPx,marginPx,background,radiusPx,borderWidthPx,borderColor}, children}. layout is flex. container is the box. background and borderColor may be a theme colour name. Children are atoms {atom, presetId, style, slots} or {kind:"molecule", moleculeId}. presetId points at a saved atom. slots are content names filled on a template item. Every atom accepts spacing and border settings: padding, margin, gap, borderRadius, borderWidth, borderColor, fontSize, textAlign.',
     inputSchema: {
       type: 'object',
       properties: {id: idSchema, name: nameSchema, document: {type: 'object'}},

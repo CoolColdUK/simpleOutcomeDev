@@ -4,6 +4,7 @@ import {BOLD_NAIL_ATOMS, BOLD_NAIL_MOLECULES, BOLD_NAIL_ORGANISMS, BOLD_NAIL_TEM
 import {blankDesignAtom, blankMoleculeDocument} from './blankDesignNode';
 import {blankDesignAtomPreset, mergedDesignAtom} from './designAtomPreset';
 import {chakraConfigFromColourScheme, colourSchemeToSiteTheme, siteThemeToColourTokens} from './designColourScheme';
+import {DesignFieldKind} from './designFieldKind';
 import {DESIGN_COLOUR_SCHEME_SEED} from './designLibrarySeed';
 import {designMoleculeDocumentSchema} from './designMolecule';
 import {designNodeSchema} from './designNode';
@@ -15,6 +16,7 @@ describe('design library', () => {
     const tokens = siteThemeToColourTokens(cleanStudioTheme);
     expect(colourSchemeToSiteTheme(tokens)).toEqual(cleanStudioTheme);
     expect(chakraConfigFromColourScheme(tokens).theme.tokens.colors.siteAccent.value).toBe(cleanStudioTheme.accent);
+    expect(DesignFieldKind.CHOICE).toBe('choice');
   });
 
   it('seeds a colour scheme for every existing template', () => {
@@ -72,6 +74,12 @@ describe('design library', () => {
     });
     expect(document.container?.minHeightPx).toBe(48);
     expect(document.children[0]).toMatchObject({atom: 'checkbox'});
+    const renamed = parseDesignMoleculeDocument({
+      pattern: 'tree',
+      layout: {},
+      children: [{id: 'title', kind: 'atom', atom: 'text', style: {fontSizePx: 18, align: 'center'}, slots: []}],
+    });
+    expect(renamed.children[0]).toMatchObject({style: {fontSize: 18, textAlign: 'center'}});
   });
 
   it('parses a blank atom', () => {

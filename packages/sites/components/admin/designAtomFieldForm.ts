@@ -1,5 +1,5 @@
 import type {DesignOptionDefinition} from '@so/component';
-import type {DesignAtomField, DesignAtomPreset, DesignStyle} from '@so/model';
+import {DesignFieldKind, type DesignAtomField, type DesignAtomPreset, type DesignStyle} from '@so/model';
 import {designSettingInitial} from '@/components/admin/designSettingInitial';
 
 export const PROP_KEY = /^[a-zA-Z][A-Za-z0-9]{0,40}$/;
@@ -10,11 +10,11 @@ export const FIELD_GROUPS = [
 ];
 
 export const FIELD_KINDS = [
-  {kind: 'text' as const, label: 'Text'},
-  {kind: 'boolean' as const, label: 'Boolean'},
-  {kind: 'number' as const, label: 'Number'},
-  {kind: 'colour' as const, label: 'Colour'},
-  {kind: 'choice' as const, label: 'Dropdown'},
+  {kind: DesignFieldKind.TEXT, label: 'Text'},
+  {kind: DesignFieldKind.BOOLEAN, label: 'Boolean'},
+  {kind: DesignFieldKind.NUMBER, label: 'Number'},
+  {kind: DesignFieldKind.COLOUR, label: 'Colour'},
+  {kind: DesignFieldKind.CHOICE, label: 'Dropdown'},
 ];
 
 export interface FieldDraft {
@@ -25,7 +25,7 @@ export interface FieldDraft {
   readonly values: readonly string[];
 }
 
-export const EMPTY_FIELD_DRAFT: FieldDraft = {key: '', label: '', group: 'content', kind: 'text', values: []};
+export const EMPTY_FIELD_DRAFT: FieldDraft = {key: '', label: '', group: 'content', kind: DesignFieldKind.TEXT, values: []};
 
 export function addFieldError(preset: DesignAtomPreset, draft: FieldDraft): string | undefined {
   const key = draft.key.trim();
@@ -38,7 +38,7 @@ export function addFieldError(preset: DesignAtomPreset, draft: FieldDraft): stri
   if (draft.label.trim().length === 0 || draft.label.trim().length > 40) {
     return 'Label is required';
   }
-  if (draft.kind === 'choice' && draft.values.length === 0) {
+  if (draft.kind === DesignFieldKind.CHOICE && draft.values.length === 0) {
     return 'Add at least one choice';
   }
   return undefined;
@@ -47,7 +47,7 @@ export function addFieldError(preset: DesignAtomPreset, draft: FieldDraft): stri
 export function fieldFromDraft(draft: FieldDraft): DesignAtomField {
   const key = draft.key.trim();
   const label = draft.label.trim();
-  if (draft.kind === 'choice') {
+  if (draft.kind === DesignFieldKind.CHOICE) {
     return {key, label, group: draft.group, kind: draft.kind, values: [...draft.values]};
   }
   return {key, label, group: draft.group, kind: draft.kind};
@@ -57,13 +57,13 @@ export function suggestDraft(option: DesignOptionDefinition): Pick<FieldDraft, '
   return {
     label: option.label,
     group: option.group,
-    kind: option.kind,
+    kind: fieldKind(option.kind),
     values: option.values === undefined ? [] : [...option.values],
   };
 }
 
 export function shownChoices(field: DesignAtomField, options: readonly DesignOptionDefinition[]): readonly string[] {
-  if (field.kind !== 'choice') {
+  if (field.kind !== DesignFieldKind.CHOICE) {
     return [];
   }
   if (field.values !== undefined) {
@@ -123,7 +123,7 @@ function styleForField(style: DesignStyle, field: DesignAtomField, options: read
   if (field.group !== 'setting') {
     return styleWithout(style, field.key);
   }
-  if (field.kind === 'choice' && (field.values === undefined || field.values.length === 0)) {
+  if (field.kind === DesignFieldKind.CHOICE && (field.values === undefined || field.values.length === 0)) {
     return styleWithout(style, field.key);
   }
   const option = definitionFromField(field, options);
@@ -145,6 +145,22 @@ function valueMatches(option: DesignOptionDefinition, value: DesignStyle[string]
     return typeof value === 'string' && (option.values ?? []).some((choice) => choice === value);
   }
   return typeof value === 'string';
+}
+
+export function fieldKind(kind: string): DesignFieldKind {
+  if (kind === DesignFieldKind.BOOLEAN) {
+    return DesignFieldKind.BOOLEAN;
+  }
+  if (kind === DesignFieldKind.NUMBER) {
+    return DesignFieldKind.NUMBER;
+  }
+  if (kind === DesignFieldKind.COLOUR) {
+    return DesignFieldKind.COLOUR;
+  }
+  if (kind === DesignFieldKind.CHOICE) {
+    return DesignFieldKind.CHOICE;
+  }
+  return DesignFieldKind.TEXT;
 }
 
 function styleWithout(style: DesignStyle, key: string): DesignStyle {

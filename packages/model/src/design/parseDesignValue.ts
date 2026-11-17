@@ -3,7 +3,7 @@ import {designAtomPresetSchema, type DesignAtomPreset} from './designAtomPreset'
 import {designColourTokensSchema, type DesignColourTokens} from './designColourScheme';
 import {designCategorySchema, designIdSchema, type DesignCategory} from './designId';
 import {designMoleculeDocumentSchema, type DesignMoleculeDocument} from './designMolecule';
-import {normaliseMoleculeDocument, normaliseOrganismDocument} from './normaliseDesignDocument';
+import {normaliseDesignAtomPreset, normaliseMoleculeDocument, normaliseOrganismDocument} from './normaliseDesignDocument';
 import {designOrganismDocumentSchema, type DesignOrganismDocument} from './designOrganism';
 import {designTemplateItemsSchema, type DesignTemplateItem} from './designTemplateItem';
 
@@ -39,7 +39,7 @@ export function parseDesignOrganismDocument(value: unknown): DesignOrganismDocum
 }
 
 export function parseDesignAtomPreset(value: unknown): DesignAtomPreset {
-  return parse(designAtomPresetSchema, value, 'atom');
+  return parse(designAtomPresetSchema, normaliseDesignAtomPreset(value), 'atom');
 }
 
 export function parseDesignTemplateItems(value: unknown): DesignTemplateItem[] {

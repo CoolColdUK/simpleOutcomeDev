@@ -1,5 +1,9 @@
+'use client';
+
+import {Box} from '@chakra-ui/react';
 import type {DesignAtomPreset, DesignColourTokens, DesignContainer, DesignFlex, DesignMolecule, DesignNode} from '@so/model';
 import {DesignNodes} from './DesignNodes';
+import DesignThemeProvider from './DesignThemeProvider';
 import {designContainerStyle, designFlexStyle, designPreviewStyle} from './designLayoutStyle';
 
 export {designPreviewStyle};
@@ -20,12 +24,18 @@ export default function DesignPreview({
   container?: DesignContainer;
 }) {
   return (
-    <div
-      className="design-preview"
-      data-uppercase={tokens.uppercaseHeadings ? 'true' : 'false'}
-      style={{...designPreviewStyle(tokens), ...designContainerStyle(container), ...designFlexStyle(layout)}}
-    >
-      <DesignNodes nodes={nodes} molecules={molecules} atoms={atoms} />
-    </div>
+    <DesignThemeProvider tokens={tokens}>
+      <Box
+        className="design-preview"
+        data-uppercase={tokens.uppercaseHeadings ? 'true' : 'false'}
+        bg="siteBackground"
+        color="siteForeground"
+        fontFamily="siteBody"
+        borderRadius="site"
+        style={{...designPreviewStyle(tokens), ...designContainerStyle(container), ...designFlexStyle(layout)}}
+      >
+        <DesignNodes nodes={nodes} molecules={molecules} atoms={atoms} />
+      </Box>
+    </DesignThemeProvider>
   );
 }

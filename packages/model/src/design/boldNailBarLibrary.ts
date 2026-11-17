@@ -1,11 +1,12 @@
 import {sampleFooter} from '../site/siteSampleCopy';
+import {DesignFieldKind} from './designFieldKind';
 import type {DesignAtomField, DesignAtomPreset} from './designAtomPreset';
 import type {DesignMolecule, DesignMoleculeDocument} from './designMolecule';
 import type {DesignAtomNode, DesignStyle} from './designNode';
 import type {DesignOrganism, DesignOrganismDocument} from './designOrganism';
 import type {DesignTemplateItem} from './designTemplateItem';
 
-const content = (key: string, label: string, kind: DesignAtomField['kind'] = 'text'): DesignAtomField => ({
+const content = (key: string, label: string, kind: DesignAtomField['kind'] = DesignFieldKind.TEXT): DesignAtomField => ({
   key,
   label,
   group: 'content',
@@ -24,17 +25,17 @@ function preset(id: string, name: string, base: string, fields: DesignAtomField[
 }
 
 export const BOLD_NAIL_ATOMS: readonly DesignAtomPreset[] = [
-  preset('heading', 'Heading', 'text', [content('text', 'Text'), content('role', 'Role', 'choice'), setting('color', 'Text colour', 'colour'), setting('fontSizePx', 'Font size', 'number'), setting('align', 'Text align', 'choice')], {
+  preset('heading', 'Heading', 'text', [content('text', 'Text'), content('role', 'Role', DesignFieldKind.CHOICE), setting('color', 'Text colour', DesignFieldKind.COLOUR), setting('fontSize', 'Font size', DesignFieldKind.NUMBER), setting('textAlign', 'Text align', DesignFieldKind.CHOICE)], {
     color: 'siteForeground',
-    fontSizePx: 32,
-    align: 'start',
+    fontSize: 32,
+    textAlign: 'start',
   }, 'text'),
-  preset('body-copy', 'Body copy', 'text', [content('text', 'Text'), setting('color', 'Text colour', 'colour'), setting('fontSizePx', 'Font size', 'number'), setting('align', 'Text align', 'choice')], {
+  preset('body-copy', 'Body copy', 'text', [content('text', 'Text'), setting('color', 'Text colour', DesignFieldKind.COLOUR), setting('fontSize', 'Font size', DesignFieldKind.NUMBER), setting('textAlign', 'Text align', DesignFieldKind.CHOICE)], {
     color: 'siteForeground',
-    fontSizePx: 16,
-    align: 'start',
+    fontSize: 16,
+    textAlign: 'start',
   }, 'text'),
-  preset('nav-link', 'Nav link', 'link', [content('label', 'Label'), content('href', 'Link'), setting('color', 'Text colour', 'colour')], {color: 'siteForeground'}, 'link'),
+  preset('nav-link', 'Nav link', 'link', [content('label', 'Label'), content('href', 'Link'), setting('color', 'Text colour', DesignFieldKind.COLOUR)], {color: 'siteForeground'}, 'link'),
   preset(
     'accent-button',
     'Accent button',
@@ -42,21 +43,21 @@ export const BOLD_NAIL_ATOMS: readonly DesignAtomPreset[] = [
     [
       content('label', 'Label'),
       content('href', 'Link'),
-      setting('background', 'Background', 'colour'),
-      setting('color', 'Text colour', 'colour'),
-      setting('radiusPx', 'Corner radius', 'number'),
-      setting('borderWidthPx', 'Border width', 'number'),
+      setting('background', 'Background', DesignFieldKind.COLOUR),
+      setting('color', 'Text colour', DesignFieldKind.COLOUR),
+      setting('borderRadius', 'Corner radius', DesignFieldKind.NUMBER),
+      setting('borderWidth', 'Border width', DesignFieldKind.NUMBER),
     ],
-    {background: 'siteAccent', color: 'siteButtonForeground', radiusPx: 16, borderWidthPx: 0},
+    {background: 'siteAccent', color: 'siteButtonForeground', borderRadius: 16, borderWidth: 0},
     'button',
   ),
-  preset('service-name', 'Service name', 'text', [content('text', 'Text'), setting('color', 'Text colour', 'colour'), setting('fontSizePx', 'Font size', 'number')], {
+  preset('service-name', 'Service name', 'text', [content('text', 'Text'), setting('color', 'Text colour', DesignFieldKind.COLOUR), setting('fontSize', 'Font size', DesignFieldKind.NUMBER)], {
     color: 'siteForeground',
-    fontSizePx: 18,
+    fontSize: 18,
   }, 'text'),
-  preset('service-price', 'Service price', 'text', [content('text', 'Text'), setting('color', 'Text colour', 'colour'), setting('fontSizePx', 'Font size', 'number')], {
+  preset('service-price', 'Service price', 'text', [content('text', 'Text'), setting('color', 'Text colour', DesignFieldKind.COLOUR), setting('fontSize', 'Font size', DesignFieldKind.NUMBER)], {
     color: 'siteAccent',
-    fontSizePx: 20,
+    fontSize: 20,
   }, 'text'),
 ];
 
@@ -94,7 +95,7 @@ export const boldNavDocument: DesignMoleculeDocument = {
   layout: {direction: 'row', gapPx: 16, align: 'center', valign: 'center', wrap: 'wrap'},
   container: {paddingPx: 16, background: 'siteBackground'},
   children: [
-    atom('name', 'text', 'heading', {fontSizePx: 22}),
+    atom('name', 'text', 'heading', {fontSize: 22}),
     atom('prices', 'link', 'nav-link'),
     atom('gallery', 'link', 'nav-link'),
     atom('book', 'button', 'accent-button'),
@@ -106,8 +107,8 @@ export const boldHeroDocument: DesignMoleculeDocument = {
   layout: {direction: 'column', gapPx: 12, align: 'center', valign: 'center'},
   container: {paddingPx: 32, background: 'hero', radiusPx: 16},
   children: [
-    atom('title', 'text', 'heading', {color: 'siteButtonForeground', align: 'center', fontSizePx: 40}),
-    atom('body', 'text', 'body-copy', {color: 'siteButtonForeground', align: 'center', fontSizePx: 18}),
+    atom('title', 'text', 'heading', {color: 'siteButtonForeground', textAlign: 'center', fontSize: 40}),
+    atom('body', 'text', 'body-copy', {color: 'siteButtonForeground', textAlign: 'center', fontSize: 18}),
     atom('cta', 'button', 'accent-button'),
   ],
 };
@@ -122,14 +123,14 @@ export const boldServicesDocument: DesignMoleculeDocument = {
   pattern: 'tree',
   layout: {direction: 'column', gapPx: 16, align: 'stretch'},
   container: {paddingPx: 24},
-  children: [atom('title', 'text', 'heading', {align: 'center', fontSizePx: 28}), {id: 'cards', kind: 'molecule', moleculeId: 'bold-service-row'}],
+  children: [atom('title', 'text', 'heading', {textAlign: 'center', fontSize: 28}), {id: 'cards', kind: 'molecule', moleculeId: 'bold-service-row'}],
 };
 
 export const galleryTileDocument: DesignMoleculeDocument = {
   pattern: 'tree',
   layout: {direction: 'column', align: 'center', valign: 'center'},
   container: {widthPx: 220, minHeightPx: 140, paddingPx: 12, background: 'siteCard', radiusPx: 16},
-  children: [atom('label', 'text', 'body-copy', {align: 'center'})],
+  children: [atom('label', 'text', 'body-copy', {textAlign: 'center'})],
 };
 
 export const boldGalleryDocument: DesignMoleculeDocument = {
@@ -143,7 +144,7 @@ export const footerNoteDocument: DesignMoleculeDocument = {
   pattern: 'tree',
   layout: {direction: 'column', align: 'center'},
   container: {paddingPx: 24, background: 'siteBackground'},
-  children: [atom('line', 'text', 'body-copy', {align: 'center', fontSizePx: 14})],
+  children: [atom('line', 'text', 'body-copy', {textAlign: 'center', fontSize: 14})],
 };
 
 export const BOLD_NAIL_MOLECULES: readonly DesignMolecule[] = [

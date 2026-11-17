@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import {DesignFieldKind} from './designFieldKind';
 import {designIdSchema} from './designId';
 import {designAtomNameSchema, designStyleSchema, type DesignStyle} from './designNode';
 
@@ -14,10 +15,10 @@ export const designAtomFieldSchema = v.pipe(
     key: v.pipe(v.string(), v.regex(/^[a-zA-Z][A-Za-z0-9]{0,40}$/)),
     label: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(40)),
     group: v.picklist(['content', 'setting']),
-    kind: v.picklist(['text', 'boolean', 'number', 'colour', 'choice']),
+    kind: v.enum(DesignFieldKind),
     values: v.optional(designAtomChoiceSchema),
   }),
-  v.check((field) => field.kind === 'choice' || field.values === undefined, 'Only a dropdown lists choices'),
+  v.check((field) => field.kind === DesignFieldKind.CHOICE || field.values === undefined, 'Only a dropdown lists choices'),
 );
 
 export interface DesignAtomField extends v.InferOutput<typeof designAtomFieldSchema> {}

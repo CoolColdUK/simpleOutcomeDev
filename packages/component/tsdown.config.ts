@@ -6,6 +6,6 @@ export default defineConfig({
   clean: true,
   dts: true,
   deps: {
-    neverBundle: ['react', 'react/jsx-runtime', '@so/model'],
+    neverBundle: ['react', 'react/jsx-runtime', '@so/model', '@chakra-ui/react', '@emotion/react'],
   },
 });

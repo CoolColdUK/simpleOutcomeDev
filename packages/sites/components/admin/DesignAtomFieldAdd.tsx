@@ -1,7 +1,7 @@
 'use client';
 
 import {designAtomOptions} from '@so/component';
-import type {DesignAtomPreset} from '@so/model';
+import {DesignFieldKind, type DesignAtomPreset} from '@so/model';
 import {useState} from 'react';
 import DesignChoiceTags from '@/components/admin/DesignChoiceTags';
 import {addField, addFieldError, EMPTY_FIELD_DRAFT, FIELD_GROUPS, FIELD_KINDS, fieldFromDraft, suggestDraft, type FieldDraft} from '@/components/admin/designAtomFieldForm';
@@ -71,7 +71,7 @@ export default function DesignAtomFieldAdd({preset, onChange}: {preset: DesignAt
 
 function suggest(preset: DesignAtomPreset, draft: FieldDraft): FieldDraft {
   const key = draft.key.trim();
-  const untouched = draft.label.trim().length === 0 && draft.group === 'content' && draft.kind === 'text' && draft.values.length === 0;
+  const untouched = draft.label.trim().length === 0 && draft.group === 'content' && draft.kind === DesignFieldKind.TEXT && draft.values.length === 0;
   if (!untouched) {
     return {...draft, key};
   }
@@ -91,5 +91,5 @@ function groupValue(value: string): FieldDraft['group'] {
 
 function kindValue(value: string): FieldDraft['kind'] {
   const kind = FIELD_KINDS.find((item) => item.kind === value);
-  return kind === undefined ? 'text' : kind.kind;
+  return kind === undefined ? DesignFieldKind.TEXT : kind.kind;
 }

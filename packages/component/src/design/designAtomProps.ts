@@ -1,3 +1,4 @@
+import type {ButtonProps} from '@chakra-ui/react';
 import type {DesignAtomNode, DesignStyle} from '@so/model';
 import type {CSSProperties} from 'react';
 import {designColourCss} from './designLayoutStyle';
@@ -16,32 +17,34 @@ export function designSlotText(node: DesignAtomNode, values: DesignAtomProps['va
 }
 
 export function designAtomCss(style: DesignStyle): CSSProperties {
-  const borderWidth = numberStyle(style['borderWidthPx']);
-  const gap = numberStyle(style['gapPx']);
   return {
-    background: designColourCss(style['background']),
-    color: designColourCss(style['color']),
-    borderRadius: numberStyle(style['radiusPx']),
-    borderStyle: borderWidth === undefined ? undefined : 'solid',
-    borderWidth,
-    borderColor: designColourCss(style['borderColor']),
-    padding: numberStyle(style['paddingPx']),
-    margin: numberStyle(style['marginPx']),
-    gap,
-    display: gap === undefined ? undefined : 'inline-flex',
-    fontSize: numberStyle(style['fontSizePx']),
-    textAlign: alignStyle(style['align']),
+    ...styleEntries(style, (value) => value, (value) => designColourCss(value) ?? value),
+    ...(typeof style['borderWidth'] === 'number' ? {borderStyle: 'solid' as const} : {}),
+    ...(typeof style['gap'] === 'number' ? {display: 'inline-flex' as const} : {}),
     boxSizing: 'border-box',
   };
 }
 
-function numberStyle(value: string | number | boolean | undefined): number | undefined {
-  return typeof value === 'number' ? value : undefined;
+export function designButtonProps(style: DesignStyle): ButtonProps {
+  return {
+    background: 'siteAccent',
+    color: 'siteButtonForeground',
+    borderRadius: 'site',
+    ...styleEntries(style, (value) => `${value}px`, (value) => value),
+    ...(typeof style['borderWidth'] === 'number' ? {borderStyle: 'solid' as const} : {}),
+  } as ButtonProps;
 }
 
-function alignStyle(value: string | number | boolean | undefined): CSSProperties['textAlign'] {
-  if (value === 'center' || value === 'end' || value === 'start') {
-    return value;
-  }
-  return undefined;
+function styleEntries(style: DesignStyle, length: (value: number) => string | number, colour: (value: string) => string): CSSProperties {
+  return Object.fromEntries(
+    Object.entries(style).flatMap(([key, value]) => {
+      if (typeof value === 'number') {
+        return [[key, length(value)]];
+      }
+      if (typeof value === 'string') {
+        return [[key, colour(value)]];
+      }
+      return [];
+    }),
+  );
 }

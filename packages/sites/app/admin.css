@@ -584,12 +584,8 @@
   align-items: stretch;
 }
 
-.admin .design-preview button,
 .admin .design-preview a.design-atom-button,
 .admin .design-preview a.design-icon-button {
-  background: var(--chakra-colors-siteAccent);
-  color: var(--chakra-colors-siteButtonForeground);
-  border-radius: var(--chakra-radii-site);
   text-decoration: none;
 }
 

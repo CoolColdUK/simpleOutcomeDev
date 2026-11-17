@@ -1,4 +1,22 @@
-const LEGACY_SETTINGS = new Set(['background', 'color', 'radiusPx', 'borderWidthPx', 'borderColor']);
+const LEGACY_SETTINGS = new Set(['background', 'color', 'borderColor', 'paddingPx', 'marginPx', 'gapPx', 'radiusPx', 'borderWidthPx', 'fontSizePx', 'align', 'padding', 'margin', 'gap', 'borderRadius', 'borderWidth', 'fontSize', 'textAlign']);
+
+const BOX_PROP_KEY: Record<string, string> = {
+  paddingPx: 'padding',
+  marginPx: 'margin',
+  gapPx: 'gap',
+  radiusPx: 'borderRadius',
+  borderWidthPx: 'borderWidth',
+  fontSizePx: 'fontSize',
+  align: 'textAlign',
+};
+
+function boxPropKey(key: string): string {
+  return BOX_PROP_KEY[key] ?? key;
+}
+
+function normaliseStyleRecord(style: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(style).map(([key, value]) => [boxPropKey(key), value]));
+}
 const LEGACY_CONTENT = new Set(['label', 'href', 'icon', 'src', 'alt', 'text', 'role', 'checked']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -25,7 +43,7 @@ function normaliseAtom(node: Record<string, unknown>): Record<string, unknown> {
   const slots = Array.isArray(slotsValue) ? slotsValue.filter((slot): slot is string => typeof slot === 'string') : [];
   Object.entries(props).forEach(([key, value]) => {
     if (LEGACY_SETTINGS.has(key)) {
-      style[key] = value;
+      style[boxPropKey(key)] = value;
       return;
     }
     if (LEGACY_CONTENT.has(key) && !slots.includes(key)) {
@@ -38,7 +56,7 @@ function normaliseAtom(node: Record<string, unknown>): Record<string, unknown> {
     kind: 'atom',
     atom: field(node, 'atom'),
     ...(typeof presetId === 'string' ? {presetId} : {}),
-    style,
+    style: normaliseStyleRecord(style),
     slots,
   };
 }
@@ -100,6 +118,19 @@ export function normaliseMoleculeDocument(value: unknown): unknown {
     layout: layoutFromLegacyStack(value),
     ...(isRecord(container) ? {container} : {}),
     children: normaliseDesignNodes(field(value, 'children')),
+  };
+}
+
+export function normaliseDesignAtomPreset(value: unknown): unknown {
+  if (!isRecord(value)) {
+    return value;
+  }
+  const fields = field(value, 'fields');
+  const style = field(value, 'style');
+  return {
+    ...value,
+    ...(Array.isArray(fields) ? {fields: fields.map((item) => (isRecord(item) && typeof item.key === 'string' ? {...item, key: boxPropKey(item.key)} : item))} : {}),
+    ...(isRecord(style) ? {style: normaliseStyleRecord(style)} : {}),
   };
 }
 
